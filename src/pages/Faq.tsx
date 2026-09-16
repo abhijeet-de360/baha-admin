@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { HelpCircle, Plus, Search, Pencil, Trash2, CheckCircle2, MessageSquare } from 'lucide-react'
+import { HelpCircle, Plus, Search, SquarePen, Trash2, CheckCircle2, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -224,19 +224,19 @@ export default function FaqPage() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       onClick={() => handleOpenEditModal(faq)}
-                      className="h-8 w-8 p-0 border-border hover:bg-muted rounded-xl cursor-pointer"
-                      title="Edit FAQ"
+                      className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                      title="Edit"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <SquarePen className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       onClick={() => setDeletingFaqId(faq.id)}
-                      className="h-8 w-8 p-0 border-border text-destructive hover:bg-destructive/10 rounded-xl cursor-pointer"
-                      title="Delete FAQ"
+                      className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                      title="Delete"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

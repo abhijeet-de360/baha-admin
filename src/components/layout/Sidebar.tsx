@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Settings, ChevronLeft, ChevronRight, HelpCircle, BookOpen, Ruler, FolderTree, Package, Palette, MessageSquareQuote, ShoppingBag } from 'lucide-react'
+import { LayoutDashboard, Settings, ChevronLeft, ChevronRight, HelpCircle, BookOpen, Ruler, FolderTree, Package, Palette, MessageSquareQuote, ShoppingBag, Users, Sliders, Ticket } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -28,6 +28,12 @@ const navItems: NavItem[] = [
     iconColor: 'text-emerald-500',
   },
   {
+    label: 'Customers',
+    path: '/customers',
+    icon: Users,
+    iconColor: 'text-indigo-500',
+  },
+  {
     label: 'Products',
     path: '/products',
     icon: Package,
@@ -40,10 +46,10 @@ const navItems: NavItem[] = [
     iconColor: 'text-indigo-500',
   },
   {
-    label: 'Blogs',
-    path: '/blogs',
-    icon: BookOpen,
-    iconColor: 'text-purple-500',
+    label: 'Coupons',
+    path: '/coupons',
+    icon: Ticket,
+    iconColor: 'text-violet-500',
   },
   {
     label: 'Clothing Sizes',
@@ -58,6 +64,12 @@ const navItems: NavItem[] = [
     iconColor: 'text-rose-500',
   },
   {
+    label: 'Blogs',
+    path: '/blogs',
+    icon: BookOpen,
+    iconColor: 'text-purple-500',
+  },
+  {
     label: 'Testimonials',
     path: '/testimonials',
     icon: MessageSquareQuote,
@@ -68,6 +80,12 @@ const navItems: NavItem[] = [
     path: '/faq',
     icon: HelpCircle,
     iconColor: 'text-emerald-500',
+  },
+  {
+    label: 'Hero Sliders',
+    path: '/banners',
+    icon: Sliders,
+    iconColor: 'text-amber-500',
   },
   {
     label: 'Settings',

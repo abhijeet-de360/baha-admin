@@ -4,7 +4,7 @@ import {
   BookOpen,
   Plus,
   Search,
-  Pencil,
+  SquarePen,
   Trash2,
   CheckCircle2,
   Calendar,
@@ -440,32 +440,32 @@ export default function BlogsPage() {
               </div>
 
               {/* Action Buttons */}
-              <CardFooter className="px-5 py-3 border-t border-border/60 bg-muted/20 flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewingBlog(blog)}
-                  className="h-8 gap-1.5 text-xs hover:text-foreground cursor-pointer p-0"
-                >
-                  <Eye className="h-3.5 w-3.5" /> Read Article & SEO
-                </Button>
-
-                <div className="flex items-center gap-1">
+              <CardFooter className="px-5 py-3 border-t border-border/60 bg-muted/20 flex items-center justify-end">
+                <div className="flex items-center gap-1.5">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenEditModal(blog)}
-                    className="h-8 w-8 hover:text-foreground hover:bg-muted rounded-xl cursor-pointer"
-                    title="Edit Blog"
+                    size="icon"
+                    onClick={() => setViewingBlog(blog)}
+                    className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                    title="View Article & SEO"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
+                    onClick={() => handleOpenEditModal(blog)}
+                    className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                    title="Edit"
+                  >
+                    <SquarePen className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
                     onClick={() => setDeletingBlogId(blog.id)}
-                    className="h-8 w-8 p-0 border-border text-destructive hover:bg-destructive/10 rounded-xl cursor-pointer"
-                    title="Delete Blog"
+                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                    title="Delete"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

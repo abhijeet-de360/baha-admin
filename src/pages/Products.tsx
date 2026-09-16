@@ -4,7 +4,7 @@ import {
   Package,
   Plus,
   Search,
-  Edit2,
+  SquarePen,
   Trash2,
   Eye,
   CheckCircle2,
@@ -446,30 +446,33 @@ export default function Products() {
                       )}
 
                       {/* Bottom Row: Actions */}
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                      <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-border/60">
                         <Button
                           variant="outline"
-                          size="sm"
-                          onClick={() => setViewingProduct(product)}
-                          className="h-8 text-xs px-3 rounded-xl border-border cursor-pointer hover:bg-muted"
+                          size="icon"
+                          onClick={() => navigate(`/products/${product.id}`)}
+                          className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                          title="View"
                         >
-                          <Eye className="h-3.5 w-3.5 mr-1" /> View
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           onClick={() => navigate(`/products/edit/${product.id}`)}
-                          className="h-8 text-xs px-3 rounded-xl border-border cursor-pointer hover:bg-muted"
+                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          title="Edit"
                         >
-                          <Edit2 className="h-3.5 w-3.5 mr-1" /> Edit
+                          <SquarePen className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           onClick={() => setDeletingProduct(product)}
-                          className="h-8 text-xs px-3 rounded-xl border-border text-destructive hover:bg-destructive/10 cursor-pointer"
+                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                          title="Delete"
                         >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -477,102 +480,84 @@ export default function Products() {
                 })}
               </div>
 
-              {/* Desktop Table View (Visible on 'md' screens and up) */}
-              <div className="hidden md:block overflow-x-auto">
+              {/* Desktop Table View (lg screens and above) */}
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-border bg-muted/50 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                      <th className="py-3.5 px-6">Product</th>
+                    <tr className="border-b border-border bg-muted/30 text-[11px] font-extrabold uppercase text-muted-foreground tracking-wider">
+                      <th className="py-3.5 px-6">Product Details</th>
                       <th className="py-3.5 px-6">Category</th>
                       <th className="py-3.5 px-6">Price</th>
-                      <th className="py-3.5 px-6">Stock / SKU</th>
-                      <th className="py-3.5 px-6">Sizes</th>
-                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6">Stock Status</th>
+                      <th className="py-3.5 px-6">Visibility</th>
                       <th className="py-3.5 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
                     {paginatedProducts.map((product) => {
-                      const primaryImg = product.images[product.primaryImageIndex || 0] || product.images[0]
                       return (
-                        <tr key={product.id} className="hover:bg-muted/30 transition-colors group">
-                          {/* Product Info (Image + Title) */}
-                          <td className="py-4 px-6">
-                            <div className="flex items-center gap-3.5">
-                              <div className="h-12 w-12 rounded-xl overflow-hidden border border-border bg-muted shrink-0 relative group-hover:scale-105 transition-transform">
-                                <img
-                                  src={primaryImg}
-                                  alt={product.title}
-                                  className="h-full w-full object-cover"
-                                />
-                              </div>
-                              <div className="space-y-0.5 max-w-xs">
-                                <h4 className="font-bold text-foreground line-clamp-1 text-sm">{product.title}</h4>
-                                <p className="text-[10px] text-muted-foreground font-mono truncate">{product.slug}</p>
+                        <tr key={product.id} className="hover:bg-muted/20 transition-colors">
+                          {/* Product Details Column */}
+                          <td className="py-4 px-6 font-medium">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={product.thumbnailImage}
+                                alt={product.name}
+                                className="h-10 w-10 rounded-xl object-cover border border-border shrink-0"
+                              />
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-bold text-foreground text-xs truncate max-w-[200px]">
+                                  {product.name}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  SKU: {product.sku}
+                                </span>
                               </div>
                             </div>
                           </td>
 
-                          {/* Category */}
-                          <td className="py-4 px-6 font-semibold">
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-muted text-foreground text-[11px] border border-border">
-                              {product.category}
-                            </span>
+                          {/* Category Column */}
+                          <td className="py-4 px-6 text-muted-foreground font-semibold text-xs">
+                            {product.category}
                           </td>
 
-                          {/* Price */}
-                          <td className="py-4 px-6 font-bold text-foreground">
-                            {product.salePrice ? (
-                              <div className="space-y-0.5">
-                                <span className="text-emerald-600 font-extrabold">${product.salePrice.toFixed(2)}</span>
-                                <span className="text-[10px] text-muted-foreground line-through block font-normal">
+                          {/* Price Column */}
+                          <td className="py-4 px-6">
+                            <div className="flex flex-col">
+                              {product.salePrice ? (
+                                <>
+                                  <span className="font-extrabold text-emerald-600 text-xs font-mono">
+                                    ${product.salePrice.toFixed(2)}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground line-through font-mono">
+                                    ${product.regularPrice.toFixed(2)}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="font-extrabold text-foreground text-xs font-mono">
                                   ${product.regularPrice.toFixed(2)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span>${product.regularPrice.toFixed(2)}</span>
-                            )}
-                          </td>
-
-                          {/* Stock Quantity / SKU */}
-                          <td className="py-4 px-6">
-                            <div className="space-y-1">
-                              <span
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getStockBadge(
-                                  product.stockStatus
-                                )}`}
-                              >
-                                {product.stockStatus} ({product.stockQuantity})
-                              </span>
-                              <span className="text-[10px] font-mono block">SKU: {product.sku}</span>
-                            </div>
-                          </td>
-
-                          {/* Sizes */}
-                          <td className="py-4 px-6">
-                            <div className="flex flex-wrap gap-1 max-w-[140px]">
-                              {product.sizes.slice(0, 3).map((sz) => (
-                                <span
-                                  key={sz}
-                                  className="px-1.5 py-0.5 rounded bg-muted font-extrabold text-[10px] border border-border"
-                                >
-                                  {sz}
-                                </span>
-                              ))}
-                              {product.sizes.length > 3 && (
-                                <span className="text-[10px] font-bold self-center">
-                                  +{product.sizes.length - 3}
                                 </span>
                               )}
                             </div>
                           </td>
 
-                          {/* Status */}
+                          {/* Stock Status Column */}
                           <td className="py-4 px-6">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStockBadge(
+                                product.stockStatus
+                              )}`}
+                            >
+                              {product.stockStatus} ({product.stockQuantity})
+                            </span>
+                          </td>
+
+                          {/* Visibility Status Column */}
+                          <td className="py-4 px-6">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                                 product.status === 'Active'
-                                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                   : 'bg-muted text-muted-foreground border-border'
                               }`}
                             >
@@ -590,29 +575,28 @@ export default function Products() {
                             <div className="flex items-center justify-end gap-1.5">
                               <Button
                                 variant="outline"
-                                size="sm"
-                                onClick={() => setViewingProduct(product)}
-                                className="h-8 w-8 p-0 rounded-xl border-border cursor-pointer hover:bg-muted"
-                                title="View Product Details"
+                                size="icon"
+                                onClick={() => navigate(`/products/${product.id}`)}
+                                title="View"
+                                className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                               >
                                 <Eye className="h-3.5 w-3.5" />
                               </Button>
-                              {/* Navigate to Dedicated Edit Product Page */}
                               <Button
                                 variant="outline"
-                                size="sm"
+                                size="icon"
                                 onClick={() => navigate(`/products/edit/${product.id}`)}
-                                className="h-8 w-8 p-0 rounded-xl border-border cursor-pointer hover:bg-muted"
-                                title="Edit Product Page"
+                                title="Edit"
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                               >
-                                <Edit2 className="h-3.5 w-3.5" />
+                                <SquarePen className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 variant="outline"
-                                size="sm"
+                                size="icon"
                                 onClick={() => setDeletingProduct(product)}
-                                className="h-8 w-8 p-0 rounded-xl border-border text-destructive hover:bg-destructive/10 cursor-pointer"
-                                title="Delete Product"
+                                title="Delete"
+                                className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -662,128 +646,6 @@ export default function Products() {
           )}
         </CardContent>
       </Card>
-
-      {/* View Product Details Modal */}
-      <Dialog open={Boolean(viewingProduct)} onOpenChange={(open) => !open && setViewingProduct(null)}>
-        {viewingProduct && (
-          <DialogContent className="sm:max-w-2xl rounded-2xl max-h-[88vh] overflow-y-auto">
-            <DialogHeader>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded bg-muted text-foreground text-[10px] font-bold uppercase tracking-wider border border-border">
-                  {viewingProduct.category}
-                </span>
-                <span className="font-mono text-[11px] text-muted-foreground">SKU: {viewingProduct.sku}</span>
-              </div>
-              <DialogTitle className="text-lg font-bold leading-snug pt-1">{viewingProduct.title}</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              {/* Product Main Images Gallery */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2 h-56 rounded-2xl overflow-hidden border border-border bg-muted">
-                  <img
-                    src={viewingProduct.images[viewingProduct.primaryImageIndex || 0] || viewingProduct.images[0]}
-                    alt={viewingProduct.title}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="flex flex-col gap-2 overflow-y-auto max-h-56">
-                  {viewingProduct.images.map((img, idx) => (
-                    <div key={idx} className="h-16 rounded-xl overflow-hidden border border-border bg-muted shrink-0">
-                      <img src={img} alt={`Thumb ${idx}`} className="h-full w-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price & Stock summary */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border text-xs">
-                <div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Pricing</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-base font-extrabold text-foreground">
-                      ${(viewingProduct.salePrice || viewingProduct.regularPrice).toFixed(2)}
-                    </span>
-                    {viewingProduct.salePrice && (
-                      <span className="text-xs text-muted-foreground line-through">
-                        ${viewingProduct.regularPrice.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Stock Level</span>
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getStockBadge(
-                      viewingProduct.stockStatus
-                    )}`}
-                  >
-                    {viewingProduct.stockStatus} ({viewingProduct.stockQuantity})
-                  </span>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="space-y-1">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Description</p>
-                <p className="text-xs text-foreground leading-relaxed bg-muted/30 p-3 rounded-xl">
-                  {viewingProduct.description || 'No description available.'}
-                </p>
-              </div>
-
-              {/* Specs Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-1">
-                {viewingProduct.color && (
-                  <div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Color</span>
-                    <span className="font-semibold text-foreground">{viewingProduct.color}</span>
-                  </div>
-                )}
-                {viewingProduct.fabric && (
-                  <div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Fabric</span>
-                    <span className="font-semibold text-foreground">{viewingProduct.fabric}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Colors */}
-              {viewingProduct.colors && viewingProduct.colors.length > 0 && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Selected Colors</span>
-                  <div className="flex flex-wrap gap-2">
-                    {viewingProduct.colors.map((colHex, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted text-foreground font-mono text-xs font-bold border border-border"
-                      >
-                        <span
-                          className="h-3.5 w-3.5 rounded-full border border-background shadow-2xs"
-                          style={{ backgroundColor: colHex }}
-                        />
-                        <span>{colHex}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Sizes */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Available Sizes</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {viewingProduct.sizes.map((sz) => (
-                    <span key={sz} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-extrabold text-xs">
-                      {sz}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
 
       {/* Delete Confirmation Alert Dialog */}
       <AlertDialog open={Boolean(deletingProduct)} onOpenChange={(open) => !open && setDeletingProduct(null)}>

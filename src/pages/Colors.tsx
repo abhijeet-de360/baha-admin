@@ -3,7 +3,7 @@ import {
   Palette,
   Plus,
   Search,
-  Edit2,
+  SquarePen,
   Trash2,
   CheckCircle2,
   AlertTriangle,
@@ -404,110 +404,196 @@ export default function Colors() {
               </Button>
             </div>
           ) : viewMode === 'table' ? (
-            /* Table View */
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border text-[11px] font-bold uppercase tracking-wider">
-                    <th className="py-3.5 px-6">Color Swatch</th>
-                    <th className="py-3.5 px-6">Color Name</th>
-                    <th className="py-3.5 px-6">HEX Code</th>
-                    <th className="py-3.5 px-6">Status</th>
-                    <th className="py-3.5 px-6">Created Date</th>
-                    <th className="py-3.5 px-6 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-xs">
-                  {paginatedColors.map((color) => {
-                    const isCopied = copiedHex === color.hexCode
-                    return (
-                      <tr key={color.id} className="hover:bg-muted/30 transition-colors group">
-                        {/* Swatch */}
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
-                              style={{ backgroundColor: color.hexCode }}
-                            />
+            /* Table View Mode */
+            <>
+              {/* Mobile & Tablet Card View (screens smaller than lg) */}
+              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                {paginatedColors.map((color) => {
+                  const isCopied = copiedHex === color.hexCode
+                  return (
+                    <Card
+                      key={color.id}
+                      className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3"
+                    >
+                      {/* Swatch & Status Header */}
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0"
+                            style={{ backgroundColor: color.hexCode }}
+                          />
+                          <div>
+                            <h4 className="font-bold text-foreground text-sm">{color.name}</h4>
+                            <p className="text-[11px] text-muted-foreground">Added {color.createdAt}</p>
                           </div>
-                        </td>
-
-                        {/* Name */}
-                        <td className="py-4 px-6 font-bold text-foreground text-sm">
-                          {color.name}
-                        </td>
-
-                        {/* HEX Code */}
-                        <td className="py-4 px-6 font-mono font-semibold">
-                          <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
-                            <Hash className="h-3 w-3 text-muted-foreground" />
-                            <span>{color.hexCode}</span>
-                            <button
-                              onClick={() => handleCopyHex(color.hexCode)}
-                              className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                              title="Copy HEX Code"
-                            >
-                              {isCopied ? (
-                                <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                              ) : (
-                                <Copy className="h-3 w-3" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-4 px-6">
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border shrink-0 ${
+                            color.status === 'Active'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              : 'bg-muted text-muted-foreground border-border'
+                          }`}
+                        >
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                              color.status === 'Active'
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                : 'bg-muted text-muted-foreground border-border'
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              color.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
                             }`}
+                          />
+                          {color.status}
+                        </span>
+                      </div>
+
+                      {/* HEX Code & Copy Row */}
+                      <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-xl border border-border/40 text-xs">
+                        <span className="text-muted-foreground font-medium">HEX Code</span>
+                        <div className="inline-flex items-center gap-1.5 font-mono font-bold text-foreground">
+                          <Hash className="h-3 w-3 text-muted-foreground" />
+                          <span>{color.hexCode}</span>
+                          <button
+                            onClick={() => handleCopyHex(color.hexCode)}
+                            className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                            title="Copy HEX Code"
                           >
+                            {isCopied ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleOpenEditModal(color)}
+                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          title="Edit"
+                        >
+                          <SquarePen className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setDeletingColor(color)}
+                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {/* Desktop Table View (screens lg and larger) */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border text-[11px] font-bold uppercase tracking-wider">
+                      <th className="py-3.5 px-6">Color Swatch</th>
+                      <th className="py-3.5 px-6">Color Name</th>
+                      <th className="py-3.5 px-6">HEX Code</th>
+                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6">Created Date</th>
+                      <th className="py-3.5 px-6 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border text-xs">
+                    {paginatedColors.map((color) => {
+                      const isCopied = copiedHex === color.hexCode
+                      return (
+                        <tr key={color.id} className="hover:bg-muted/30 transition-colors group">
+                          {/* Swatch */}
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
+                                style={{ backgroundColor: color.hexCode }}
+                              />
+                            </div>
+                          </td>
+
+                          {/* Name */}
+                          <td className="py-4 px-6 font-bold text-foreground text-sm">
+                            {color.name}
+                          </td>
+
+                          {/* HEX Code */}
+                          <td className="py-4 px-6 font-mono font-semibold">
+                            <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
+                              <Hash className="h-3 w-3 text-muted-foreground" />
+                              <span>{color.hexCode}</span>
+                              <button
+                                onClick={() => handleCopyHex(color.hexCode)}
+                                className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                                title="Copy HEX Code"
+                              >
+                                {isCopied ? (
+                                  <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-4 px-6">
                             <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                color.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                                color.status === 'Active'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : 'bg-muted text-muted-foreground border-border'
                               }`}
-                            />
-                            {color.status}
-                          </span>
-                        </td>
-
-                        {/* Created Date */}
-                        <td className="py-4 px-6 text-muted-foreground font-medium">
-                          {color.createdAt}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenEditModal(color)}
-                              className="h-8 w-8 p-0 rounded-xl hover:bg-muted hover:text-foreground border-border cursor-pointer"
-                              title="Edit Color"
                             >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setDeletingColor(color)}
-                              className="h-8 w-8 p-0 rounded-xl border-border text-destructive hover:bg-destructive/10 cursor-pointer"
-                              title="Delete Color"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  color.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
+                                }`}
+                              />
+                              {color.status}
+                            </span>
+                          </td>
+
+                          {/* Created Date */}
+                          <td className="py-4 px-6 text-muted-foreground font-medium">
+                            {color.createdAt}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenEditModal(color)}
+                                title="Edit"
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                              >
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setDeletingColor(color)}
+                                title="Delete"
+                                className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             /* Grid View Cards */
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -551,22 +637,22 @@ export default function Colors() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleOpenEditModal(color)}
-                          className="h-8 w-8 p-0 rounded-xl border-border cursor-pointer hover:bg-muted hover:text-foreground"
-                          title="Edit Color"
+                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          title="Edit"
                         >
-                          <Edit2 className="h-3.5 w-3.5" />
+                          <SquarePen className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           onClick={() => setDeletingColor(color)}
-                          className="h-8 w-8 p-0 rounded-xl border-border text-destructive hover:bg-destructive/10 cursor-pointer"
-                          title="Delete Color"
+                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                          title="Delete"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

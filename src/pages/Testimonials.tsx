@@ -3,7 +3,7 @@ import {
   MessageSquareQuote,
   Plus,
   Search,
-  Pencil,
+  SquarePen,
   Trash2,
   CheckCircle2,
   Star,
@@ -387,19 +387,19 @@ export default function Testimonials() {
                 <div className="flex items-center gap-1.5">
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
                     onClick={() => handleOpenEditModal(t)}
-                    className="h-8 w-8 p-0 rounded-xl border-border cursor-pointer hover:bg-muted hover:text-foreground"
-                    title="Edit Testimonial"
+                    className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                    title="Edit"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <SquarePen className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
                     onClick={() => setDeletingId(t.id)}
-                    className="h-8 w-8 p-0 rounded-xl border-border text-destructive hover:bg-destructive/10 cursor-pointer"
-                    title="Delete Testimonial"
+                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                    title="Delete"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

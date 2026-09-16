@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ShoppingBag,
   Search,
@@ -16,7 +17,7 @@ import {
   MapPin,
   CreditCard,
   Calendar,
-  Edit3,
+  SquarePen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +39,7 @@ import {
 } from '@/data/mockOrders'
 
 export default function Orders() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('All')
@@ -50,7 +52,6 @@ export default function Orders() {
 
   // Modal States
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
 
@@ -103,7 +104,7 @@ export default function Orders() {
       })
       .sort((a, b) => {
         if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(a.createdAt).getTime()
         if (sortBy === 'highest') return b.totalAmount - a.totalAmount
         if (sortBy === 'lowest') return a.totalAmount - b.totalAmount
         return 0
@@ -122,10 +123,9 @@ export default function Orders() {
     setCurrentPage(1)
   }, [searchQuery, statusFilter, paymentFilter, sortBy])
 
-  // Open Details Modal
+  // Navigate to Order Details Page
   const handleOpenDetails = (order: Order) => {
-    setSelectedOrder(order)
-    setIsDetailModalOpen(true)
+    navigate(`/orders/${order.id}`)
   }
 
   // Open Status Modal
@@ -435,138 +435,251 @@ export default function Orders() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30 text-[11px] font-extrabold uppercase text-muted-foreground tracking-wider">
-                    <th className="py-3.5 px-6">Order ID & Date</th>
-                    <th className="py-3.5 px-6">Customer</th>
-                    <th className="py-3.5 px-6">Items Purchased</th>
-                    <th className="py-3.5 px-6">Payment</th>
-                    <th className="py-3.5 px-6">Total Amount</th>
-                    <th className="py-3.5 px-6">Order Status</th>
-                    <th className="py-3.5 px-6 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-xs">
-                  {paginatedOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-muted/20 transition-colors">
-                      {/* Order ID & Date */}
-                      <td className="py-4 px-6 font-medium">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-foreground font-mono">{order.orderNumber}</span>
-                          <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(order.createdAt).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                      </td>
+            <>
+              {/* Mobile & Tablet Card View (screens smaller than lg) */}
+              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                {paginatedOrders.map((order) => (
+                  <Card key={order.id} className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3">
+                    {/* Top Row: Order Number, Date & Status */}
+                    <div className="flex items-start justify-between gap-2 border-b border-border/50 pb-3">
+                      <div>
+                        <span className="font-bold text-foreground font-mono text-sm block">{order.orderNumber}</span>
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Calendar className="h-3 w-3 shrink-0" />
+                          {new Date(order.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      <div>{getStatusBadge(order.orderStatus)}</div>
+                    </div>
 
-                      {/* Customer Info */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          {order.customer.avatar ? (
+                    {/* Customer Info */}
+                    <div className="flex items-center gap-3 py-1">
+                      {order.customer.avatar ? (
+                        <img
+                          src={order.customer.avatar}
+                          alt={order.customer.name}
+                          className="h-10 w-10 rounded-full object-cover border border-border shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
+                          {order.customer.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-foreground text-xs truncate">{order.customer.name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{order.customer.email}</p>
+                      </div>
+                    </div>
+
+                    {/* Items Preview & Amount */}
+                    <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-xl border border-border/40 text-xs">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="flex -space-x-2 overflow-hidden shrink-0">
+                          {order.items.slice(0, 3).map((item) => (
                             <img
-                              src={order.customer.avatar}
-                              alt={order.customer.name}
-                              className="h-9 w-9 rounded-full object-cover border border-border"
+                              key={item.id}
+                              src={item.image}
+                              alt={item.productName}
+                              className="inline-block h-7 w-7 rounded-full ring-2 ring-background object-cover"
+                              title={`${item.productName} (${item.size})`}
                             />
-                          ) : (
-                            <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
-                              {order.customer.name.charAt(0)}
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            <span className="font-bold text-foreground">{order.customer.name}</span>
-                            <span className="text-[11px] text-muted-foreground truncate max-w-[150px]">
-                              {order.customer.email}
-                            </span>
-                          </div>
+                          ))}
                         </div>
-                      </td>
+                        <span className="text-[11px] font-medium text-muted-foreground truncate">
+                          {order.items.reduce((acc, i) => acc + i.quantity, 0)} item
+                          {order.items.reduce((acc, i) => acc + i.quantity, 0) > 1 ? 's' : ''}
+                        </span>
+                      </div>
 
-                      {/* Items Purchased Preview */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-2">
-                          <div className="flex -space-x-2 overflow-hidden">
-                            {order.items.slice(0, 3).map((item) => (
-                              <img
-                                key={item.id}
-                                src={item.image}
-                                alt={item.productName}
-                                className="inline-block h-8 w-8 rounded-full ring-2 ring-background object-cover"
-                                title={`${item.productName} (${item.size})`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-xs font-semibold text-muted-foreground">
-                            {order.items.reduce((acc, i) => acc + i.quantity, 0)} item
-                            {order.items.reduce((acc, i) => acc + i.quantity, 0) > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Payment Status & Method */}
-                      <td className="py-4 px-6">
-                        <div className="flex flex-col gap-1 items-start">
-                          {getPaymentBadge(order.paymentStatus)}
-                          <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                            <CreditCard className="h-3 w-3" /> {order.paymentMethod}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Total Amount */}
-                      <td className="py-4 px-6">
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] uppercase text-muted-foreground font-semibold block">Total</span>
                         <span className="font-extrabold text-foreground text-sm font-mono">
                           ${order.totalAmount.toFixed(2)}
                         </span>
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* Order Status */}
-                      <td className="py-4 px-6">{getStatusBadge(order.orderStatus)}</td>
+                    {/* Payment Status & Quick Actions */}
+                    <div className="flex items-center justify-between pt-1 gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {getPaymentBadge(order.paymentStatus)}
+                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                          <CreditCard className="h-3 w-3" /> {order.paymentMethod}
+                        </span>
+                      </div>
 
-                      {/* Actions */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenDetails(order)}
-                            className="h-8 w-8 p-0 rounded-xl border-border hover:bg-muted cursor-pointer"
-                            title="View Order Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenStatusEdit(order)}
-                            className="h-8 w-8 p-0 rounded-xl border-border text-primary hover:bg-primary/10 cursor-pointer"
-                            title="Update Status"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenInvoice(order)}
-                            className="h-8 w-8 p-0 rounded-xl border-border text-muted-foreground hover:bg-muted cursor-pointer"
-                            title="Print Invoice"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleOpenDetails(order)}
+                          className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                          title="View Order Details"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleOpenStatusEdit(order)}
+                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          title="Update Status"
+                        >
+                          <SquarePen className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleOpenInvoice(order)}
+                          className="h-8 w-8 text-muted-foreground border-border hover:bg-muted cursor-pointer"
+                          title="Print Invoice"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table View (lg screens and above) */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30 text-[11px] font-extrabold uppercase text-muted-foreground tracking-wider">
+                      <th className="py-3.5 px-6">Order ID & Date</th>
+                      <th className="py-3.5 px-6">Customer</th>
+                      <th className="py-3.5 px-6">Items Purchased</th>
+                      <th className="py-3.5 px-6">Payment</th>
+                      <th className="py-3.5 px-6">Total Amount</th>
+                      <th className="py-3.5 px-6">Order Status</th>
+                      <th className="py-3.5 px-6 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border text-xs">
+                    {paginatedOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-muted/20 transition-colors">
+                        {/* Order ID & Date */}
+                        <td className="py-4 px-6 font-medium">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-foreground font-mono">{order.orderNumber}</span>
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(order.createdAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Customer Info */}
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            {order.customer.avatar ? (
+                              <img
+                                src={order.customer.avatar}
+                                alt={order.customer.name}
+                                className="h-9 w-9 rounded-full object-cover border border-border"
+                              />
+                            ) : (
+                              <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
+                                {order.customer.name.charAt(0)}
+                              </div>
+                            )}
+                            <div className="flex flex-col">
+                              <span className="font-bold text-foreground">{order.customer.name}</span>
+                              <span className="text-[11px] text-muted-foreground truncate max-w-[150px]">
+                                {order.customer.email}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Items Purchased Preview */}
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <div className="flex -space-x-2 overflow-hidden">
+                              {order.items.slice(0, 3).map((item) => (
+                                <img
+                                  key={item.id}
+                                  src={item.image}
+                                  alt={item.productName}
+                                  className="inline-block h-8 w-8 rounded-full ring-2 ring-background object-cover"
+                                  title={`${item.productName} (${item.size})`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              {order.items.reduce((acc, i) => acc + i.quantity, 0)} item
+                              {order.items.reduce((acc, i) => acc + i.quantity, 0) > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Payment Status & Method */}
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col gap-1 items-start">
+                            {getPaymentBadge(order.paymentStatus)}
+                            <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                              <CreditCard className="h-3 w-3" /> {order.paymentMethod}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Total Amount */}
+                        <td className="py-4 px-6">
+                          <span className="font-extrabold text-foreground text-sm font-mono">
+                            ${order.totalAmount.toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* Order Status */}
+                        <td className="py-4 px-6">{getStatusBadge(order.orderStatus)}</td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleOpenDetails(order)}
+                              className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                              title="View Order Details"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleOpenStatusEdit(order)}
+                              className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                              title="Update Status"
+                            >
+                              <SquarePen className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleOpenInvoice(order)}
+                              className="h-8 w-8 text-muted-foreground border-border hover:bg-muted cursor-pointer"
+                              title="Print Invoice"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {/* Pagination Footer */}
@@ -604,219 +717,6 @@ export default function Orders() {
           )}
         </CardContent>
       </Card>
-
-      {/* Order Details Drawer Modal */}
-      {selectedOrder && (
-        <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-          <DialogContent className="sm:max-w-2xl rounded-3xl p-6 max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="pb-3 border-b border-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                    Order {selectedOrder.orderNumber}
-                  </DialogTitle>
-                  <DialogDescription className="text-xs">
-                    Placed on{' '}
-                    {new Date(selectedOrder.createdAt).toLocaleString('en-US', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
-                  </DialogDescription>
-                </div>
-                <div className="flex items-center gap-2">{getStatusBadge(selectedOrder.orderStatus)}</div>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-6 py-3 text-xs">
-              {/* Order Status Progress Tracker */}
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border">
-                <h4 className="font-bold text-muted-foreground uppercase text-[10px] tracking-wider mb-3">
-                  Fulfillment Status Tracker
-                </h4>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  {[
-                    { label: 'Order Placed', step: 1, active: true },
-                    {
-                      label: 'Processing',
-                      step: 2,
-                      active: ['Processing', 'Shipped', 'Delivered'].includes(selectedOrder.orderStatus),
-                    },
-                    {
-                      label: 'Shipped',
-                      step: 3,
-                      active: ['Shipped', 'Delivered'].includes(selectedOrder.orderStatus),
-                    },
-                    { label: 'Delivered', step: 4, active: selectedOrder.orderStatus === 'Delivered' },
-                  ].map((s, idx) => (
-                    <div key={idx} className="flex flex-col items-center space-y-1">
-                      <div
-                        className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                          s.active
-                            ? 'bg-emerald-500 text-white shadow-xs'
-                            : 'bg-muted text-muted-foreground border border-border'
-                        }`}
-                      >
-                        {s.active ? <CheckCircle2 className="h-4 w-4" /> : s.step}
-                      </div>
-                      <span
-                        className={`text-[10px] font-semibold ${
-                          s.active ? 'text-foreground font-bold' : 'text-muted-foreground'
-                        }`}
-                      >
-                        {s.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Customer & Shipping Info Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Customer Details */}
-                <div className="p-4 rounded-2xl border border-border bg-card space-y-2">
-                  <h4 className="font-bold text-foreground flex items-center gap-1.5 text-xs">
-                    <User className="h-4 w-4 text-primary" /> Customer Details
-                  </h4>
-                  <div className="space-y-1 pt-1 text-muted-foreground">
-                    <p className="font-bold text-foreground">{selectedOrder.customer.name}</p>
-                    <p>{selectedOrder.customer.email}</p>
-                    <p>{selectedOrder.customer.phone}</p>
-                  </div>
-                </div>
-
-                {/* Shipping Address */}
-                <div className="p-4 rounded-2xl border border-border bg-card space-y-2">
-                  <h4 className="font-bold text-foreground flex items-center gap-1.5 text-xs">
-                    <MapPin className="h-4 w-4 text-primary" /> Shipping Address
-                  </h4>
-                  <div className="space-y-1 pt-1 text-muted-foreground">
-                    <p className="font-semibold text-foreground">{selectedOrder.shippingAddress.street}</p>
-                    <p>
-                      {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state}{' '}
-                      {selectedOrder.shippingAddress.zipCode}
-                    </p>
-                    <p>{selectedOrder.shippingAddress.country}</p>
-                    {selectedOrder.trackingNumber && (
-                      <p className="font-mono text-[11px] font-bold text-primary pt-1">
-                        Tracking: {selectedOrder.trackingNumber}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Ordered Items Table */}
-              <div className="space-y-2">
-                <h4 className="font-bold text-foreground text-xs uppercase tracking-wider">Items Breakdown</h4>
-                <div className="border border-border rounded-2xl overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-muted/40 text-[10px] uppercase font-bold text-muted-foreground border-b border-border">
-                      <tr>
-                        <th className="p-3">Product</th>
-                        <th className="p-3">Color & Size</th>
-                        <th className="p-3 text-center">Qty</th>
-                        <th className="p-3 text-right">Price</th>
-                        <th className="p-3 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {selectedOrder.items.map((item) => (
-                        <tr key={item.id}>
-                          <td className="p-3 flex items-center gap-2.5">
-                            <img
-                              src={item.image}
-                              alt={item.productName}
-                              className="h-10 w-10 rounded-xl object-cover border border-border shrink-0"
-                            />
-                            <span className="font-semibold text-foreground line-clamp-1">{item.productName}</span>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className="h-3 w-3 rounded-full border border-border shrink-0"
-                                style={{ backgroundColor: item.colorHex }}
-                              />
-                              <span className="font-medium text-foreground">{item.color}</span>
-                              <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-bold">
-                                {item.size}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-3 text-center font-bold">{item.quantity}</td>
-                          <td className="p-3 text-right font-mono">${item.unitPrice.toFixed(2)}</td>
-                          <td className="p-3 text-right font-mono font-bold">
-                            ${(item.quantity * item.unitPrice).toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Payment Summary */}
-              <div className="p-4 rounded-2xl bg-muted/30 border border-border flex flex-col sm:flex-row justify-between gap-4">
-                <div>
-                  <h5 className="font-bold text-foreground mb-1">Payment Method</h5>
-                  <p className="text-muted-foreground flex items-center gap-1">
-                    <CreditCard className="h-3.5 w-3.5" /> {selectedOrder.paymentMethod} ({selectedOrder.paymentStatus})
-                  </p>
-                  {selectedOrder.notes && (
-                    <div className="mt-2 text-[11px] bg-background p-2 rounded-xl border border-border">
-                      <span className="font-bold text-foreground">Notes: </span>
-                      <span className="text-muted-foreground">{selectedOrder.notes}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 text-right font-mono text-xs shrink-0 min-w-[200px]">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Subtotal:</span>
-                    <span>${selectedOrder.subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Shipping:</span>
-                    <span>${selectedOrder.shippingFee.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Estimated Tax:</span>
-                    <span>${selectedOrder.tax.toFixed(2)}</span>
-                  </div>
-                  {selectedOrder.discount > 0 && (
-                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-                      <span>Discount:</span>
-                      <span>-${selectedOrder.discount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-black text-foreground border-t border-border pt-1.5">
-                    <span>Grand Total:</span>
-                    <span>${selectedOrder.totalAmount.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 border-t border-border pt-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsDetailModalOpen(false)}
-                className="rounded-full text-xs cursor-pointer"
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsDetailModalOpen(false)
-                  handleOpenStatusEdit(selectedOrder)
-                }}
-                className="rounded-full font-semibold text-xs px-5 cursor-pointer"
-              >
-                <Edit3 className="h-3.5 w-3.5 mr-1.5" /> Update Status
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Edit Order Status Modal */}
       {selectedOrder && (

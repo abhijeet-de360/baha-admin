@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import slugify from 'slugify'
 import {
-  FolderTree, Plus, Search, Edit2, Trash2, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight,
-  Upload, Image as ImageIcon, X, Filter, Sparkles, Layers, Calendar, Tag, Link as LinkIcon
+  FolderTree, Plus, Search, SquarePen, Trash2, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight,
+  Upload, Image as ImageIcon, X, Filter, Sparkles, Layers, Calendar, Tag, Link as LinkIcon, Globe
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,8 @@ export interface Category {
   status: 'Active' | 'Inactive'
   createdAt: string
   productCount: number
+  metaTitle?: string
+  metaDescription?: string
 }
 
 // Generate slug using slugify package
@@ -39,6 +41,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Active',
     createdAt: '2026-01-10',
     productCount: 42,
+    metaTitle: 'Boys Collection - Trendy Kids Fashion & Clothing | Baha',
+    metaDescription: 'Shop trendy t-shirts, shirts, shorts and denim for young boys at Baha. Premium quality kids apparel.',
   },
   {
     id: 'cat-2',
@@ -49,6 +53,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Active',
     createdAt: '2026-01-10',
     productCount: 58,
+    metaTitle: 'Girls Collection - Dresses, Skirts & Tops | Baha',
+    metaDescription: 'Explore adorable dresses, skirts, tops, and stylish matching sets for young girls at Baha.',
   },
   {
     id: 'cat-3',
@@ -59,6 +65,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Active',
     createdAt: '2026-01-12',
     productCount: 35,
+    metaTitle: 'Baby & Toddler Wear - Organic Cotton Onesies & Rompers | Baha',
+    metaDescription: 'Ultra-soft organic cotton onesies, rompers, and bibs for infants and toddlers.',
   },
   {
     id: 'cat-4',
@@ -69,6 +77,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Active',
     createdAt: '2026-01-15',
     productCount: 24,
+    metaTitle: 'Newborn Clothing Essentials & Swaddles | Baha',
+    metaDescription: 'Discover cozy newborn clothing sets, swaddles, mittens, and baby gift bundles.',
   },
   {
     id: 'cat-5',
@@ -79,6 +89,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Active',
     createdAt: '2026-01-20',
     productCount: 30,
+    metaTitle: 'Party & Festive Wear for Kids | Baha',
+    metaDescription: 'Shop elegant tuxedos, party gowns, suits, and festive ethnic wear for boys and girls.',
   },
   {
     id: 'cat-6',
@@ -89,6 +101,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Active',
     createdAt: '2026-02-01',
     productCount: 19,
+    metaTitle: 'Kids Winter Wear - Jackets, Hoodies & Sweaters | Baha',
+    metaDescription: 'Stay warm with cozy winter jackets, fleece hoodies, knitted sweaters, and beanies.',
   },
   {
     id: 'cat-7',
@@ -99,6 +113,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Active',
     createdAt: '2026-02-10',
     productCount: 28,
+    metaTitle: 'Summer Shorts & Tees for Kids | Baha',
+    metaDescription: 'Lightweight, breathable cotton t-shirts and summer shorts for kids.',
   },
   {
     id: 'cat-8',
@@ -109,6 +125,8 @@ const INITIAL_CATEGORIES: Category[] = [
     status: 'Inactive',
     createdAt: '2026-02-15',
     productCount: 15,
+    metaTitle: 'Kids Sleepwear & Pajama Sets | Baha',
+    metaDescription: 'Comfortable cotton night suits, pajamas, and sleep sacks for kids.',
   },
 ]
 
@@ -131,6 +149,10 @@ export default function Categories() {
   const [isSlugManuallyModified, setIsSlugManuallyModified] = useState(false)
   const [formImage, setFormImage] = useState('')
   const [formDescription, setFormDescription] = useState('')
+  const [formMetaTitle, setFormMetaTitle] = useState('')
+  const [formMetaDescription, setFormMetaDescription] = useState('')
+  const [isMetaTitleModified, setIsMetaTitleModified] = useState(false)
+  const [isMetaDescModified, setIsMetaDescModified] = useState(false)
   const [formStatus, setFormStatus] = useState<'Active' | 'Inactive' | ''>('')
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -145,11 +167,14 @@ export default function Categories() {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
-  // Handle category name change and auto-generate slug
+  // Handle category name change and auto-generate slug & meta title
   const handleNameChange = (val: string) => {
     setFormName(val)
     if (!isSlugManuallyModified) {
       setFormSlug(generateSlug(val))
+    }
+    if (!isMetaTitleModified) {
+      setFormMetaTitle(val ? `${val} | Baha Kids Fashion` : '')
     }
   }
 
@@ -181,6 +206,10 @@ export default function Categories() {
     setIsSlugManuallyModified(false)
     setFormImage('')
     setFormDescription('')
+    setFormMetaTitle('')
+    setFormMetaDescription('')
+    setIsMetaTitleModified(false)
+    setIsMetaDescModified(false)
     setFormStatus('')
     setFormError(null)
     setIsModalOpen(true)
@@ -194,6 +223,10 @@ export default function Categories() {
     setIsSlugManuallyModified(true)
     setFormImage(cat.image)
     setFormDescription(cat.description)
+    setFormMetaTitle(cat.metaTitle || (cat.name ? `${cat.name} | Baha Kids Fashion` : ''))
+    setFormMetaDescription(cat.metaDescription || cat.description || '')
+    setIsMetaTitleModified(true)
+    setIsMetaDescModified(true)
     setFormStatus(cat.status)
     setFormError(null)
     setIsModalOpen(true)
@@ -225,6 +258,8 @@ export default function Categories() {
               slug: finalSlug,
               image: defaultImage,
               description: formDescription.trim(),
+              metaTitle: formMetaTitle.trim(),
+              metaDescription: formMetaDescription.trim(),
               status: selectedStatus,
             }
             : item
@@ -238,6 +273,8 @@ export default function Categories() {
         slug: finalSlug,
         image: defaultImage,
         description: formDescription.trim(),
+        metaTitle: formMetaTitle.trim(),
+        metaDescription: formMetaDescription.trim(),
         status: selectedStatus,
         createdAt: todayStr,
         productCount: 0,
@@ -469,19 +506,19 @@ export default function Categories() {
                         <div className="flex items-center gap-1.5">
                           <Button
                             variant="outline"
-                            size="sm"
+                            size="icon"
                             onClick={() => handleOpenEditModal(cat)}
-                            className="h-8 w-8 p-0 rounded-xl border-border cursor-pointer hover:bg-muted hover:text-foreground"
-                            title="Edit Category"
+                            className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                            title="Edit"
                           >
-                            <Edit2 className="h-3.5 w-3.5" />
+                            <SquarePen className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="outline"
-                            size="sm"
+                            size="icon"
                             onClick={() => setDeletingCategory(cat)}
-                            className="h-8 w-8 p-0 rounded-xl border-border text-destructive hover:bg-destructive/10 cursor-pointer"
-                            title="Delete Category"
+                            className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                            title="Delete"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -539,7 +576,7 @@ export default function Categories() {
 
       {/* Add / Edit Category Modal Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[550px] rounded-2xl">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto rounded-2xl">
           <form onSubmit={handleSaveCategory}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
@@ -658,6 +695,59 @@ export default function Categories() {
                   rows={3}
                   className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium focus:outline-none focus:ring-1 focus:ring-ring resize-y text-foreground"
                 />
+              </div>
+
+              {/* SEO SETTINGS SECTION */}
+              <div className="pt-3 border-t border-border space-y-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-foreground" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    SEO Search Meta Tags
+                  </span>
+                </div>
+
+                {/* Meta Title Tag */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Meta Title Tag
+                    </label>
+                    <span className="text-[10px] font-mono font-medium text-muted-foreground">
+                      {formMetaTitle.length}/60 chars
+                    </span>
+                  </div>
+                  <Input
+                    placeholder="e.g., Boys Collection - Kids Fashion & Outfits | Baha"
+                    value={formMetaTitle}
+                    onChange={(e) => {
+                      setFormMetaTitle(e.target.value)
+                      setIsMetaTitleModified(true)
+                    }}
+                    className="h-10 text-xs font-medium placeholder:text-muted-foreground/40 text-foreground bg-background"
+                  />
+                </div>
+
+                {/* Meta Description Tag */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Meta Description Tag
+                    </label>
+                    <span className="text-[10px] font-mono font-medium text-muted-foreground">
+                      {formMetaDescription.length}/160 chars
+                    </span>
+                  </div>
+                  <textarea
+                    placeholder="Write a concise meta description summarizing the category for Google search results..."
+                    value={formMetaDescription}
+                    onChange={(e) => {
+                      setFormMetaDescription(e.target.value)
+                      setIsMetaDescModified(true)
+                    }}
+                    rows={2}
+                    className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring resize-y placeholder:text-muted-foreground/40 text-foreground"
+                  />
+                </div>
               </div>
             </div>
 

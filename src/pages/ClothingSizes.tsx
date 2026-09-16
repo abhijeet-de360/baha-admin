@@ -3,7 +3,7 @@ import {
   Ruler,
   Plus,
   Search,
-  Edit2,
+  SquarePen,
   Trash2,
   CheckCircle2,
   AlertTriangle,
@@ -474,22 +474,24 @@ export default function ClothingSizes() {
                         {size.createdAt}
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Button
-                          variant="ghost"
-                          size="sm"
+                          variant="outline"
+                          size="icon"
                           onClick={() => handleOpenEditModal(size)}
-                          className="h-8 px-2.5 rounded-lg text-muted-foreground hover:text-foreground font-semibold cursor-pointer"
+                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          title="Edit"
                         >
-                          <Edit2 className="h-3.5 w-3.5 mr-1" /> Edit
+                          <SquarePen className="h-3.5 w-3.5" />
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="sm"
+                          variant="outline"
+                          size="icon"
                           onClick={() => setDeletingSize(size)}
-                          className="h-8 px-2.5 rounded-lg text-destructive hover:bg-destructive/10 font-semibold cursor-pointer"
+                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                          title="Delete"
                         >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -577,19 +579,19 @@ export default function ClothingSizes() {
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => handleOpenEditModal(size)}
-                              className="h-8 w-8 p-0 rounded-xl border-border cursor-pointer hover:bg-muted"
-                              title="Edit Size"
+                              title="Edit"
+                              className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                             >
-                              <Edit2 className="h-3.5 w-3.5" />
+                              <SquarePen className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => setDeletingSize(size)}
-                              className="h-8 w-8 p-0 rounded-xl border-border text-destructive hover:bg-destructive/10 cursor-pointer"
-                              title="Delete Size"
+                              title="Delete"
+                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
