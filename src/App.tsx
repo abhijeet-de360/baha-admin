@@ -13,11 +13,13 @@ import ProductDetail from '@/pages/ProductDetail'
 import AddEditProduct from '@/pages/AddEditProduct'
 import Orders from '@/pages/Orders'
 import OrderDetail from '@/pages/OrderDetail'
+import AbandonedCarts from '@/pages/AbandonedCarts'
 import Colors from '@/pages/Colors'
 import Testimonials from '@/pages/Testimonials'
 import Customers from '@/pages/Customers'
 import Banners from '@/pages/Banners'
 import Coupons from '@/pages/Coupons'
+import Notifications from '@/pages/Notifications'
 import { ThemeProvider } from '@/components/theme-provider'
 
 export default function App() {
@@ -28,10 +30,12 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/banners" element={<Banners />} />
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/abandoned-carts" element={<AbandonedCarts />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import {
   Package,
   Plus,
@@ -9,20 +10,12 @@ import {
   Eye,
   CheckCircle2,
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,12 +45,10 @@ export default function Products() {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All')
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc' | 'name'>('newest')
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  // Infinite Scroll State
+  const [visibleCount, setVisibleCount] = useState(10)
 
   // Modal States
-  const [viewingProduct, setViewingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -65,6 +56,11 @@ export default function Products() {
   useEffect(() => {
     setProducts(getStoredProducts())
   }, [])
+
+  // Reset scroll batch on filter change
+  useEffect(() => {
+    setVisibleCount(10)
+  }, [searchQuery, categoryFilter, sizeFilter, statusFilter, sortBy])
 
   const showNotification = (msg: string) => {
     setToastMessage(msg)
@@ -77,22 +73,22 @@ export default function Products() {
       const updated = products.filter((p) => p.id !== deletingProduct.id)
       setProducts(updated)
       saveStoredProducts(updated)
-      showNotification(`Product "${deletingProduct.title}" deleted successfully.`)
       setDeletingProduct(null)
+      showNotification(`Product "${deletingProduct.title}" has been deleted.`)
     }
   }
 
-  // Filter & Search Logic
+  // Filter & Sort Logic
   const filteredProducts = useMemo(() => {
     return products
-      .filter((prod) => {
+      .filter((p) => {
         const matchesSearch =
-          prod.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          prod.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          prod.category.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesCategory = categoryFilter === 'All' || prod.category === categoryFilter
-        const matchesSize = sizeFilter === 'All' || prod.sizes.includes(sizeFilter)
-        const matchesStatus = statusFilter === 'All' || prod.status === statusFilter
+          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.category.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter
+        const matchesSize = sizeFilter === 'All' || p.sizes.includes(sizeFilter)
+        const matchesStatus = statusFilter === 'All' || p.status === statusFilter
         return matchesSearch && matchesCategory && matchesSize && matchesStatus
       })
       .sort((a, b) => {
@@ -116,12 +112,16 @@ export default function Products() {
       })
   }, [products, searchQuery, categoryFilter, sizeFilter, statusFilter, sortBy])
 
-  // Pagination calculation
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return filteredProducts.slice(start, start + itemsPerPage)
-  }, [filteredProducts, currentPage])
+  // Displayed items slice for InfiniteScroll
+  const displayedProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount)
+  }, [filteredProducts, visibleCount])
+
+  const fetchMoreProducts = () => {
+    if (visibleCount < filteredProducts.length) {
+      setVisibleCount((prev) => prev + 10)
+    }
+  }
 
   // Badge helpers
   const getStockBadge = (status: Product['stockStatus']) => {
@@ -138,7 +138,7 @@ export default function Products() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 max-w-full mx-auto">
       {/* Notification Toast */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 flex items-center gap-2 bg-popover text-popover-foreground text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl border border-border animate-in fade-in slide-in-from-top-4">
@@ -148,7 +148,7 @@ export default function Products() {
       )}
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-6 rounded-3xl border border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-4 sm:p-5 rounded-2xl border border-border">
         <div>
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-primary text-primary-foreground shadow-md">
@@ -240,7 +240,6 @@ export default function Products() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value)
-                  setCurrentPage(1)
                 }}
                 className="pl-10 h-10 text-xs rounded-xl border-border bg-background shadow-2xs font-semibold"
               />
@@ -274,7 +273,6 @@ export default function Products() {
               value={categoryFilter}
               onChange={(e) => {
                 setCategoryFilter(e.target.value)
-                setCurrentPage(1)
               }}
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
@@ -291,7 +289,6 @@ export default function Products() {
               value={sizeFilter}
               onChange={(e) => {
                 setSizeFilter(e.target.value)
-                setCurrentPage(1)
               }}
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
@@ -308,7 +305,6 @@ export default function Products() {
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value as any)
-                setCurrentPage(1)
               }}
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
@@ -324,7 +320,6 @@ export default function Products() {
                   setCategoryFilter('All')
                   setSizeFilter('All')
                   setStatusFilter('All')
-                  setCurrentPage(1)
                 }}
                 className="text-[11px] font-bold text-destructive hover:underline ml-auto cursor-pointer"
               >
@@ -336,7 +331,7 @@ export default function Products() {
 
         {/* Product List: Mobile/Tablet Cards (< md) & Desktop Table (>= md) */}
         <CardContent className="p-0">
-          {paginatedProducts.length === 0 ? (
+          {displayedProducts.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <div className="p-4 rounded-full bg-muted inline-block text-muted-foreground">
                 <Package className="h-8 w-8" />
@@ -354,10 +349,24 @@ export default function Products() {
               </Button>
             </div>
           ) : (
-            <>
+            <InfiniteScroll
+              dataLength={displayedProducts.length}
+              next={fetchMoreProducts}
+              hasMore={visibleCount < filteredProducts.length}
+              loader={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Loading more products...
+                </div>
+              }
+              endMessage={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Showing all {filteredProducts.length} products
+                </div>
+              }
+            >
               {/* Mobile / Tablet Card View (Visible below 'md' breakpoint) */}
               <div className="block md:hidden p-4 space-y-4">
-                {paginatedProducts.map((product) => {
+                {displayedProducts.map((product) => {
                   const primaryImg = product.images[product.primaryImageIndex || 0] || product.images[0]
                   return (
                     <div
@@ -373,53 +382,44 @@ export default function Products() {
                             className="h-full w-full object-cover"
                           />
                         </div>
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-muted text-foreground text-[10px] font-semibold border border-border">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase">
                               {product.category}
                             </span>
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                                product.status === 'Active'
-                                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                                  : 'bg-muted text-muted-foreground border-border'
-                              }`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  product.status === 'Active' ? 'bg-emerald-500' : 'bg-muted-foreground'
-                                }`}
-                              />
-                              {product.status}
-                            </span>
+                            {product.featured && (
+                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 flex items-center gap-0.5">
+                                <Sparkles className="h-3 w-3" /> Featured
+                              </span>
+                            )}
                           </div>
-                          <h4 className="font-bold text-foreground line-clamp-1 text-sm">{product.title}</h4>
-                          <p className="text-[10px] text-muted-foreground font-mono truncate">SKU: {product.sku}</p>
+                          <h4 className="font-bold text-foreground text-sm leading-tight truncate">
+                            {product.title}
+                          </h4>
+                          <p className="text-[11px] font-mono text-muted-foreground">SKU: {product.sku}</p>
                         </div>
                       </div>
 
-                      {/* Middle Row: Price, Stock Badge & Sizes */}
-                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60 text-xs">
+                      {/* Middle Row: Price, Stock Badge */}
+                      <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
                         <div>
                           <span className="text-[10px] text-muted-foreground block font-medium">Price</span>
-                          <div className="font-bold text-foreground">
-                            {product.salePrice ? (
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-emerald-600 font-extrabold">${product.salePrice.toFixed(2)}</span>
-                                <span className="text-[10px] text-muted-foreground line-through font-normal">
-                                  ${product.regularPrice.toFixed(2)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span>${product.regularPrice.toFixed(2)}</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="font-extrabold text-foreground text-sm">
+                              ${(product.salePrice || product.regularPrice).toFixed(2)}
+                            </span>
+                            {product.salePrice && (
+                              <span className="line-through text-muted-foreground text-[10px]">
+                                ${product.regularPrice.toFixed(2)}
+                              </span>
                             )}
                           </div>
                         </div>
 
-                        <div>
-                          <span className="text-[10px] text-muted-foreground block font-medium">Stock</span>
+                        <div className="text-right">
+                          <span className="text-[10px] text-muted-foreground block font-medium">Status</span>
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getStockBadge(
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStockBadge(
                               product.stockStatus
                             )}`}
                           >
@@ -428,51 +428,31 @@ export default function Products() {
                         </div>
                       </div>
 
-                      {/* Sizes Row */}
-                      {product.sizes.length > 0 && (
-                        <div className="flex items-center gap-1.5 text-xs pt-1">
-                          <span className="text-[10px] text-muted-foreground font-medium shrink-0">Sizes:</span>
-                          <div className="flex flex-wrap gap-1">
-                            {product.sizes.map((sz) => (
-                              <span
-                                key={sz}
-                                className="px-1.5 py-0.5 rounded bg-muted font-extrabold text-[10px] border border-border"
-                              >
-                                {sz}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
                       {/* Bottom Row: Actions */}
                       <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-border/60">
                         <Button
                           variant="outline"
-                          size="icon"
+                          size="sm"
                           onClick={() => navigate(`/products/${product.id}`)}
-                          className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
-                          title="View"
+                          className="h-8 px-3 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                         >
-                          <Eye className="h-3.5 w-3.5" />
+                          <Eye className="h-3.5 w-3.5 mr-1" /> View
                         </Button>
                         <Button
                           variant="outline"
-                          size="icon"
+                          size="sm"
                           onClick={() => navigate(`/products/edit/${product.id}`)}
-                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                          title="Edit"
+                          className="h-8 px-3 text-xs text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                         >
-                          <SquarePen className="h-3.5 w-3.5" />
+                          <SquarePen className="h-3.5 w-3.5 mr-1" /> Edit
                         </Button>
                         <Button
                           variant="outline"
-                          size="icon"
+                          size="sm"
                           onClick={() => setDeletingProduct(product)}
-                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                          title="Delete"
+                          className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                         </Button>
                       </div>
                     </div>
@@ -480,61 +460,65 @@ export default function Products() {
                 })}
               </div>
 
-              {/* Desktop Table View (lg screens and above) */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              {/* Desktop Table View (Visible on 'md' breakpoint and larger) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-[11px] font-extrabold uppercase text-muted-foreground tracking-wider">
-                      <th className="py-3.5 px-6">Product Details</th>
-                      <th className="py-3.5 px-6">Category</th>
-                      <th className="py-3.5 px-6">Price</th>
-                      <th className="py-3.5 px-6">Stock Status</th>
-                      <th className="py-3.5 px-6">Visibility</th>
-                      <th className="py-3.5 px-6 text-right">Actions</th>
+                    <tr className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider">
+                      <th className="py-3 px-6 min-w-[240px]">Product Info</th>
+                      <th className="py-3 px-6">Category</th>
+                      <th className="py-3 px-6">Price</th>
+                      <th className="py-3 px-6">Stock Status</th>
+                      <th className="py-3 px-6">Visibility</th>
+                      <th className="py-3 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border text-xs">
-                    {paginatedProducts.map((product) => {
+                  <tbody className="divide-y divide-border">
+                    {displayedProducts.map((product) => {
+                      const primaryImg = product.images[product.primaryImageIndex || 0] || product.images[0]
                       return (
-                        <tr key={product.id} className="hover:bg-muted/20 transition-colors">
-                          {/* Product Details Column */}
-                          <td className="py-4 px-6 font-medium">
+                        <tr key={product.id} className="hover:bg-muted/30 transition-colors group">
+                          {/* Info Column */}
+                          <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
-                              <img
-                                src={product.thumbnailImage}
-                                alt={product.name}
-                                className="h-10 w-10 rounded-xl object-cover border border-border shrink-0"
-                              />
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-bold text-foreground text-xs truncate max-w-[200px]">
-                                  {product.name}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground font-mono">
-                                  SKU: {product.sku}
-                                </span>
+                              <div className="h-12 w-12 rounded-xl overflow-hidden border border-border bg-muted shrink-0 relative">
+                                <img
+                                  src={primaryImg}
+                                  alt={product.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <h4 className="font-bold text-foreground text-xs truncate max-w-[200px]">
+                                    {product.title}
+                                  </h4>
+                                  {product.featured && (
+                                    <span title="Featured">
+                                      <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] font-mono text-muted-foreground">SKU: {product.sku}</p>
                               </div>
                             </div>
                           </td>
 
                           {/* Category Column */}
-                          <td className="py-4 px-6 text-muted-foreground font-semibold text-xs">
-                            {product.category}
+                          <td className="py-4 px-6 font-medium text-foreground">
+                            <span className="inline-block px-2 py-0.5 rounded bg-muted text-[11px]">
+                              {product.category}
+                            </span>
                           </td>
 
                           {/* Price Column */}
                           <td className="py-4 px-6">
-                            <div className="flex flex-col">
-                              {product.salePrice ? (
-                                <>
-                                  <span className="font-extrabold text-emerald-600 text-xs font-mono">
-                                    ${product.salePrice.toFixed(2)}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground line-through font-mono">
-                                    ${product.regularPrice.toFixed(2)}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="font-extrabold text-foreground text-xs font-mono">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="font-bold text-foreground">
+                                ${(product.salePrice || product.regularPrice).toFixed(2)}
+                              </span>
+                              {product.salePrice && (
+                                <span className="line-through text-muted-foreground text-[10px]">
                                   ${product.regularPrice.toFixed(2)}
                                 </span>
                               )}
@@ -544,7 +528,7 @@ export default function Products() {
                           {/* Stock Status Column */}
                           <td className="py-4 px-6">
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStockBadge(
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStockBadge(
                                 product.stockStatus
                               )}`}
                             >
@@ -575,30 +559,27 @@ export default function Products() {
                             <div className="flex items-center justify-end gap-1.5">
                               <Button
                                 variant="outline"
-                                size="icon"
+                                size="sm"
                                 onClick={() => navigate(`/products/${product.id}`)}
-                                title="View"
-                                className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                                className="h-8 px-3 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                               >
-                                <Eye className="h-3.5 w-3.5" />
+                                <Eye className="h-3.5 w-3.5 mr-1" /> View
                               </Button>
                               <Button
                                 variant="outline"
-                                size="icon"
+                                size="sm"
                                 onClick={() => navigate(`/products/edit/${product.id}`)}
-                                title="Edit"
-                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                                className="h-8 px-3 text-xs text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                               >
-                                <SquarePen className="h-3.5 w-3.5" />
+                                <SquarePen className="h-3.5 w-3.5 mr-1" /> Edit
                               </Button>
                               <Button
                                 variant="outline"
-                                size="icon"
+                                size="sm"
                                 onClick={() => setDeletingProduct(product)}
-                                title="Delete"
-                                className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                               </Button>
                             </div>
                           </td>
@@ -608,41 +589,7 @@ export default function Products() {
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
-
-          {/* Pagination Footer */}
-          {filteredProducts.length > 0 && (
-            <div className="p-4 border-t border-border flex items-center justify-between text-xs">
-              <span>
-                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredProducts.length)} to{' '}
-                {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
-              </span>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer font-bold"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
-                </Button>
-                <span className="font-bold text-foreground px-2">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer font-bold"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
+            </InfiniteScroll>
           )}
         </CardContent>
       </Card>

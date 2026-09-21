@@ -20,7 +20,7 @@ export default function Layout() {
         />
 
         {/* Scrollable Content Viewport */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 w-full">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 lg:p-7 w-full space-y-5">
           <Outlet />
         </main>
       </div>

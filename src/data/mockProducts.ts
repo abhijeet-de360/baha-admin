@@ -17,6 +17,7 @@ export interface Product {
   primaryImageIndex: number
   status: 'Active' | 'Inactive'
   createdAt: string
+  featured?: boolean
   // Additional Specs
   color?: string
   colors?: string[]

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import slugify from 'slugify'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import {
-  FolderTree, Plus, Search, SquarePen, Trash2, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight,
+  FolderTree, Plus, Search, SquarePen, Trash2, CheckCircle2, AlertTriangle,
   Upload, Image as ImageIcon, X, Filter, Sparkles, Layers, Calendar, Tag, Link as LinkIcon, Globe
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,15 +32,16 @@ const generateSlug = (text: string): string => {
   })
 }
 
+// Initial Mock Dataset for Categories
 const INITIAL_CATEGORIES: Category[] = [
   {
-    id: 'cat-1',
-    name: 'Boys Collection',
-    slug: 'boys-collection',
-    image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=500&auto=format&fit=crop&q=80',
-    description: 'Trendy t-shirts, shirts, shorts and denim for young boys.',
+    id: 'CAT-1',
+    name: 'Kurtis & Tunics',
+    slug: 'kurtis-tunics',
+    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80',
+    description: 'Elegant, dailywear & designer ethnic kurtis and tunics.',
     status: 'Active',
-    createdAt: '2026-01-10',
+    createdAt: '2025-01-10',
     productCount: 42,
     metaTitle: 'Boys Collection - Trendy Kids Fashion & Clothing | Baha',
     metaDescription: 'Shop trendy t-shirts, shirts, shorts and denim for young boys at Baha. Premium quality kids apparel.',
@@ -135,9 +137,12 @@ export default function Categories() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All')
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  const [visibleCount, setVisibleCount] = useState(8)
+
+  // Reset batch count when filter/search changes
+  useEffect(() => {
+    setVisibleCount(8)
+  }, [searchQuery, statusFilter])
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -167,14 +172,22 @@ export default function Categories() {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
-  // Handle category name change and auto-generate slug & meta title
-  const handleNameChange = (val: string) => {
-    setFormName(val)
+  // Handle Category Name change (auto-generate slug & meta title)
+  const handleNameChange = (nameVal: string) => {
+    setFormName(nameVal)
     if (!isSlugManuallyModified) {
-      setFormSlug(generateSlug(val))
+      setFormSlug(generateSlug(nameVal))
     }
     if (!isMetaTitleModified) {
-      setFormMetaTitle(val ? `${val} | Baha Kids Fashion` : '')
+      setFormMetaTitle(nameVal ? `${nameVal} | Baha Kids Fashion` : '')
+    }
+  }
+
+  // Handle Description change (auto-generate meta desc if not modified)
+  const handleDescriptionChange = (descVal: string) => {
+    setFormDescription(descVal)
+    if (!isMetaDescModified) {
+      setFormMetaDescription(descVal)
     }
   }
 
@@ -295,20 +308,26 @@ export default function Categories() {
   }
 
   // Filtered Categories List
-  const filteredCategories = categories.filter((cat) => {
-    const matchesSearch =
-      cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cat.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'All' || cat.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredCategories = useMemo(() => {
+    return categories.filter((cat) => {
+      const matchesSearch =
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cat.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === 'All' || cat.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [categories, searchQuery, statusFilter])
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage) || 1
-  const paginatedCategories = filteredCategories.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  // Displayed items slice for InfiniteScroll
+  const displayedCategories = useMemo(() => {
+    return filteredCategories.slice(0, visibleCount)
+  }, [filteredCategories, visibleCount])
+
+  const fetchMoreCategories = () => {
+    if (visibleCount < filteredCategories.length) {
+      setVisibleCount((prev) => prev + 8)
+    }
+  }
 
   return (
     <div className="space-y-6 md:space-y-8 w-full font-sans pb-16">
@@ -392,7 +411,6 @@ export default function Categories() {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
-              setCurrentPage(1)
             }}
             className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
           />
@@ -407,7 +425,6 @@ export default function Categories() {
               key={st}
               onClick={() => {
                 setStatusFilter(st)
-                setCurrentPage(1)
               }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${statusFilter === st
                 ? 'bg-primary text-primary-foreground shadow-xs'
@@ -423,7 +440,7 @@ export default function Categories() {
       {/* Categories Content Area */}
       <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
         <CardContent className="p-0">
-          {paginatedCategories.length === 0 ? (
+          {displayedCategories.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <div className="p-3.5 rounded-full bg-muted text-muted-foreground w-fit mx-auto">
                 <FolderTree className="h-8 w-8" />
@@ -444,64 +461,81 @@ export default function Categories() {
               )}
             </div>
           ) : (
-            <>
+            <InfiniteScroll
+              dataLength={displayedCategories.length}
+              next={fetchMoreCategories}
+              hasMore={visibleCount < filteredCategories.length}
+              loader={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Loading more categories...
+                </div>
+              }
+              endMessage={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Showing all {filteredCategories.length} categories
+                </div>
+              }
+            >
               {/* Responsive Grid View for All Screens */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 p-5">
-                {paginatedCategories.map((cat) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-6">
+                {displayedCategories.map((cat) => (
                   <div
                     key={cat.id}
-                    className="group relative rounded-2xl border border-border bg-card overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col justify-between"
+                    className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between"
                   >
-                    {/* Category Image Header */}
-                    <div className="relative h-44 w-full overflow-hidden bg-muted">
+                    {/* Image Banner Container */}
+                    <div className="relative h-40 w-full bg-muted overflow-hidden">
                       <img
                         src={cat.image}
                         alt={cat.name}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
 
-                      {/* Status Badge Overlay */}
-                      <div className="absolute top-3 right-3">
+                      {/* Status Badge */}
+                      <div className="absolute top-3 left-3">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold backdrop-blur-md ${cat.status === 'Active'
-                            ? 'bg-primary/90 text-primary-foreground shadow-xs'
-                            : 'bg-muted/90 text-muted-foreground'
-                            }`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-md shadow-xs ${
+                            cat.status === 'Active'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-black/40 text-muted-foreground border-white/10'
+                          }`}
                         >
                           <span
-                            className={`h-1.5 w-1.5 rounded-full ${cat.status === 'Active' ? 'bg-primary-foreground' : 'bg-muted-foreground'
-                              }`}
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              cat.status === 'Active' ? 'bg-emerald-400' : 'bg-muted-foreground'
+                            }`}
                           />
                           {cat.status}
                         </span>
                       </div>
 
-                      {/* Category Title & Product Count Overlay */}
-                      <div className="absolute bottom-3 left-3 right-3 space-y-1 text-foreground">
-                        <h3 className="font-extrabold text-base leading-tight truncate">{cat.name}</h3>
-                        <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-                          <span className="font-mono text-[10px] bg-background/60 backdrop-blur-md text-foreground px-2 py-0.5 rounded font-semibold truncate max-w-[150px]">
-                            /{cat.slug}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Tag className="h-3 w-3 text-muted-foreground" /> {cat.productCount} Products
-                          </span>
-                        </div>
+                      {/* Products Count Badge */}
+                      <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-white border border-white/10">
+                        <Tag className="h-3 w-3 text-amber-400" />
+                        <span>{cat.productCount} Products</span>
                       </div>
                     </div>
 
-                    {/* Category Content & Actions Body */}
-                    <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                        {cat.description || 'No description provided for this category.'}
-                      </p>
+                    {/* Content Section */}
+                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-foreground text-base group-hover:text-primary transition-colors">
+                          {cat.name}
+                        </h4>
+                        <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+                          <LinkIcon className="h-3 w-3 shrink-0" /> /{cat.slug}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed pt-1">
+                          {cat.description}
+                        </p>
+                      </div>
 
-                      <div className="pt-3 border-t border-border flex items-center justify-between">
-                        <div className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {cat.createdAt}
-                        </div>
+                      {/* Footer Info & Actions */}
+                      <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> {cat.createdAt}
+                        </span>
 
                         <div className="flex items-center gap-1.5">
                           <Button
@@ -528,48 +562,7 @@ export default function Categories() {
                   </div>
                 ))}
               </div>
-            </>
-          )}
-
-          {/* Pagination Footer */}
-          {filteredCategories.length > 0 && (
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-border bg-muted/20 text-xs">
-              <p className="text-muted-foreground">
-                Showing{' '}
-                <span className="font-semibold text-foreground">
-                  {(currentPage - 1) * itemsPerPage + 1}
-                </span>{' '}
-                to{' '}
-                <span className="font-semibold text-foreground">
-                  {Math.min(currentPage * itemsPerPage, filteredCategories.length)}
-                </span>{' '}
-                of <span className="font-semibold text-foreground">{filteredCategories.length}</span> categories
-              </p>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
-                </Button>
-                <span className="text-xs font-semibold px-2">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
+            </InfiniteScroll>
           )}
         </CardContent>
       </Card>
@@ -691,7 +684,7 @@ export default function Categories() {
                 <textarea
                   placeholder="Short overview describing this category..."
                   value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
+                  onChange={(e) => handleDescriptionChange(e.target.value)}
                   rows={3}
                   className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium focus:outline-none focus:ring-1 focus:ring-ring resize-y text-foreground"
                 />

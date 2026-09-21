@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Package, Edit2, Trash2, CheckCircle2, AlertTriangle, Ruler, FileText } from 'lucide-react'
+import { ArrowLeft, Package, Edit2, Trash2, AlertTriangle, Ruler, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
  import {
@@ -27,7 +27,6 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = getStoredProducts()
@@ -86,14 +85,6 @@ export default function ProductDetail() {
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-[1400px] mx-auto pb-16">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 bg-popover text-popover-foreground text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl border border-border animate-in fade-in slide-in-from-top-4">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* Navigation Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

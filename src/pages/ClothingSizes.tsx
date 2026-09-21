@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import {
   Ruler,
   Plus,
@@ -7,8 +8,6 @@ import {
   Trash2,
   CheckCircle2,
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   Sparkles,
   Info,
   Calendar,
@@ -35,107 +34,120 @@ export interface ClothingSize {
   description: string
   status: 'Active' | 'Inactive'
   createdAt: string
+  productCount: number
 }
 
+// Initial Mock Dataset for Kids Clothing Sizes
 const INITIAL_SIZES: ClothingSize[] = [
   {
-    id: 'size-1',
+    id: 'SIZE-1',
     name: '0-3M',
     minAge: 0,
-    maxAge: 0.25,
-    description: 'Newborn to 3 months infants',
+    maxAge: 0,
+    description: 'Newborns and infants up to 3 months.',
     status: 'Active',
-    createdAt: '2026-01-15',
+    createdAt: '2025-01-10',
+    productCount: 18,
   },
   {
-    id: 'size-2',
+    id: 'SIZE-2',
     name: '3-6M',
-    minAge: 0.25,
-    maxAge: 0.5,
-    description: '3 to 6 months babies',
+    minAge: 0,
+    maxAge: 0,
+    description: 'Infants aged 3 to 6 months.',
     status: 'Active',
-    createdAt: '2026-01-15',
+    createdAt: '2025-01-10',
+    productCount: 22,
   },
   {
-    id: 'size-3',
+    id: 'SIZE-3',
     name: '6-12M',
     minAge: 0.5,
     maxAge: 1,
-    description: '6 to 12 months infants',
+    description: 'Babies aged 6 to 12 months.',
     status: 'Active',
-    createdAt: '2026-01-15',
+    createdAt: '2025-01-12',
+    productCount: 30,
   },
   {
-    id: 'size-4',
-    name: '12-18M',
+    id: 'SIZE-4',
+    name: '1-2Y',
     minAge: 1,
-    maxAge: 1.5,
-    description: '12 to 18 months toddlers',
+    maxAge: 2,
+    description: 'Toddlers aged 1 to 2 years.',
     status: 'Active',
-    createdAt: '2026-01-20',
+    createdAt: '2025-01-15',
+    productCount: 45,
   },
   {
-    id: 'size-5',
-    name: '2T',
+    id: 'SIZE-5',
+    name: '2-3Y',
     minAge: 2,
     maxAge: 3,
-    description: 'Toddlers aged 2 to 3 years',
+    description: 'Toddlers aged 2 to 3 years.',
     status: 'Active',
-    createdAt: '2026-01-20',
+    createdAt: '2025-01-15',
+    productCount: 50,
   },
   {
-    id: 'size-6',
-    name: '3T',
+    id: 'SIZE-6',
+    name: '3-4Y',
     minAge: 3,
     maxAge: 4,
-    description: 'Toddlers aged 3 to 4 years',
+    description: 'Young kids aged 3 to 4 years.',
     status: 'Active',
-    createdAt: '2026-02-01',
+    createdAt: '2025-01-18',
+    productCount: 40,
   },
   {
-    id: 'size-7',
-    name: '4T',
+    id: 'SIZE-7',
+    name: '4-5Y',
     minAge: 4,
     maxAge: 5,
-    description: 'Toddlers aged 4 to 5 years',
+    description: 'Kids aged 4 to 5 years.',
     status: 'Active',
-    createdAt: '2026-02-01',
+    createdAt: '2025-01-20',
+    productCount: 38,
   },
   {
-    id: 'size-8',
-    name: '5T',
+    id: 'SIZE-8',
+    name: '5-6Y',
     minAge: 5,
     maxAge: 6,
-    description: 'Kids aged 5 to 6 years',
+    description: 'Kids aged 5 to 6 years.',
     status: 'Active',
-    createdAt: '2026-02-10',
+    createdAt: '2025-01-22',
+    productCount: 35,
   },
   {
-    id: 'size-9',
-    name: '6T',
+    id: 'SIZE-9',
+    name: '6-7Y',
     minAge: 6,
     maxAge: 7,
-    description: 'Kids aged 6 to 7 years',
+    description: 'Kids aged 6 to 7 years.',
     status: 'Active',
-    createdAt: '2026-02-15',
+    createdAt: '2025-01-25',
+    productCount: 28,
   },
   {
-    id: 'size-10',
+    id: 'SIZE-10',
     name: '7-8Y',
     minAge: 7,
     maxAge: 8,
-    description: 'Junior kids aged 7 to 8 years',
+    description: 'Growing kids aged 7 to 8 years.',
     status: 'Active',
-    createdAt: '2026-02-20',
+    createdAt: '2025-01-28',
+    productCount: 25,
   },
   {
-    id: 'size-11',
+    id: 'SIZE-11',
     name: '9-10Y',
     minAge: 9,
     maxAge: 10,
     description: 'Older kids aged 9 to 10 years',
     status: 'Inactive',
     createdAt: '2026-03-01',
+    productCount: 0,
   },
 ]
 
@@ -144,9 +156,12 @@ export default function ClothingSizes() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All')
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  const [visibleCount, setVisibleCount] = useState(10)
+
+  // Reset batch count when filter/search changes
+  useEffect(() => {
+    setVisibleCount(10)
+  }, [searchQuery, statusFilter])
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -258,6 +273,7 @@ export default function ClothingSizes() {
         description: formDescription.trim(),
         status: selectedStatus,
         createdAt: todayStr,
+        productCount: 0,
       }
       setSizes((prev) => [newSize, ...prev])
       showNotification(`New size "${formName.trim()}" added successfully!`)
@@ -275,21 +291,27 @@ export default function ClothingSizes() {
   }
 
   // Filtered List
-  const filteredSizes = sizes.filter((size) => {
-    const matchesSearch =
-      size.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      size.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `${size.minAge}-${size.maxAge}`.includes(searchQuery)
-    const matchesStatus = statusFilter === 'All' || size.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredSizes = useMemo(() => {
+    return sizes.filter((size) => {
+      const matchesSearch =
+        size.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        size.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        `${size.minAge}-${size.maxAge}`.includes(searchQuery)
+      const matchesStatus = statusFilter === 'All' || size.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [sizes, searchQuery, statusFilter])
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredSizes.length / itemsPerPage) || 1
-  const paginatedSizes = filteredSizes.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  // Displayed sizes for InfiniteScroll
+  const displayedSizes = useMemo(() => {
+    return filteredSizes.slice(0, visibleCount)
+  }, [filteredSizes, visibleCount])
+
+  const fetchMoreSizes = () => {
+    if (visibleCount < filteredSizes.length) {
+      setVisibleCount((prev) => prev + 10)
+    }
+  }
 
   return (
     <div className="space-y-6 md:space-y-8 w-full font-sans pb-16">
@@ -373,7 +395,6 @@ export default function ClothingSizes() {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
-              setCurrentPage(1)
             }}
             className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
           />
@@ -388,7 +409,6 @@ export default function ClothingSizes() {
               key={st}
               onClick={() => {
                 setStatusFilter(st)
-                setCurrentPage(1)
               }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 statusFilter === st
@@ -405,7 +425,7 @@ export default function ClothingSizes() {
       {/* Main Sizes Table Card */}
       <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
         <CardContent className="p-0">
-          {paginatedSizes.length === 0 ? (
+          {displayedSizes.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <div className="p-3.5 rounded-full bg-muted text-muted-foreground w-fit mx-auto">
                 <Ruler className="h-8 w-8" />
@@ -414,7 +434,7 @@ export default function ClothingSizes() {
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 {searchQuery || statusFilter !== 'All'
                   ? 'Try adjusting your search criteria or status filter.'
-                  : 'Get started by creating your first clothing size for kids.'}
+                  : 'Get started by creating your first clothing size specification.'}
               </p>
               {!searchQuery && statusFilter === 'All' && (
                 <Button
@@ -426,10 +446,24 @@ export default function ClothingSizes() {
               )}
             </div>
           ) : (
-            <>
+            <InfiniteScroll
+              dataLength={displayedSizes.length}
+              next={fetchMoreSizes}
+              hasMore={visibleCount < filteredSizes.length}
+              loader={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Loading more sizes...
+                </div>
+              }
+              endMessage={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Showing all {filteredSizes.length} sizes
+                </div>
+              }
+            >
               {/* Mobile & Tablet Card Layout (< lg screens) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
-                {paginatedSizes.map((size) => (
+                {displayedSizes.map((size) => (
                   <div
                     key={size.id}
                     className="p-4 rounded-xl border border-border bg-card hover:border-border/80 transition-all shadow-xs flex flex-col justify-between space-y-3"
@@ -468,11 +502,10 @@ export default function ClothingSizes() {
                       </p>
                     )}
 
-                    <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
-                      <div className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {size.createdAt}
-                      </div>
+                    <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" /> {size.createdAt}
+                      </span>
 
                       <div className="flex items-center gap-1.5">
                         <Button
@@ -515,7 +548,7 @@ export default function ClothingSizes() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {paginatedSizes.map((size) => (
+                    {displayedSizes.map((size) => (
                       <tr
                         key={size.id}
                         className="hover:bg-muted/30 transition-colors group"
@@ -523,7 +556,6 @@ export default function ClothingSizes() {
                         {/* Size Name */}
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-2.5">
-             
                             <span className="font-bold text-muted-foreground">{size.name}</span>
                           </div>
                         </td>
@@ -568,10 +600,7 @@ export default function ClothingSizes() {
 
                         {/* Created Date */}
                         <td className="py-4 px-4 text-muted-foreground font-mono text-[11px]">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {size.createdAt}
-                          </div>
+                          {size.createdAt}
                         </td>
 
                         {/* Actions */}
@@ -602,41 +631,7 @@ export default function ClothingSizes() {
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
-
-          {/* Pagination Footer */}
-          {filteredSizes.length > 0 && (
-            <div className="p-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredSizes.length)} to{' '}
-                {Math.min(currentPage * itemsPerPage, filteredSizes.length)} of {filteredSizes.length} sizes
-              </span>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
-                </Button>
-                <span className="text-xs font-semibold px-2">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
+            </InfiniteScroll>
           )}
         </CardContent>
       </Card>

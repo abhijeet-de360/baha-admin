@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import {
   ShoppingBag,
   Search,
@@ -11,11 +12,8 @@ import {
   AlertCircle,
   DollarSign,
   Printer,
-  ChevronLeft,
-  ChevronRight,
   User,
   MapPin,
-  CreditCard,
   Calendar,
   SquarePen,
 } from 'lucide-react'
@@ -46,9 +44,8 @@ export default function Orders() {
   const [paymentFilter, setPaymentFilter] = useState<string>('All')
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest')
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  // Infinite Scroll State
+  const [visibleCount, setVisibleCount] = useState(10)
 
   // Modal States
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -65,6 +62,11 @@ export default function Orders() {
     setOrders(getStoredOrders())
   }, [])
 
+  // Reset scroll batch on filter change
+  useEffect(() => {
+    setVisibleCount(10)
+  }, [searchQuery, statusFilter, paymentFilter, sortBy])
+
   const showNotification = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3000)
@@ -80,6 +82,7 @@ export default function Orders() {
     const activeOrders = orders.filter(
       (o) => o.orderStatus === 'Pending' || o.orderStatus === 'Processing' || o.orderStatus === 'Shipped'
     ).length
+
     const deliveredOrders = orders.filter((o) => o.orderStatus === 'Delivered').length
 
     return { totalRevenue, totalOrders, activeOrders, deliveredOrders }
@@ -92,6 +95,7 @@ export default function Orders() {
         const query = searchQuery.toLowerCase().trim()
         const matchesSearch =
           !query ||
+          order.id.toLowerCase().includes(query) ||
           order.orderNumber.toLowerCase().includes(query) ||
           order.customer.name.toLowerCase().includes(query) ||
           order.customer.email.toLowerCase().includes(query) ||
@@ -111,22 +115,17 @@ export default function Orders() {
       })
   }, [orders, searchQuery, statusFilter, paymentFilter, sortBy])
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1
-  const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return filteredOrders.slice(start, start + itemsPerPage)
-  }, [filteredOrders, currentPage])
+  // Displayed items slice for InfiniteScroll
+  const displayedOrders = useMemo(() => {
+    return filteredOrders.slice(0, visibleCount)
+  }, [filteredOrders, visibleCount])
 
-  // Reset filter page if search changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, statusFilter, paymentFilter, sortBy])
-
-  // Navigate to Order Details Page
-  const handleOpenDetails = (order: Order) => {
-    navigate(`/orders/${order.id}`)
+  const fetchMoreOrders = () => {
+    if (visibleCount < filteredOrders.length) {
+      setVisibleCount((prev) => prev + 10)
+    }
   }
+
 
   // Open Status Modal
   const handleOpenStatusEdit = (order: Order) => {
@@ -238,7 +237,7 @@ export default function Orders() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 max-w-full mx-auto">
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 flex items-center gap-2 bg-popover text-popover-foreground text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl border border-border animate-in fade-in slide-in-from-top-4">
@@ -412,7 +411,7 @@ export default function Orders() {
       {/* Orders Table Container */}
       <Card className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden">
         <CardContent className="p-0">
-          {paginatedOrders.length === 0 ? (
+          {displayedOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center space-y-3">
               <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                 <ShoppingBag className="h-8 w-8" />
@@ -435,222 +434,175 @@ export default function Orders() {
               </Button>
             </div>
           ) : (
-            <>
+            <InfiniteScroll
+              dataLength={displayedOrders.length}
+              next={fetchMoreOrders}
+              hasMore={visibleCount < filteredOrders.length}
+              loader={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Loading more orders...
+                </div>
+              }
+              endMessage={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Showing all {filteredOrders.length} orders
+                </div>
+              }
+            >
               {/* Mobile & Tablet Card View (screens smaller than lg) */}
               <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                {paginatedOrders.map((order) => (
-                  <Card key={order.id} className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3">
-                    {/* Top Row: Order Number, Date & Status */}
-                    <div className="flex items-start justify-between gap-2 border-b border-border/50 pb-3">
+                {displayedOrders.map((order) => (
+                  <Card
+                    key={order.id}
+                    className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-border transition-all p-4 space-y-3"
+                  >
+                    {/* Header: Order ID & Date */}
+                    <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
                       <div>
-                        <span className="font-bold text-foreground font-mono text-sm block">{order.orderNumber}</span>
-                        <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Calendar className="h-3 w-3 shrink-0" />
+                        <span className="font-extrabold text-foreground text-sm font-mono">{order.orderNumber}</span>
+                        <p className="text-[11px] text-muted-foreground">
                           {new Date(order.createdAt).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
                           })}
-                        </span>
+                        </p>
                       </div>
-                      <div>{getStatusBadge(order.orderStatus)}</div>
+                      <div className="flex flex-col items-end gap-1">
+                        {getStatusBadge(order.orderStatus)}
+                        {getPaymentBadge(order.paymentStatus)}
+                      </div>
                     </div>
 
                     {/* Customer Info */}
-                    <div className="flex items-center gap-3 py-1">
-                      {order.customer.avatar ? (
-                        <img
-                          src={order.customer.avatar}
-                          alt={order.customer.name}
-                          className="h-10 w-10 rounded-full object-cover border border-border shrink-0"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0">
-                          {order.customer.name.charAt(0)}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-foreground text-xs truncate">{order.customer.name}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{order.customer.email}</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-foreground">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="truncate">{order.customer.name}</span>
                       </div>
-                    </div>
-
-                    {/* Items Preview & Amount */}
-                    <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-xl border border-border/40 text-xs">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <div className="flex -space-x-2 overflow-hidden shrink-0">
-                          {order.items.slice(0, 3).map((item) => (
-                            <img
-                              key={item.id}
-                              src={item.image}
-                              alt={item.productName}
-                              className="inline-block h-7 w-7 rounded-full ring-2 ring-background object-cover"
-                              title={`${item.productName} (${item.size})`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-[11px] font-medium text-muted-foreground truncate">
-                          {order.items.reduce((acc, i) => acc + i.quantity, 0)} item
-                          {order.items.reduce((acc, i) => acc + i.quantity, 0) > 1 ? 's' : ''}
-                        </span>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] uppercase text-muted-foreground font-semibold block">Total</span>
-                        <span className="font-extrabold text-foreground text-sm font-mono">
-                          ${order.totalAmount.toFixed(2)}
+                      <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">
+                          {order.shippingAddress.city}, {order.shippingAddress.state}
                         </span>
                       </div>
                     </div>
 
-                    {/* Payment Status & Quick Actions */}
-                    <div className="flex items-center justify-between pt-1 gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {getPaymentBadge(order.paymentStatus)}
-                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                          <CreditCard className="h-3 w-3" /> {order.paymentMethod}
+                    {/* Items Summary & Total Amount */}
+                    <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-xl text-xs">
+                      <div>
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Items</span>
+                        <span className="font-bold text-foreground">
+                          {order.items.reduce((sum, item) => sum + item.quantity, 0)} items
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenDetails(order)}
-                          className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
-                          title="View Order Details"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenStatusEdit(order)}
-                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                          title="Update Status"
-                        >
-                          <SquarePen className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenInvoice(order)}
-                          className="h-8 w-8 text-muted-foreground border-border hover:bg-muted cursor-pointer"
-                          title="Print Invoice"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                        </Button>
+                      <div className="text-right">
+                        <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Total</span>
+                        <span className="font-extrabold text-foreground text-sm">${order.totalAmount.toFixed(2)}</span>
                       </div>
+                    </div>
+
+                    {/* Action Bar */}
+                    <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                        className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                        title="View Details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleOpenStatusEdit(order)}
+                        className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                        title="Update Status"
+                      >
+                        <SquarePen className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleOpenInvoice(order)}
+                        className="h-8 w-8 text-muted-foreground border-border hover:bg-muted cursor-pointer"
+                        title="Print Invoice"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </Card>
                 ))}
               </div>
 
-              {/* Desktop Table View (lg screens and above) */}
+              {/* Desktop Table View (screens lg and larger) */}
               <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-[11px] font-extrabold uppercase text-muted-foreground tracking-wider">
-                      <th className="py-3.5 px-6">Order ID & Date</th>
-                      <th className="py-3.5 px-6">Customer</th>
-                      <th className="py-3.5 px-6">Items Purchased</th>
-                      <th className="py-3.5 px-6">Payment</th>
-                      <th className="py-3.5 px-6">Total Amount</th>
-                      <th className="py-3.5 px-6">Order Status</th>
-                      <th className="py-3.5 px-6 text-right">Actions</th>
+                    <tr className="border-b border-border bg-muted/40 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
+                      <th className="py-3 px-4">Order ID & Date</th>
+                      <th className="py-3 px-4">Customer</th>
+                      <th className="py-3 px-4">Items</th>
+                      <th className="py-3 px-4">Total</th>
+                      <th className="py-3 px-4">Payment</th>
+                      <th className="py-3 px-4">Fulfillment</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border text-xs">
-                    {paginatedOrders.map((order) => (
+                  <tbody className="divide-y divide-border/60">
+                    {displayedOrders.map((order) => (
                       <tr key={order.id} className="hover:bg-muted/20 transition-colors">
                         {/* Order ID & Date */}
-                        <td className="py-4 px-6 font-medium">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-foreground font-mono">{order.orderNumber}</span>
-                            <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <td className="py-4 px-4 font-mono font-bold text-foreground">
+                          <div>
+                            <span className="text-sm font-bold text-foreground">{order.orderNumber}</span>
+                            <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-sans font-normal mt-0.5">
                               <Calendar className="h-3 w-3" />
-                              {new Date(order.createdAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Customer Info */}
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-3">
-                            {order.customer.avatar ? (
-                              <img
-                                src={order.customer.avatar}
-                                alt={order.customer.name}
-                                className="h-9 w-9 rounded-full object-cover border border-border"
-                              />
-                            ) : (
-                              <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
-                                {order.customer.name.charAt(0)}
-                              </div>
-                            )}
-                            <div className="flex flex-col">
-                              <span className="font-bold text-foreground">{order.customer.name}</span>
-                              <span className="text-[11px] text-muted-foreground truncate max-w-[150px]">
-                                {order.customer.email}
+                              <span>
+                                {new Date(order.createdAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })}
                               </span>
                             </div>
                           </div>
                         </td>
 
-                        {/* Items Purchased Preview */}
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-2">
-                            <div className="flex -space-x-2 overflow-hidden">
-                              {order.items.slice(0, 3).map((item) => (
-                                <img
-                                  key={item.id}
-                                  src={item.image}
-                                  alt={item.productName}
-                                  className="inline-block h-8 w-8 rounded-full ring-2 ring-background object-cover"
-                                  title={`${item.productName} (${item.size})`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-xs font-semibold text-muted-foreground">
-                              {order.items.reduce((acc, i) => acc + i.quantity, 0)} item
-                              {order.items.reduce((acc, i) => acc + i.quantity, 0) > 1 ? 's' : ''}
-                            </span>
+                        {/* Customer Info */}
+                        <td className="py-4 px-4">
+                          <div className="font-bold text-foreground text-xs">{order.customer.name}</div>
+                          <div className="text-[11px] text-muted-foreground truncate max-w-[150px]">
+                            {order.customer.email}
                           </div>
                         </td>
 
-                        {/* Payment Status & Method */}
-                        <td className="py-4 px-6">
-                          <div className="flex flex-col gap-1 items-start">
-                            {getPaymentBadge(order.paymentStatus)}
-                            <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                              <CreditCard className="h-3 w-3" /> {order.paymentMethod}
-                            </span>
-                          </div>
+                        {/* Items */}
+                        <td className="py-4 px-4 text-xs font-medium text-foreground">
+                          <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} items</span>
                         </td>
 
                         {/* Total Amount */}
-                        <td className="py-4 px-6">
-                          <span className="font-extrabold text-foreground text-sm font-mono">
-                            ${order.totalAmount.toFixed(2)}
-                          </span>
+                        <td className="py-4 px-4 font-extrabold text-foreground text-sm">
+                          ${order.totalAmount.toFixed(2)}
                         </td>
 
-                        {/* Order Status */}
-                        <td className="py-4 px-6">{getStatusBadge(order.orderStatus)}</td>
+                        {/* Payment Status */}
+                        <td className="py-4 px-4">{getPaymentBadge(order.paymentStatus)}</td>
+
+                        {/* Fulfillment Status */}
+                        <td className="py-4 px-4">{getStatusBadge(order.orderStatus)}</td>
 
                         {/* Actions */}
-                        <td className="py-4 px-6 text-right">
+                        <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
                               variant="outline"
                               size="icon"
-                              onClick={() => handleOpenDetails(order)}
+                              onClick={() => navigate(`/orders/${order.id}`)}
                               className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
-                              title="View Order Details"
+                              title="View Details"
                             >
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
@@ -679,41 +631,7 @@ export default function Orders() {
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
-
-          {/* Pagination Footer */}
-          {filteredOrders.length > 0 && (
-            <div className="p-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredOrders.length)} to{' '}
-                {Math.min(currentPage * itemsPerPage, filteredOrders.length)} of {filteredOrders.length} orders
-              </span>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
-                </Button>
-                <span className="font-bold text-foreground px-2">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
+            </InfiniteScroll>
           )}
         </CardContent>
       </Card>

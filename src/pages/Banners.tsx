@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   Image,
   Plus,
@@ -7,8 +7,6 @@ import {
   SquarePen,
   Trash2,
   Eye,
-  ArrowUp,
-  ArrowDown,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -175,26 +173,6 @@ export default function Banners() {
     updateBannersState(updated)
   }
 
-  // Reorder slider up/down
-  const handleReorder = (banner: Banner, direction: 'up' | 'down') => {
-    const sorted = [...banners].sort((a, b) => a.order - b.order)
-    const currentIndex = sorted.findIndex((b) => b.id === banner.id)
-    if (currentIndex === -1) return
-
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-    if (targetIndex < 0 || targetIndex >= sorted.length) return
-
-    const targetBanner = sorted[targetIndex]
-
-    const updated = sorted.map((b) => {
-      if (b.id === banner.id) return { ...b, order: targetBanner.order }
-      if (b.id === targetBanner.id) return { ...b, order: banner.order }
-      return b
-    })
-
-    updateBannersState(updated)
-  }
-
   // Delete slider
   const handleDeleteConfirm = () => {
     if (!deletingBanner) return
@@ -235,7 +213,7 @@ export default function Banners() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="space-y-4 max-w-full mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -336,7 +314,7 @@ export default function Banners() {
       </Card>
 
       {/* Mobile Card View */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:hidden gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:hidden gap-4">
         {filteredBanners.length === 0 ? (
           <div className="col-span-full text-center py-12 text-muted-foreground bg-card border border-border rounded-lg p-6">
             No hero slides found matching your search.
@@ -413,7 +391,7 @@ export default function Banners() {
       </div>
 
       {/* Desktop Table View */}
-      <Card className="hidden lg:block bg-card border-border overflow-hidden">
+      <Card className="hidden xl:block bg-card border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead>

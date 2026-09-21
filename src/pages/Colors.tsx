@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import {
   Palette,
   Plus,
@@ -7,8 +8,6 @@ import {
   Trash2,
   CheckCircle2,
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   Copy,
   Check,
   Sparkles,
@@ -65,9 +64,13 @@ export default function Colors() {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All')
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table')
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  // Infinite Scroll State
+  const [visibleCount, setVisibleCount] = useState(12)
+
+  // Reset scroll batch on filter change
+  useEffect(() => {
+    setVisibleCount(12)
+  }, [searchQuery, statusFilter])
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -101,12 +104,16 @@ export default function Colors() {
     })
   }, [colors, searchQuery, statusFilter])
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredColors.length / itemsPerPage) || 1
-  const paginatedColors = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return filteredColors.slice(start, start + itemsPerPage)
-  }, [filteredColors, currentPage])
+  // Displayed items slice for InfiniteScroll
+  const displayedColors = useMemo(() => {
+    return filteredColors.slice(0, visibleCount)
+  }, [filteredColors, visibleCount])
+
+  const fetchMoreColors = () => {
+    if (visibleCount < filteredColors.length) {
+      setVisibleCount((prev) => prev + 12)
+    }
+  }
 
   // Hex Validation helper
   const isValidHex = (hex: string): boolean => {
@@ -330,7 +337,6 @@ export default function Colors() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value)
-                  setCurrentPage(1)
                 }}
                 className="pl-10 h-10 text-xs rounded-xl border-border bg-background shadow-2xs font-semibold"
               />
@@ -345,7 +351,6 @@ export default function Colors() {
                     key={st}
                     onClick={() => {
                       setStatusFilter(st)
-                      setCurrentPage(1)
                     }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       statusFilter === st
@@ -385,8 +390,7 @@ export default function Colors() {
 
         {/* Content Body */}
         <CardContent className="p-0">
-          {paginatedColors.length === 0 ? (
-            /* Empty State */
+          {displayedColors.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <div className="p-4 rounded-full bg-muted inline-block text-muted-foreground">
                 <Palette className="h-8 w-8" />
@@ -403,299 +407,270 @@ export default function Colors() {
                 <Plus className="h-3.5 w-3.5 mr-1" /> Add Color
               </Button>
             </div>
-          ) : viewMode === 'table' ? (
-            /* Table View Mode */
-            <>
-              {/* Mobile & Tablet Card View (screens smaller than lg) */}
-              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                {paginatedColors.map((color) => {
-                  const isCopied = copiedHex === color.hexCode
-                  return (
-                    <Card
-                      key={color.id}
-                      className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3"
-                    >
-                      {/* Swatch & Status Header */}
-                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0"
-                            style={{ backgroundColor: color.hexCode }}
-                          />
-                          <div>
-                            <h4 className="font-bold text-foreground text-sm">{color.name}</h4>
-                            <p className="text-[11px] text-muted-foreground">Added {color.createdAt}</p>
-                          </div>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border shrink-0 ${
-                            color.status === 'Active'
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                              : 'bg-muted text-muted-foreground border-border'
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              color.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
-                          />
-                          {color.status}
-                        </span>
-                      </div>
-
-                      {/* HEX Code & Copy Row */}
-                      <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-xl border border-border/40 text-xs">
-                        <span className="text-muted-foreground font-medium">HEX Code</span>
-                        <div className="inline-flex items-center gap-1.5 font-mono font-bold text-foreground">
-                          <Hash className="h-3 w-3 text-muted-foreground" />
-                          <span>{color.hexCode}</span>
-                          <button
-                            onClick={() => handleCopyHex(color.hexCode)}
-                            className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                            title="Copy HEX Code"
-                          >
-                            {isCopied ? (
-                              <Check className="h-3.5 w-3.5 text-emerald-500" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenEditModal(color)}
-                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                          title="Edit"
-                        >
-                          <SquarePen className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setDeletingColor(color)}
-                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </Card>
-                  )
-                })}
-              </div>
-
-              {/* Desktop Table View (screens lg and larger) */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border text-[11px] font-bold uppercase tracking-wider">
-                      <th className="py-3.5 px-6">Color Swatch</th>
-                      <th className="py-3.5 px-6">Color Name</th>
-                      <th className="py-3.5 px-6">HEX Code</th>
-                      <th className="py-3.5 px-6">Status</th>
-                      <th className="py-3.5 px-6">Created Date</th>
-                      <th className="py-3.5 px-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border text-xs">
-                    {paginatedColors.map((color) => {
+          ) : (
+            <InfiniteScroll
+              dataLength={displayedColors.length}
+              next={fetchMoreColors}
+              hasMore={visibleCount < filteredColors.length}
+              loader={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Loading more colors...
+                </div>
+              }
+              endMessage={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Showing all {filteredColors.length} colors
+                </div>
+              }
+            >
+              {viewMode === 'table' ? (
+                /* Table View Mode */
+                <>
+                  {/* Mobile & Tablet Card View (screens smaller than lg) */}
+                  <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                    {displayedColors.map((color) => {
                       const isCopied = copiedHex === color.hexCode
                       return (
-                        <tr key={color.id} className="hover:bg-muted/30 transition-colors group">
-                          {/* Swatch */}
-                          <td className="py-4 px-6">
+                        <Card
+                          key={color.id}
+                          className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3"
+                        >
+                          {/* Swatch & Status Header */}
+                          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
                             <div className="flex items-center gap-3">
                               <div
-                                className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
+                                className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0"
                                 style={{ backgroundColor: color.hexCode }}
                               />
+                              <div>
+                                <h4 className="font-bold text-foreground text-sm">{color.name}</h4>
+                                <p className="text-[11px] text-muted-foreground">Added {color.createdAt}</p>
+                              </div>
                             </div>
-                          </td>
-
-                          {/* Name */}
-                          <td className="py-4 px-6 font-bold text-foreground text-sm">
-                            {color.name}
-                          </td>
-
-                          {/* HEX Code */}
-                          <td className="py-4 px-6 font-mono font-semibold">
-                            <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
-                              <Hash className="h-3 w-3 text-muted-foreground" />
-                              <span>{color.hexCode}</span>
-                              <button
-                                onClick={() => handleCopyHex(color.hexCode)}
-                                className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                                title="Copy HEX Code"
-                              >
-                                {isCopied ? (
-                                  <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                                ) : (
-                                  <Copy className="h-3 w-3" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-4 px-6">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border shrink-0 ${
                                 color.status === 'Active'
                                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                   : 'bg-muted text-muted-foreground border-border'
                               }`}
                             >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  color.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
-                                }`}
-                              />
                               {color.status}
                             </span>
-                          </td>
+                          </div>
 
-                          {/* Created Date */}
-                          <td className="py-4 px-6 text-muted-foreground font-medium">
-                            {color.createdAt}
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-4 px-6 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => handleOpenEditModal(color)}
-                                title="Edit"
-                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          {/* HEX Code Bar */}
+                          <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-xl border border-border/40 text-xs">
+                            <span className="text-muted-foreground font-medium">HEX Code:</span>
+                            <div className="inline-flex items-center gap-1.5 font-mono font-bold text-foreground">
+                              <span>{color.hexCode}</span>
+                              <button
+                                onClick={() => handleCopyHex(color.hexCode)}
+                                className="cursor-pointer text-muted-foreground hover:text-foreground"
+                                title="Copy HEX"
                               >
-                                <SquarePen className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setDeletingColor(color)}
-                                title="Delete"
-                                className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                                {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                              </button>
                             </div>
-                          </td>
-                        </tr>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleOpenEditModal(color)}
+                              className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                              title="Edit"
+                            >
+                              <SquarePen className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setDeletingColor(color)}
+                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </Card>
                       )
                     })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            /* Grid View Cards */
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {paginatedColors.map((color) => {
-                const isCopied = copiedHex === color.hexCode
-                const contrastText = getContrastTextColor(color.hexCode)
-                return (
-                  <div
-                    key={color.id}
-                    className="p-4 rounded-2xl border border-border bg-card hover:border-slate-300 transition-all shadow-2xs space-y-3 group"
-                  >
-                    {/* Header color box preview */}
-                    <div
-                      className="h-24 rounded-xl shadow-inner relative flex flex-col justify-between p-3 transition-transform group-hover:scale-[1.02]"
-                      style={{ backgroundColor: color.hexCode }}
-                    >
-                      <span
-                        className="self-end text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs backdrop-blur-xs"
-                        style={{
-                          backgroundColor: color.status === 'Active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(15, 23, 42, 0.3)',
-                          color: contrastText,
-                          border: `1px solid ${contrastText}30`,
-                        }}
-                      >
-                        {color.status}
-                      </span>
-                    </div>
+                  </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-bold text-foreground text-sm">{color.name}</h4>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="font-mono text-xs font-semibold text-muted-foreground">{color.hexCode}</span>
-                          <button
-                            onClick={() => handleCopyHex(color.hexCode)}
-                            className="cursor-pointer text-muted-foreground hover:text-foreground"
-                            title="Copy HEX"
+                  {/* Desktop Table View (screens lg and larger) */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border text-[11px] font-bold uppercase tracking-wider">
+                          <th className="py-3.5 px-6">Color Swatch</th>
+                          <th className="py-3.5 px-6">Color Name</th>
+                          <th className="py-3.5 px-6">HEX Code</th>
+                          <th className="py-3.5 px-6">Status</th>
+                          <th className="py-3.5 px-6">Created Date</th>
+                          <th className="py-3.5 px-6 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border text-xs">
+                        {displayedColors.map((color) => {
+                          const isCopied = copiedHex === color.hexCode
+                          return (
+                            <tr key={color.id} className="hover:bg-muted/30 transition-colors group">
+                              {/* Swatch */}
+                              <td className="py-4 px-6">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
+                                    style={{ backgroundColor: color.hexCode }}
+                                  />
+                                </div>
+                              </td>
+
+                              {/* Name */}
+                              <td className="py-4 px-6 font-bold text-foreground text-sm">
+                                {color.name}
+                              </td>
+
+                              {/* HEX Code */}
+                              <td className="py-4 px-6 font-mono font-semibold">
+                                <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
+                                  <Hash className="h-3 w-3 text-muted-foreground" />
+                                  <span>{color.hexCode}</span>
+                                  <button
+                                    onClick={() => handleCopyHex(color.hexCode)}
+                                    className="cursor-pointer text-muted-foreground hover:text-foreground ml-1"
+                                    title="Copy HEX"
+                                  >
+                                    {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Status */}
+                              <td className="py-4 px-6">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                    color.status === 'Active'
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                      : 'bg-muted text-muted-foreground border-border'
+                                  }`}
+                                >
+                                  {color.status}
+                                </span>
+                              </td>
+
+                              {/* Created Date */}
+                              <td className="py-4 px-6 text-muted-foreground font-mono">
+                                {color.createdAt}
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-4 px-6 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => handleOpenEditModal(color)}
+                                    title="Edit"
+                                    className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                                  >
+                                    <SquarePen className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setDeletingColor(color)}
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                /* Color Swatch Visual Card Grid View Mode */
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 md:p-6">
+                  {displayedColors.map((color) => {
+                    const isCopied = copiedHex === color.hexCode
+                    const textColor = getContrastTextColor(color.hexCode)
+                    return (
+                      <div
+                        key={color.id}
+                        className="rounded-2xl border border-border/80 bg-card p-4 space-y-3.5 shadow-2xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between"
+                      >
+                        {/* Swatch Block */}
+                        <div
+                          className="h-28 w-full rounded-xl shadow-inner flex items-center justify-center relative p-3 border border-border/30 overflow-hidden"
+                          style={{ backgroundColor: color.hexCode }}
+                        >
+                          <span
+                            className="font-mono text-xs font-bold px-2.5 py-1 rounded-full shadow-xs border border-white/20 backdrop-blur-md"
+                            style={{ color: textColor, backgroundColor: color.hexCode === '#ffffff' ? '#00000020' : '#ffffff30' }}
                           >
-                            {isCopied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
-                          </button>
+                            {color.hexCode}
+                          </span>
+
+                          <span
+                            className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs border ${
+                              color.status === 'Active'
+                                ? 'bg-emerald-500 text-white border-emerald-400'
+                                : 'bg-muted/90 text-muted-foreground border-border'
+                            }`}
+                          >
+                            {color.status}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-bold text-foreground text-sm">{color.name}</h4>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="font-mono text-xs font-semibold text-muted-foreground">{color.hexCode}</span>
+                              <button
+                                onClick={() => handleCopyHex(color.hexCode)}
+                                className="cursor-pointer text-muted-foreground hover:text-foreground"
+                                title="Copy HEX"
+                              >
+                                {isCopied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleOpenEditModal(color)}
+                              className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                              title="Edit"
+                            >
+                              <SquarePen className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setDeletingColor(color)}
+                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenEditModal(color)}
-                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                          title="Edit"
-                        >
-                          <SquarePen className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setDeletingColor(color)}
-                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Pagination Footer */}
-          {filteredColors.length > 0 && (
-            <div className="p-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredColors.length)} to{' '}
-                {Math.min(currentPage * itemsPerPage, filteredColors.length)} of {filteredColors.length} colors
-              </span>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
-                </Button>
-                <span className="font-bold text-foreground px-2">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
+                    )
+                  })}
+                </div>
+              )}
+            </InfiniteScroll>
           )}
         </CardContent>
       </Card>

@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import {
   Users,
   DollarSign,
@@ -6,8 +7,6 @@ import {
   Eye,
   SquarePen,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Mail,
   Phone,
@@ -52,9 +51,13 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'highest_spent' | 'most_orders' | 'newest' | 'oldest' | 'name_asc'>('highest_spent')
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 7
+  // Infinite Scroll State
+  const [visibleCount, setVisibleCount] = useState(10)
+
+  // Reset batch count when filter/search changes
+  useEffect(() => {
+    setVisibleCount(10)
+  }, [searchQuery, sortBy])
 
   // Feedback Notification State
   const [notification, setNotification] = useState<string | null>(null)
@@ -229,12 +232,16 @@ export default function Customers() {
       })
   }, [customers, searchQuery, sortBy])
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1
-  const paginatedCustomers = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return filteredCustomers.slice(start, start + itemsPerPage)
-  }, [filteredCustomers, currentPage])
+  // Displayed items slice for InfiniteScroll
+  const displayedCustomers = useMemo(() => {
+    return filteredCustomers.slice(0, visibleCount)
+  }, [filteredCustomers, visibleCount])
+
+  const fetchMoreCustomers = () => {
+    if (visibleCount < filteredCustomers.length) {
+      setVisibleCount((prev) => prev + 10)
+    }
+  }
 
   // Related Orders for Selected Customer
   const customerOrders = useMemo(() => {
@@ -289,7 +296,7 @@ export default function Customers() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-[1600px] mx-auto">
+    <div className="space-y-4 max-w-full mx-auto">
       {/* Toast Notification Banner */}
       {notification && (
         <div className="fixed top-20 right-6 z-50 bg-primary text-primary-foreground px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-top-5 duration-300">
@@ -388,7 +395,6 @@ export default function Customers() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value)
-                  setCurrentPage(1)
                 }}
                 className="pl-9 bg-background border-border"
               />
@@ -429,7 +435,6 @@ export default function Customers() {
                   size="sm"
                   onClick={() => {
                     setSearchQuery('')
-                    setCurrentPage(1)
                   }}
                   className="text-xs text-muted-foreground hover:text-foreground h-9"
                 >
@@ -443,7 +448,7 @@ export default function Customers() {
 
       {/* Customers List Container */}
       <Card className="bg-card border-border shadow-xs overflow-hidden">
-        {paginatedCustomers.length === 0 ? (
+        {displayedCustomers.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
             <div className="flex flex-col items-center justify-center gap-2">
               <Users className="h-10 w-10 text-muted-foreground/40" />
@@ -454,10 +459,24 @@ export default function Customers() {
             </div>
           </div>
         ) : (
-          <>
+          <InfiniteScroll
+            dataLength={displayedCustomers.length}
+            next={fetchMoreCustomers}
+            hasMore={visibleCount < filteredCustomers.length}
+            loader={
+              <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                Loading more customers...
+              </div>
+            }
+            endMessage={
+              <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                Showing all {filteredCustomers.length} customers
+              </div>
+            }
+          >
             {/* Mobile & Tablet Card View (screens smaller than lg) */}
             <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-              {paginatedCustomers.map((customer) => (
+              {displayedCustomers.map((customer) => (
                 <Card
                   key={customer.id}
                   className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-indigo-500/40 transition-all p-4 space-y-3"
@@ -548,35 +567,30 @@ export default function Customers() {
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                    <th className="py-3.5 px-4">Customer</th>
-                    <th className="py-3.5 px-4">Contact Info</th>
-                    <th className="py-3.5 px-4">Location</th>
-                    <th className="py-3.5 px-4 text-center">Orders</th>
-                    <th className="py-3.5 px-4 text-right">Total Spent</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  <tr className="border-b border-border bg-muted/30 text-[11px] uppercase font-bold text-muted-foreground tracking-wider">
+                    <th className="py-3 px-4">Customer Details</th>
+                    <th className="py-3 px-4">Contact Info</th>
+                    <th className="py-3 px-4">Location</th>
+                    <th className="py-3 px-4 text-center">Orders</th>
+                    <th className="py-3 px-4 text-right">Total Spent</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {paginatedCustomers.map((customer) => (
-                    <tr
-                      key={customer.id}
-                      className="hover:bg-muted/30 transition-colors group"
-                    >
-                      {/* Customer Name & Avatar */}
+                  {displayedCustomers.map((customer) => (
+                    <tr key={customer.id} className="hover:bg-muted/20 transition-colors">
+                      {/* Customer Details */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border border-border shadow-xs">
+                          <Avatar className="h-10 w-10 border border-border shadow-xs shrink-0">
                             {customer.avatar && <AvatarImage src={customer.avatar} alt={customer.name} />}
                             <AvatarFallback className="bg-indigo-500/10 text-indigo-500 font-bold">
                               {getInitials(customer.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-semibold text-foreground group-hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-                              {customer.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground font-mono">{customer.id}</p>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-foreground text-sm truncate">{customer.name}</h4>
+                            <p className="text-[11px] text-muted-foreground font-mono">{customer.id}</p>
                           </div>
                         </div>
                       </td>
@@ -654,47 +668,8 @@ export default function Customers() {
                 </tbody>
               </table>
             </div>
-          </>
+          </InfiniteScroll>
         )}
-
-        {/* Pagination Footer */}
-        <div className="p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/20">
-          <p className="text-xs text-muted-foreground">
-            Showing{' '}
-            <span className="font-semibold text-foreground">
-              {filteredCustomers.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}
-            </span>{' '}
-            to{' '}
-            <span className="font-semibold text-foreground">
-              {Math.min(currentPage * itemsPerPage, filteredCustomers.length)}
-            </span>{' '}
-            of <span className="font-semibold text-foreground">{filteredCustomers.length}</span> customers
-          </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              className="gap-1 text-xs border-border"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" /> Previous
-            </Button>
-            <span className="text-xs text-muted-foreground px-2 font-medium">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              className="gap-1 text-xs border-border"
-            >
-              Next <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
       </Card>
 
       {/* Customer Detail Drawer / Modal */}

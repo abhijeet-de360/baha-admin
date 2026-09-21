@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Settings, ChevronLeft, ChevronRight, HelpCircle, BookOpen, Ruler, FolderTree, Package, Palette, MessageSquareQuote, ShoppingBag, Users, Sliders, Ticket } from 'lucide-react'
+import { LayoutDashboard, Settings, ChevronLeft, ChevronRight, HelpCircle, BookOpen, Ruler, FolderTree, Package, Palette, MessageSquareQuote, ShoppingBag, ShoppingCart, Users, Sliders, Ticket, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -46,12 +46,6 @@ const navItems: NavItem[] = [
     iconColor: 'text-indigo-500',
   },
   {
-    label: 'Coupons',
-    path: '/coupons',
-    icon: Ticket,
-    iconColor: 'text-violet-500',
-  },
-  {
     label: 'Clothing Sizes',
     path: '/sizes',
     icon: Ruler,
@@ -64,10 +58,34 @@ const navItems: NavItem[] = [
     iconColor: 'text-rose-500',
   },
   {
+    label: 'Hero Sliders',
+    path: '/banners',
+    icon: Sliders,
+    iconColor: 'text-amber-500',
+  },
+  {
+    label: 'Coupons',
+    path: '/coupons',
+    icon: Ticket,
+    iconColor: 'text-violet-500',
+  },
+  {
     label: 'Blogs',
     path: '/blogs',
     icon: BookOpen,
     iconColor: 'text-purple-500',
+  },
+  {
+    label: 'Notifications',
+    path: '/notifications',
+    icon: Bell,
+    iconColor: 'text-amber-500',
+  },
+  {
+    label: 'Abandoned Carts',
+    path: '/abandoned-carts',
+    icon: ShoppingCart,
+    iconColor: 'text-amber-500',
   },
   {
     label: 'Testimonials',
@@ -80,12 +98,6 @@ const navItems: NavItem[] = [
     path: '/faq',
     icon: HelpCircle,
     iconColor: 'text-emerald-500',
-  },
-  {
-    label: 'Hero Sliders',
-    path: '/banners',
-    icon: Sliders,
-    iconColor: 'text-amber-500',
   },
   {
     label: 'Settings',

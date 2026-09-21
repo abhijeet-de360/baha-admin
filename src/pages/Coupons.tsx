@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import {
   Ticket, Plus, Search, SquarePen, Trash2, Eye, Copy, Check, CheckCircle2,
-  AlertTriangle, ChevronLeft, ChevronRight, Filter, Sparkles, Percent,
+  AlertTriangle, Filter, Sparkles, Percent,
   Truck, Tag, Calendar, Layers, Clock, AlertCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -17,9 +18,13 @@ export default function Coupons() {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Scheduled' | 'Expired' | 'Draft'>('All')
   const [typeFilter, setTypeFilter] = useState<'All' | 'percentage' | 'fixed' | 'free_shipping'>('All')
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
+  // Infinite Scroll State
+  const [visibleCount, setVisibleCount] = useState(10)
+
+  // Reset scroll batch on filter change
+  useEffect(() => {
+    setVisibleCount(10)
+  }, [searchQuery, statusFilter, typeFilter])
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -163,21 +168,27 @@ export default function Coupons() {
   }
 
   // Filter Logic
-  const filteredCoupons = coupons.filter((coup) => {
-    const matchesSearch =
-      coup.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      coup.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'All' || coup.status === statusFilter
-    const matchesType = typeFilter === 'All' || coup.discountType === typeFilter
-    return matchesSearch && matchesStatus && matchesType
-  })
+  const filteredCoupons = useMemo(() => {
+    return coupons.filter((coup) => {
+      const matchesSearch =
+        coup.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        coup.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === 'All' || coup.status === statusFilter
+      const matchesType = typeFilter === 'All' || coup.discountType === typeFilter
+      return matchesSearch && matchesStatus && matchesType
+    })
+  }, [coupons, searchQuery, statusFilter, typeFilter])
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredCoupons.length / itemsPerPage) || 1
-  const paginatedCoupons = filteredCoupons.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  // Displayed items slice for InfiniteScroll
+  const displayedCoupons = useMemo(() => {
+    return filteredCoupons.slice(0, visibleCount)
+  }, [filteredCoupons, visibleCount])
+
+  const fetchMoreCoupons = () => {
+    if (visibleCount < filteredCoupons.length) {
+      setVisibleCount((prev) => prev + 10)
+    }
+  }
 
   // Status Badge Component
   const getStatusBadge = (status: Coupon['status']) => {
@@ -323,7 +334,6 @@ export default function Coupons() {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
-              setCurrentPage(1)
             }}
             className="pl-10 h-10 text-xs bg-background rounded-xl border-border text-foreground"
           />
@@ -337,7 +347,6 @@ export default function Coupons() {
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value as any)
-                setCurrentPage(1)
               }}
               className="bg-transparent text-xs font-semibold focus:outline-none text-foreground cursor-pointer"
             >
@@ -356,7 +365,6 @@ export default function Coupons() {
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value as any)
-                setCurrentPage(1)
               }}
               className="bg-transparent text-xs font-semibold focus:outline-none text-foreground cursor-pointer"
             >
@@ -372,7 +380,7 @@ export default function Coupons() {
       {/* Main Table / Mobile Card View */}
       <Card className="rounded-2xl border-border shadow-xs overflow-hidden bg-card">
         <CardContent className="p-0">
-          {filteredCoupons.length === 0 ? (
+          {displayedCoupons.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <div className="p-4 rounded-full bg-muted w-14 h-14 mx-auto flex items-center justify-center text-muted-foreground">
                 <Ticket className="h-6 w-6" />
@@ -383,7 +391,21 @@ export default function Coupons() {
               </p>
             </div>
           ) : (
-            <>
+            <InfiniteScroll
+              dataLength={displayedCoupons.length}
+              next={fetchMoreCoupons}
+              hasMore={visibleCount < filteredCoupons.length}
+              loader={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Loading more coupons...
+                </div>
+              }
+              endMessage={
+                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                  Showing all {filteredCoupons.length} coupons
+                </div>
+              }
+            >
               {/* Desktop Table View */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -399,73 +421,51 @@ export default function Coupons() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {paginatedCoupons.map((coup) => (
+                    {displayedCoupons.map((coup) => (
                       <tr key={coup.id} className="hover:bg-muted/20 transition-colors">
                         {/* Coupon Code Column */}
                         <td className="py-3.5 px-4 font-bold text-foreground">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono bg-muted border border-border px-2.5 py-1 rounded-lg text-xs tracking-wider text-foreground">
+                            <span className="font-mono text-sm bg-muted/60 px-2.5 py-1 rounded-lg border border-border flex items-center gap-1.5 font-bold tracking-wider">
                               {coup.code}
+                              <button
+                                onClick={() => handleCopyCode(coup.code)}
+                                className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                title="Copy Code"
+                              >
+                                {copiedCode === coup.code ? (
+                                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                ) : (
+                                  <Copy className="h-3.5 w-3.5" />
+                                )}
+                              </button>
                             </span>
-                            <button
-                              onClick={() => handleCopyCode(coup.code)}
-                              className="text-muted-foreground hover:text-emerald-500 p-1 rounded-md transition-colors cursor-pointer"
-                              title="Copy Code"
-                            >
-                              {copiedCode === coup.code ? (
-                                <Check className="h-3.5 w-3.5 text-emerald-500" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5" />
-                              )}
-                            </button>
                           </div>
                         </td>
 
                         {/* Discount Details */}
                         <td className="py-3.5 px-4">
-                          <div className="space-y-1">
-                            {getTypeBadge(coup.discountType, coup.discountValue)}
-                            <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[220px]">
-                              {coup.description}
-                            </p>
-                          </div>
+                          <p className="font-semibold text-foreground">
+                            {coup.discountType === 'percentage' && `${coup.discountValue}% OFF`}
+                            {coup.discountType === 'fixed' && `₹${coup.discountValue} OFF`}
+                            {coup.discountType === 'free_shipping' && `Free Shipping`}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground line-clamp-1">{coup.description}</p>
                         </td>
 
                         {/* Min Spend */}
-                        <td className="py-3.5 px-4 font-semibold text-foreground">
-                          ₹{coup.minSpend.toLocaleString()}
+                        <td className="py-3.5 px-4 text-muted-foreground font-semibold">
+                          ₹{coup.minSpend}
                         </td>
 
-                        {/* Redemptions Progress */}
-                        <td className="py-3.5 px-4">
-                          <div className="space-y-1 min-w-[120px]">
-                            <div className="flex justify-between text-[11px] font-semibold">
-                              <span>{coup.usedCount} used</span>
-                              <span className="text-muted-foreground">
-                                {coup.usageLimit !== null ? `/ ${coup.usageLimit}` : 'Unlimited'}
-                              </span>
-                            </div>
-                            {coup.usageLimit !== null && (
-                              <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-                                <div
-                                  className="bg-primary h-full rounded-full transition-all"
-                                  style={{
-                                    width: `${Math.min(100, (coup.usedCount / coup.usageLimit) * 100)}%`,
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
+                        {/* Redemptions */}
+                        <td className="py-3.5 px-4 text-muted-foreground font-semibold">
+                          {coup.usedCount} {coup.usageLimit ? `/ ${coup.usageLimit}` : 'times'}
                         </td>
 
-                        {/* Validity Dates */}
-                        <td className="py-3.5 px-4 text-muted-foreground font-medium">
-                          <div className="flex items-center gap-1.5 text-[11px]">
-                            <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span>
-                              {coup.startDate} to {coup.endDate}
-                            </span>
-                          </div>
+                        {/* Validity */}
+                        <td className="py-3.5 px-4 text-muted-foreground">
+                          {coup.startDate} – {coup.endDate}
                         </td>
 
                         {/* Status */}
@@ -477,7 +477,7 @@ export default function Coupons() {
                             <Button
                               variant="outline"
                               size="icon"
-                              onClick={() => setPreviewCoupon(coup as any)}
+                              onClick={() => setPreviewCoupon(coup)}
                               className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                               title="View Details"
                             >
@@ -509,121 +509,55 @@ export default function Coupons() {
                 </table>
               </div>
 
-              {/* Mobile Card View */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:hidden gap-4 p-4">
-                {paginatedCoupons.map((coup) => (
-                  <Card key={coup.id} className="rounded-2xl border border-border p-4 bg-card space-y-3">
+              {/* Mobile Card Grid View */}
+              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                {displayedCoupons.map((coup) => (
+                  <Card key={coup.id} className="p-4 space-y-3 border border-border/80 bg-card rounded-2xl shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs bg-muted border border-border px-2.5 py-1 rounded-lg text-foreground">
-                          {coup.code}
-                        </span>
-                        <button
-                          onClick={() => handleCopyCode(coup.code)}
-                          className="text-muted-foreground hover:text-emerald-500 p-1 rounded-md cursor-pointer"
-                        >
-                          {copiedCode === coup.code ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      </div>
+                      <span className="font-mono text-xs font-bold bg-muted px-2 py-1 rounded border border-border">
+                        {coup.code}
+                      </span>
                       {getStatusBadge(coup.status)}
                     </div>
-
-                    <div className="space-y-1">
-                      {getTypeBadge(coup.discountType, coup.discountValue)}
-                      <p className="text-xs text-muted-foreground pt-1">{coup.description}</p>
+                    <div>
+                      <h4 className="font-bold text-foreground text-xs">{coup.description}</h4>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border">
-                      <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold">Min Spend</span>
-                        <p className="font-semibold text-foreground">₹{coup.minSpend}</p>
+                    <div className="flex items-center justify-between text-[11px] pt-2 border-t border-border/60">
+                      <span className="text-muted-foreground">Used: {coup.usedCount} times</span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setPreviewCoupon(coup)}
+                          className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                          title="View"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleOpenEditModal(coup)}
+                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          title="Edit"
+                        >
+                          <SquarePen className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setDeletingCoupon(coup)}
+                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold">Redemptions</span>
-                        <p className="font-semibold text-foreground">
-                          {coup.usedCount} {coup.usageLimit ? `/ ${coup.usageLimit}` : '(Unlimited)'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-border flex items-center justify-end gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setPreviewCoupon(coup as any)}
-                        className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
-                        title="View"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleOpenEditModal(coup)}
-                        className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                        title="Edit"
-                      >
-                        <SquarePen className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setDeletingCoupon(coup)}
-                        className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
                     </div>
                   </Card>
                 ))}
               </div>
-            </>
-          )}
-
-          {/* Pagination Footer */}
-          {filteredCoupons.length > 0 && (
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-border bg-muted/20 text-xs">
-              <p className="text-muted-foreground">
-                Showing{' '}
-                <span className="font-semibold text-foreground">
-                  {(currentPage - 1) * itemsPerPage + 1}
-                </span>{' '}
-                to{' '}
-                <span className="font-semibold text-foreground">
-                  {Math.min(currentPage * itemsPerPage, filteredCoupons.length)}
-                </span>{' '}
-                of <span className="font-semibold text-foreground">{filteredCoupons.length}</span> coupons
-              </p>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
-                </Button>
-                <span className="text-xs font-semibold px-2">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="h-8 text-xs rounded-lg px-3 cursor-pointer"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
+            </InfiniteScroll>
           )}
         </CardContent>
       </Card>
