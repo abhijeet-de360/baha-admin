@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import {
   Users,
-  DollarSign,
   Search,
   Eye,
   SquarePen,
@@ -15,7 +14,8 @@ import {
   Sparkles,
   ShieldAlert,
   ArrowUpDown,
-  UserPlus
+  UserPlus,
+  IndianRupee
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,8 +45,11 @@ import {
   saveStoredCustomers,
 } from '@/data/mockCustomers'
 import { getStoredOrders } from '@/data/mockOrders'
+import { useNavigate } from 'react-router-dom'
 
 export default function Customers() {
+  const navigate = useNavigate();
+  
   const [customers, setCustomers] = useState<Customer[]>(getStoredCustomers)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'highest_spent' | 'most_orders' | 'newest' | 'oldest' | 'name_asc'>('highest_spent')
@@ -371,13 +374,13 @@ export default function Customers() {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Customer Revenue</p>
-              <h3 className="text-2xl font-bold mt-1 text-foreground">${stats.totalSpentSum.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
+              <h3 className="text-2xl font-bold mt-1 text-foreground">₹{stats.totalSpentSum.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Avg. ${stats.avgSpent.toFixed(2)} / customer
+                Avg. ₹{stats.avgSpent.toFixed(2)} / customer
               </p>
             </div>
             <div className="h-12 w-12 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0">
-              <DollarSign className="h-6 w-6" />
+              <IndianRupee className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
@@ -627,7 +630,7 @@ export default function Customers() {
                       {/* Total Spent */}
                       <td className="py-4 px-4 text-right">
                         <span className="font-bold text-foreground text-sm">
-                          ${customer.totalSpent.toFixed(2)}
+                          ₹{customer.totalSpent.toFixed(2)}
                         </span>
                       </td>
 
@@ -637,7 +640,7 @@ export default function Customers() {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => handleOpenDetailModal(customer)}
+                            onClick={() => navigate(`/customers/${customer.id}`)}
                             title="View Customer Profile"
                             className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                           >

@@ -199,7 +199,7 @@ export default function AbandonedCarts() {
                                 </div>
                               </div>
                               <span className="font-bold text-foreground text-xs shrink-0">
-                                ${(item.price * item.quantity).toFixed(2)}
+                                ₹{(item.price * item.quantity).toFixed(2)}
                               </span>
                             </div>
                           ))}
@@ -208,7 +208,7 @@ export default function AbandonedCarts() {
 
                       {/* Total Price */}
                       <td className="py-3 px-4 text-right align-top font-bold text-foreground text-xs">
-                        ${cart.totalAmount.toFixed(2)}
+                        ₹{cart.totalAmount.toFixed(2)}
                       </td>
 
                       {/* Abandoned Time */}

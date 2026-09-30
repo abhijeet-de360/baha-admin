@@ -201,7 +201,7 @@ export default function OrderDetail() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => navigate('/orders')}
+            onClick={() => navigate(-1)}
             className="h-10 w-10 rounded-2xl border-border hover:bg-muted cursor-pointer shrink-0"
             title="Back to Orders"
           >

@@ -21,6 +21,7 @@ import Banners from '@/pages/Banners'
 import Coupons from '@/pages/Coupons'
 import Notifications from '@/pages/Notifications'
 import { ThemeProvider } from '@/components/theme-provider'
+import CustomerDetails from './pages/CustomerDetails'
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/abandoned-carts" element={<AbandonedCarts />} />
           <Route path="/customers" element={<Customers />} />
+          <Route path='/customers/:id' element={<CustomerDetails />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/products/add" element={<AddEditProduct />} />

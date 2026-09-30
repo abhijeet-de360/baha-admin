@@ -26,6 +26,8 @@ export interface Product {
   ageGroup?: string
   careInstructions?: string
   tags?: string[]
+  newArrival?: boolean
+  bestSeller?: boolean
 }
 
 export const CATEGORIES_LIST = [
@@ -76,6 +78,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     ageGroup: '2-5 Years',
     careInstructions: 'Machine wash cold inside out, tumble dry low.',
     tags: ['summer', 'floral', 'dress', 'cotton'],
+    newArrival: true,
+    bestSeller: false,
+    featured: false,
   },
   {
     id: 'prod-2',
@@ -103,6 +108,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     ageGroup: '3-7 Years',
     careInstructions: 'Machine wash warm, dry in shade.',
     tags: ['dinosaur', 'boys set', 'shorts'],
+    newArrival: false,
+    bestSeller: true,
+    featured: false,
   },
   {
     id: 'prod-3',
@@ -129,6 +137,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     ageGroup: '2-8 Years',
     careInstructions: 'Dry clean only.',
     tags: ['festive', 'traditional', 'kurta', 'party'],
+    newArrival: false,
+    bestSeller: false,
+    featured: true,
   },
   {
     id: 'prod-4',
@@ -154,6 +165,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     ageGroup: '6M - 3 Years',
     careInstructions: 'Gentle cycle cold, lay flat to dry.',
     tags: ['winter', 'jacket', 'fleece', 'bear ears'],
+    newArrival: true,
+    bestSeller: false,
+    featured: false,
   },
 ]
 

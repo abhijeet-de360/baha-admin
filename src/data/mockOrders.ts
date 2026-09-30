@@ -14,6 +14,7 @@ export interface OrderItem {
 }
 
 export interface CustomerInfo {
+  id: string
   name: string
   email: string
   phone: string
@@ -53,6 +54,7 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-1001',
     orderNumber: 'ORD-2026-8801',
     customer: {
+      id: 'CUST-1001',
       name: 'Sarah Jenkins',
       email: 'sarah.j@example.com',
       phone: '+1 (555) 234-5678',
@@ -104,10 +106,11 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-1002',
     orderNumber: 'ORD-2026-8802',
     customer: {
-      name: 'Michael Miller',
-      email: 'm.miller@example.com',
-      phone: '+1 (555) 876-5432',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      id: 'CUST-1003',
+      name: 'Emily Watson',
+      email: 'emily.watson@example.com',
+      phone: '+1 (555) 345-6789',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     },
     shippingAddress: {
       street: '128 Pinecrest Drive',
@@ -144,10 +147,11 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-1003',
     orderNumber: 'ORD-2026-8803',
     customer: {
-      name: 'Emily Watson',
-      email: 'emily.watson@example.com',
-      phone: '+1 (555) 345-6789',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      id: 'CUST-1005',
+      name: 'Jessica Taylor',
+      email: 'jess.taylor@example.com',
+      phone: '+1 (555) 456-7890',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     },
     shippingAddress: {
       street: '450 Sunset Boulevard',
@@ -193,9 +197,11 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-1004',
     orderNumber: 'ORD-2026-8804',
     customer: {
-      name: 'David Kim',
-      email: 'dkim.tech@example.com',
-      phone: '+1 (555) 987-6543',
+      id: 'CUST-1006',
+      name: 'Amanda Foster',
+      email: 'amanda.f@example.com',
+      phone: '+1 (555) 678-1234',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     },
     shippingAddress: {
       street: '88 Market Street, Apt 4B',
@@ -232,10 +238,11 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-1005',
     orderNumber: 'ORD-2026-8805',
     customer: {
-      name: 'Jessica Taylor',
-      email: 'jess.taylor@example.com',
-      phone: '+1 (555) 456-7890',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      id: 'CUST-1007',
+      name: 'Robert Chen',
+      email: 'robert.chen@example.com',
+      phone: '+1 (555) 321-7654',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
     },
     shippingAddress: {
       street: '312 Maple Avenue',

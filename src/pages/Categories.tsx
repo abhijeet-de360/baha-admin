@@ -21,6 +21,7 @@ export interface Category {
   productCount: number
   metaTitle?: string
   metaDescription?: string
+  parentId?: string | null
 }
 
 // Generate slug using slugify package
@@ -45,6 +46,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 42,
     metaTitle: 'Boys Collection - Trendy Kids Fashion & Clothing | Baha',
     metaDescription: 'Shop trendy t-shirts, shirts, shorts and denim for young boys at Baha. Premium quality kids apparel.',
+    parentId: null,
   },
   {
     id: 'cat-2',
@@ -57,6 +59,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 58,
     metaTitle: 'Girls Collection - Dresses, Skirts & Tops | Baha',
     metaDescription: 'Explore adorable dresses, skirts, tops, and stylish matching sets for young girls at Baha.',
+    parentId: null,
   },
   {
     id: 'cat-3',
@@ -69,6 +72,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 35,
     metaTitle: 'Baby & Toddler Wear - Organic Cotton Onesies & Rompers | Baha',
     metaDescription: 'Ultra-soft organic cotton onesies, rompers, and bibs for infants and toddlers.',
+    parentId: null,
   },
   {
     id: 'cat-4',
@@ -81,6 +85,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 24,
     metaTitle: 'Newborn Clothing Essentials & Swaddles | Baha',
     metaDescription: 'Discover cozy newborn clothing sets, swaddles, mittens, and baby gift bundles.',
+    parentId: null,
   },
   {
     id: 'cat-5',
@@ -93,6 +98,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 30,
     metaTitle: 'Party & Festive Wear for Kids | Baha',
     metaDescription: 'Shop elegant tuxedos, party gowns, suits, and festive ethnic wear for boys and girls.',
+    parentId: null,
   },
   {
     id: 'cat-6',
@@ -105,6 +111,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 19,
     metaTitle: 'Kids Winter Wear - Jackets, Hoodies & Sweaters | Baha',
     metaDescription: 'Stay warm with cozy winter jackets, fleece hoodies, knitted sweaters, and beanies.',
+    parentId: null,
   },
   {
     id: 'cat-7',
@@ -117,6 +124,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 28,
     metaTitle: 'Summer Shorts & Tees for Kids | Baha',
     metaDescription: 'Lightweight, breathable cotton t-shirts and summer shorts for kids.',
+    parentId: null,
   },
   {
     id: 'cat-8',
@@ -129,6 +137,7 @@ const INITIAL_CATEGORIES: Category[] = [
     productCount: 15,
     metaTitle: 'Kids Sleepwear & Pajama Sets | Baha',
     metaDescription: 'Comfortable cotton night suits, pajamas, and sleep sacks for kids.',
+    parentId: null,
   },
 ]
 

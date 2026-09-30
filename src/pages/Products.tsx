@@ -406,11 +406,11 @@ export default function Products() {
                           <span className="text-[10px] text-muted-foreground block font-medium">Price</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="font-extrabold text-foreground text-sm">
-                              ${(product.salePrice || product.regularPrice).toFixed(2)}
+                              ₹{(product.salePrice || product.regularPrice).toFixed(2)}
                             </span>
                             {product.salePrice && (
                               <span className="line-through text-muted-foreground text-[10px]">
-                                ${product.regularPrice.toFixed(2)}
+                                ₹{product.regularPrice.toFixed(2)}
                               </span>
                             )}
                           </div>
@@ -515,11 +515,11 @@ export default function Products() {
                           <td className="py-4 px-6">
                             <div className="flex items-baseline gap-1.5">
                               <span className="font-bold text-foreground">
-                                ${(product.salePrice || product.regularPrice).toFixed(2)}
+                                ₹{(product.salePrice || product.regularPrice).toFixed(2)}
                               </span>
                               {product.salePrice && (
                                 <span className="line-through text-muted-foreground text-[10px]">
-                                  ${product.regularPrice.toFixed(2)}
+                                  ₹{product.regularPrice.toFixed(2)}
                                 </span>
                               )}
                             </div>

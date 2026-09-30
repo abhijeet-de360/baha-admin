@@ -18,6 +18,7 @@ import {
   getStoredProducts,
   saveStoredProducts,
 } from '@/data/mockProducts'
+import { Switch } from '@/components/ui/switch'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
@@ -26,7 +27,10 @@ export default function ProductDetail() {
   const [products, setProducts] = useState<Product[]>(getStoredProducts)
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [featured, setFeatured] = useState<Product['featured']>(product?.featured);
+  const [newArrival, setNewArrival] = useState<Product['newArrival']>(product?.newArrival);
+  const [bestSeller, setBestSeller] = useState<Product['bestSeller']>(product?.bestSeller);
 
   useEffect(() => {
     const stored = getStoredProducts()
@@ -294,6 +298,26 @@ export default function ProductDetail() {
                   <span className="font-semibold text-foreground">
                     {new Date(product.createdAt).toLocaleDateString()}
                   </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Featured & New Arrival & Best Seller switches */}
+          <Card className="rounded-3xl border border-border bg-card shadow-xs">
+            <CardContent className="p-6 space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="featured" className="text-sm font-bold text-foreground">Featured</label>
+                  <Switch id="featured" checked={featured} onCheckedChange={(checked) => setFeatured(checked)} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="newArrival" className="text-sm font-bold text-foreground">New Arrival</label>
+                  <Switch id="newArrival" checked={newArrival} onCheckedChange={(checked) => setNewArrival(checked)} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="bestSeller" className="text-sm font-bold text-foreground">Best Seller</label>
+                  <Switch id="bestSeller" checked={bestSeller} onCheckedChange={(checked) => setBestSeller(checked)} />
                 </div>
               </div>
             </CardContent>

@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  DollarSign,
   ShoppingBag,
   Clock,
   CheckCircle2,
@@ -16,7 +15,8 @@ import {
   Sparkles,
   ChevronRight,
   BadgeAlert,
-  CreditCard
+  CreditCard,
+  IndianRupee
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -157,12 +157,12 @@ export default function DashboardPage() {
                 Total Sales
               </span>
               <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <DollarSign className="h-5 w-5" />
+                <IndianRupee className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-3">
               <div className="text-2xl font-bold text-foreground">
-                ${metrics.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ₹{metrics.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-emerald-500" />
@@ -354,19 +354,19 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-muted/40 border border-border/60">
                 <span className="text-xs text-muted-foreground font-medium block">Average Order Value (AOV)</span>
-                <span className="text-xl font-bold text-foreground mt-1 block">${metrics.avgOrderValue}</span>
+                <span className="text-xl font-bold text-foreground mt-1 block">₹{metrics.avgOrderValue}</span>
                 <span className="text-[11px] text-muted-foreground">Per completed checkout</span>
               </div>
 
               <div className="p-4 rounded-xl bg-muted/40 border border-border/60">
                 <span className="text-xs text-muted-foreground font-medium block">Shipping Fees Collected</span>
-                <span className="text-xl font-bold text-foreground mt-1 block">${metrics.shippingCollected.toFixed(2)}</span>
+                <span className="text-xl font-bold text-foreground mt-1 block">₹{metrics.shippingCollected.toFixed(2)}</span>
                 <span className="text-[11px] text-muted-foreground">Total freight revenue</span>
               </div>
 
               <div className="p-4 rounded-xl bg-muted/40 border border-border/60">
                 <span className="text-xs text-muted-foreground font-medium block">Cancelled Orders Lost</span>
-                <span className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1 block">${metrics.cancelledTotal.toFixed(2)}</span>
+                <span className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1 block">₹{metrics.cancelledTotal.toFixed(2)}</span>
                 <span className="text-[11px] text-muted-foreground">Returned / cancelled sales</span>
               </div>
             </div>
@@ -513,7 +513,7 @@ export default function DashboardPage() {
                       {getOrderStatusBadge(order.orderStatus)}
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-foreground">
-                      ${order.totalAmount.toFixed(2)}
+                      ₹{order.totalAmount.toFixed(2)}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <Button
