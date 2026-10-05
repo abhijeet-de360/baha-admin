@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDispatch } from 'react-redux'
 
 import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -7,11 +8,19 @@ import { Input } from '@/components/ui/input'
 
 import kidsFashionBg from '@/assets/kids-fashion-bg.jpg'
 import bigLogo from '@/assets/big-logo.png'
+import { login } from '@/store/authSlice'
+import type { AppDispatch } from '@/store/store'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@baha.io')
-  const [password, setPassword] = useState('••••••••••••')
+  const dispatch = useDispatch<AppDispatch>()
+  const [email, setEmail] = useState('admin@baha.com')
+  const [password, setPassword] = useState('12345678')
   const [showPassword, setShowPassword] = useState(false)
+
+  const handleSignin = (e: React.FormEvent) => {
+    e.preventDefault()
+    dispatch(login(email, password))
+  }
 
   return (
     <div className="relative h-screen w-screen overflow-hidden flex items-center justify-center md:justify-end p-4 md:pr-24 lg:pr-52 font-sans bg-background">
@@ -39,7 +48,7 @@ export default function LoginPage() {
             </div>
           </CardHeader>
 
-          <form>
+          <form onSubmit={handleSignin}>
             <CardContent className="space-y-6 px-8 py-4">
               <div className="space-y-2.5">
                 <label className="text-xs font-bold text-muted-foreground tracking-wide uppercase">Email Address</label>

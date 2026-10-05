@@ -1,10 +1,31 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store/store';
+import { getMe } from '@/store/authSlice';
 
 export default function Layout() {
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Protected Route
+  const { user, loading } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    dispatch(getMe());
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    navigate("/login");
+    return null;
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background text-foreground flex flex-col md:flex-row font-sans transition-colors duration-300">

@@ -32,6 +32,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import bigLogo from '@/assets/big-logo.png'
+import { useSelector } from 'react-redux'
+import type { RootState } from '@/store/store'
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void
@@ -49,6 +51,9 @@ export default function Header({ onToggleMobileMenu, isMobileOpen }: HeaderProps
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' })
   const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+  // User
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const confirmLogout = () => {
     setShowLogoutAlert(false)
@@ -155,8 +160,8 @@ export default function Header({ onToggleMobileMenu, isMobileOpen }: HeaderProps
                       <AvatarFallback>AD</AvatarFallback>
                     </Avatar>
                     <div className="overflow-hidden">
-                      <p className="text-xs font-semibold truncate">Admin User</p>
-                      <p className="text-[10px] text-muted-foreground truncate">admin@baha.io</p>
+                      <p className="text-xs font-semibold truncate">{user?.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
                     </div>
                   </div>
                 </DropdownMenuLabel>
