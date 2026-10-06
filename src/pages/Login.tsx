@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 
 import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,13 +14,14 @@ import type { AppDispatch } from '@/store/store'
 
 export default function LoginPage() {
   const dispatch = useDispatch<AppDispatch>()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('admin@baha.com')
   const [password, setPassword] = useState('12345678')
   const [showPassword, setShowPassword] = useState(false)
 
   const handleSignin = (e: React.FormEvent) => {
     e.preventDefault()
-    dispatch(login(email, password))
+    dispatch(login(email, password, navigate));
   }
 
   return (

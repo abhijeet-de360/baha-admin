@@ -1,36 +1,42 @@
-import { useEffect, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
-import Sidebar from '@/components/layout/Sidebar'
-import Header from '@/components/layout/Header'
-import { useDispatch, useSelector } from 'react-redux';
-import type { RootState, AppDispatch } from '@/store/store';
-import { getMe } from '@/store/authSlice';
+import { useEffect, useState } from "react";
+import { Navigate, Outlet } from "react-router-dom";
+import Sidebar from "@/components/layout/Sidebar";
+import Header from "@/components/layout/Header";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState, AppDispatch } from "@/store/store";
+import { getMe } from "@/store/authSlice";
 
 export default function Layout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Protected Route
-  const { user, loading } = useSelector((state: RootState) => state.auth);
-  const navigate = useNavigate();
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth,
+  );
+  
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
-    dispatch(getMe());
-  }, []);
+    if (isAuthenticated) {
+      dispatch(getMe());
+    }
+  }, [isAuthenticated]);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  // if (loading) {
+  //   return <div>Loading...</div>;
+  // }
 
-  if (!user) {
-    navigate("/login");
-    return null;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background text-foreground flex flex-col md:flex-row font-sans transition-colors duration-300">
       {/* Left Sidebar */}
-      <Sidebar isMobileOpen={isMobileOpen} onCloseMobile={() => setIsMobileOpen(false)} />
+      <Sidebar
+        isMobileOpen={isMobileOpen}
+        onCloseMobile={() => setIsMobileOpen(false)}
+      />
 
       {/* Main Container with Sticky Header & Scrollable Body */}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
@@ -46,5 +52,5 @@ export default function Layout() {
         </main>
       </div>
     </div>
-  )
+  );
 }
