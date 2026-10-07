@@ -150,6 +150,7 @@ export default function ProfilePage() {
                     placeholder="name@company.com"
                     className="pl-9 h-10 text-xs font-semibold rounded-xl"
                     required
+                    disabled
                   />
                 </div>
               </div>

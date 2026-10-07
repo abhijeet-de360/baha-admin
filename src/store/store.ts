@@ -1,11 +1,15 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./authSlice";
 import colorReducer from "./colorSlice";
+import faqReducer from "./faqSlice";
+import sizeReducer from "./sizeSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    color: colorReducer
+    color: colorReducer,
+    faq: faqReducer,
+    size: sizeReducer
   },
 });
 

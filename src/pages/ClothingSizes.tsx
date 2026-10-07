@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import InfiniteScroll from 'react-infinite-scroll-component'
+import { useState, useEffect, useMemo } from "react";
+import InfiniteScroll from "react-infinite-scroll-component";
 import {
   Ruler,
   Plus,
@@ -13,10 +13,10 @@ import {
   Calendar,
   Layers,
   Filter,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,294 +24,183 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/store/store";
+import {
+  addSizeThunk,
+  deleteSizeThunk,
+  getAllSizeThunk,
+  updateSizeThunk,
+  type SIZE,
+} from "@/store/sizeSlice";
 
-export interface ClothingSize {
-  id: string
-  name: string
-  minAge: number
-  maxAge: number
-  description: string
-  status: 'Active' | 'Inactive'
-  createdAt: string
-  productCount: number
-}
-
-// Initial Mock Dataset for Kids Clothing Sizes
-const INITIAL_SIZES: ClothingSize[] = [
-  {
-    id: 'SIZE-1',
-    name: '0-3M',
-    minAge: 0,
-    maxAge: 0,
-    description: 'Newborns and infants up to 3 months.',
-    status: 'Active',
-    createdAt: '2025-01-10',
-    productCount: 18,
-  },
-  {
-    id: 'SIZE-2',
-    name: '3-6M',
-    minAge: 0,
-    maxAge: 0,
-    description: 'Infants aged 3 to 6 months.',
-    status: 'Active',
-    createdAt: '2025-01-10',
-    productCount: 22,
-  },
-  {
-    id: 'SIZE-3',
-    name: '6-12M',
-    minAge: 0.5,
-    maxAge: 1,
-    description: 'Babies aged 6 to 12 months.',
-    status: 'Active',
-    createdAt: '2025-01-12',
-    productCount: 30,
-  },
-  {
-    id: 'SIZE-4',
-    name: '1-2Y',
-    minAge: 1,
-    maxAge: 2,
-    description: 'Toddlers aged 1 to 2 years.',
-    status: 'Active',
-    createdAt: '2025-01-15',
-    productCount: 45,
-  },
-  {
-    id: 'SIZE-5',
-    name: '2-3Y',
-    minAge: 2,
-    maxAge: 3,
-    description: 'Toddlers aged 2 to 3 years.',
-    status: 'Active',
-    createdAt: '2025-01-15',
-    productCount: 50,
-  },
-  {
-    id: 'SIZE-6',
-    name: '3-4Y',
-    minAge: 3,
-    maxAge: 4,
-    description: 'Young kids aged 3 to 4 years.',
-    status: 'Active',
-    createdAt: '2025-01-18',
-    productCount: 40,
-  },
-  {
-    id: 'SIZE-7',
-    name: '4-5Y',
-    minAge: 4,
-    maxAge: 5,
-    description: 'Kids aged 4 to 5 years.',
-    status: 'Active',
-    createdAt: '2025-01-20',
-    productCount: 38,
-  },
-  {
-    id: 'SIZE-8',
-    name: '5-6Y',
-    minAge: 5,
-    maxAge: 6,
-    description: 'Kids aged 5 to 6 years.',
-    status: 'Active',
-    createdAt: '2025-01-22',
-    productCount: 35,
-  },
-  {
-    id: 'SIZE-9',
-    name: '6-7Y',
-    minAge: 6,
-    maxAge: 7,
-    description: 'Kids aged 6 to 7 years.',
-    status: 'Active',
-    createdAt: '2025-01-25',
-    productCount: 28,
-  },
-  {
-    id: 'SIZE-10',
-    name: '7-8Y',
-    minAge: 7,
-    maxAge: 8,
-    description: 'Growing kids aged 7 to 8 years.',
-    status: 'Active',
-    createdAt: '2025-01-28',
-    productCount: 25,
-  },
-  {
-    id: 'SIZE-11',
-    name: '9-10Y',
-    minAge: 9,
-    maxAge: 10,
-    description: 'Older kids aged 9 to 10 years',
-    status: 'Inactive',
-    createdAt: '2026-03-01',
-    productCount: 0,
-  },
-]
+const PAGE_LIMIT = 10;
 
 export default function ClothingSizes() {
-  const [sizes, setSizes] = useState<ClothingSize[]>(INITIAL_SIZES)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All')
+  const {
+    sizes = [],
+    total = 0,
+    status,
+  } = useSelector((state: RootState) => state.size);
+  const dispatch = useDispatch<AppDispatch>();
 
-  const [visibleCount, setVisibleCount] = useState(10)
-
-  // Reset batch count when filter/search changes
-  useEffect(() => {
-    setVisibleCount(10)
-  }, [searchQuery, statusFilter])
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingSize, setEditingSize] = useState<ClothingSize | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSize, setEditingSize] = useState<SIZE | null>(null);
 
   // Form State
-  const [formName, setFormName] = useState('')
-  const [formMinAge, setFormMinAge] = useState<string>('')
-  const [formMaxAge, setFormMaxAge] = useState<string>('')
-  const [formDescription, setFormDescription] = useState('')
-  const [formStatus, setFormStatus] = useState<'Active' | 'Inactive' | ''>('')
-  const [formError, setFormError] = useState<string | null>(null)
+  const [formName, setFormName] = useState("");
+  const [formMinAge, setFormMinAge] = useState<string>("");
+  const [formMaxAge, setFormMaxAge] = useState<string>("");
+  const [formAgeUnit, setFormAgeUnit] = useState<SIZE["ageUnit"]>("year");
+  const [formDescription, setFormDescription] = useState("");
+  const [formStatus, setFormStatus] = useState<SIZE["status"]>("active");
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Delete State
-  const [deletingSize, setDeletingSize] = useState<ClothingSize | null>(null)
-
-  // Toast Notification State
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-
-  const showNotification = (msg: string) => {
-    setToastMessage(msg)
-    setTimeout(() => setToastMessage(null), 3000)
-  }
+  const [deletingSize, setDeletingSize] = useState<SIZE | null>(null);
 
   // Open Modal for Add
   const handleOpenAddModal = () => {
-    setEditingSize(null)
-    setFormName('')
-    setFormMinAge('')
-    setFormMaxAge('')
-    setFormDescription('')
-    setFormStatus('')
-    setFormError(null)
-    setIsModalOpen(true)
-  }
+    setEditingSize(null);
+    setFormName("");
+    setFormMinAge("");
+    setFormMaxAge("");
+    setFormAgeUnit("year");
+    setFormDescription("");
+    setFormStatus("");
+    setFormError(null);
+    setIsModalOpen(true);
+  };
 
   // Open Modal for Edit
-  const handleOpenEditModal = (size: ClothingSize) => {
-    setEditingSize(size)
-    setFormName(size.name)
-    setFormMinAge(size.minAge.toString())
-    setFormMaxAge(size.maxAge.toString())
-    setFormDescription(size.description)
-    setFormStatus(size.status)
-    setFormError(null)
-    setIsModalOpen(true)
-  }
+  const handleOpenEditModal = (size: SIZE) => {
+    setEditingSize(size);
+    setFormName(size.name);
+    setFormMinAge(size.minAge.toString());
+    setFormMaxAge(size.maxAge.toString());
+    setFormAgeUnit(size.ageUnit || "year");
+    setFormDescription(size.description);
+    setFormStatus(size.status);
+    setFormError(null);
+    setIsModalOpen(true);
+  };
 
   // Format age for display
-  const formatAgeRange = (min: number, max: number) => {
-    if (min === max) return `${min} Year${min === 1 ? '' : 's'}`
-    return `${min} – ${max} Years`
-  }
+  const formatAgeRange = (min: number, max: number, ageUnit: string) => {
+    if (min === max) return `${min} ${ageUnit}`;
+    return `${min} – ${max} ${ageUnit}`;
+  };
 
   // Save (Create / Edit)
-  const handleSaveSize = (e: React.FormEvent) => {
-    e.preventDefault()
-    setFormError(null)
+  const handleSaveSize = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
 
     if (!formName.trim()) {
-      setFormError('Please enter a size name.')
-      return
+      setFormError("Please enter a size name.");
+      return;
     }
 
-    const minNum = parseFloat(formMinAge)
-    const maxNum = parseFloat(formMaxAge)
+    const minNum = parseFloat(formMinAge);
+    const maxNum = parseFloat(formMaxAge);
 
     if (isNaN(minNum) || minNum < 0) {
-      setFormError('Minimum age must be a valid number (0 or greater).')
-      return
+      setFormError("Minimum age must be a valid number (0 or greater).");
+      return;
     }
 
     if (isNaN(maxNum) || maxNum < 0) {
-      setFormError('Maximum age must be a valid number (0 or greater).')
-      return
+      setFormError("Maximum age must be a valid number (0 or greater).");
+      return;
     }
 
     if (maxNum < minNum) {
-      setFormError('Maximum age cannot be lower than Minimum age.')
-      return
+      setFormError("Maximum age cannot be lower than Minimum age.");
+      return;
     }
 
-    const selectedStatus: 'Active' | 'Inactive' = (formStatus as 'Active' | 'Inactive') || 'Active'
-
-    const todayStr = new Date().toISOString().split('T')[0]
+    const selectedStatus: SIZE["status"] = formStatus || "active";
 
     if (editingSize) {
-      setSizes((prev) =>
-        prev.map((item) =>
-          item.id === editingSize.id
-            ? {
-                ...item,
-                name: formName.trim(),
-                minAge: minNum,
-                maxAge: maxNum,
-                description: formDescription.trim(),
-                status: selectedStatus,
-              }
-            : item
-        )
-      )
-      showNotification(`Size "${formName.trim()}" updated successfully!`)
-    } else {
-      const newSize: ClothingSize = {
-        id: `size-${Date.now()}`,
-        name: formName.trim(),
-        minAge: minNum,
-        maxAge: maxNum,
-        description: formDescription.trim(),
-        status: selectedStatus,
-        createdAt: todayStr,
-        productCount: 0,
+      // Update
+      const res = await dispatch(
+        updateSizeThunk(editingSize._id, {
+          name: formName.trim(),
+          minAge: minNum,
+          maxAge: maxNum,
+          ageUnit: formAgeUnit,
+          description: formDescription.trim(),
+          status: selectedStatus,
+        }),
+      );
+      if (res) {
+        setIsModalOpen(false);
+        setEditingSize(null);
       }
-      setSizes((prev) => [newSize, ...prev])
-      showNotification(`New size "${formName.trim()}" added successfully!`)
+    } else {
+      // Add
+      const res = await dispatch(
+        addSizeThunk({
+          name: formName.trim(),
+          minAge: minNum,
+          maxAge: maxNum,
+          ageUnit: formAgeUnit,
+          description: formDescription.trim(),
+          status: selectedStatus,
+        }),
+      );
+      if (res) {
+        setIsModalOpen(false);
+      }
     }
-
-    setIsModalOpen(false)
-  }
+  };
 
   // Delete Handler
-  const handleConfirmDelete = () => {
-    if (!deletingSize) return
-    setSizes((prev) => prev.filter((item) => item.id !== deletingSize.id))
-    showNotification(`Size "${deletingSize.name}" deleted successfully!`)
-    setDeletingSize(null)
-  }
-
-  // Filtered List
-  const filteredSizes = useMemo(() => {
-    return sizes.filter((size) => {
-      const matchesSearch =
-        size.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        size.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        `${size.minAge}-${size.maxAge}`.includes(searchQuery)
-      const matchesStatus = statusFilter === 'All' || size.status === statusFilter
-      return matchesSearch && matchesStatus
-    })
-  }, [sizes, searchQuery, statusFilter])
-
-  // Displayed sizes for InfiniteScroll
-  const displayedSizes = useMemo(() => {
-    return filteredSizes.slice(0, visibleCount)
-  }, [filteredSizes, visibleCount])
-
-  const fetchMoreSizes = () => {
-    if (visibleCount < filteredSizes.length) {
-      setVisibleCount((prev) => prev + 10)
+  const handleConfirmDelete = async () => {
+    if (!deletingSize) return;
+    const res = await dispatch(deleteSizeThunk(deletingSize._id));
+    if (res) {
+      setDeletingSize(null);
     }
-  }
+  };
+
+  // Infinite Scroll fetch more
+  const fetchMoreSizes = () => {
+    if (status === "loading" || sizes.length >= total) return;
+    dispatch(
+      getAllSizeThunk({
+        query: searchQuery.trim(),
+        offset: sizes.length,
+        limit: PAGE_LIMIT,
+      }),
+    );
+  };
+
+  // Debounced initial fetch & search query
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      dispatch(
+        getAllSizeThunk(
+          {
+            query: searchQuery.trim(),
+            offset: 0,
+            limit: PAGE_LIMIT,
+          },
+          controller.signal,
+        ),
+      );
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery, dispatch]);
 
   return (
     <div className="space-y-6 md:space-y-8 w-full font-sans pb-16">
@@ -340,14 +229,6 @@ export default function ClothingSizes() {
         </Button>
       </div>
 
-      {/* Notification Toast */}
-      {toastMessage && (
-        <div className="flex items-center gap-2 bg-muted border border-border text-foreground text-xs px-4 py-3 rounded-xl shadow-xs animate-in fade-in">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-          <span className="font-semibold">{toastMessage}</span>
-        </div>
-      )}
-
       {/* Quick Stats Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-card p-4 rounded-2xl border border-border flex items-center gap-4 shadow-xs">
@@ -355,8 +236,10 @@ export default function ClothingSizes() {
             <Ruler className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total Sizes</p>
-            <p className="text-xl font-extrabold text-foreground">{sizes.length}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Total Sizes
+            </p>
+            <p className="text-xl font-extrabold text-foreground">{total}</p>
           </div>
         </div>
 
@@ -365,9 +248,11 @@ export default function ClothingSizes() {
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Active Sizes</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Active Sizes
+            </p>
             <p className="text-xl font-extrabold text-foreground">
-              {sizes.filter((s) => s.status === 'Active').length}
+              {sizes.filter((s) => s.status?.toLowerCase() === "active").length}
             </p>
           </div>
         </div>
@@ -377,9 +262,14 @@ export default function ClothingSizes() {
             <Layers className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Inactive Sizes</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Inactive Sizes
+            </p>
             <p className="text-xl font-extrabold text-foreground">
-              {sizes.filter((s) => s.status === 'Inactive').length}
+              {
+                sizes.filter((s) => s.status?.toLowerCase() === "inactive")
+                  .length
+              }
             </p>
           </div>
         </div>
@@ -394,49 +284,30 @@ export default function ClothingSizes() {
             placeholder="Search size name, age range, description..."
             value={searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value)
+              setSearchQuery(e.target.value);
             }}
             className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
           />
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[11px] font-bold uppercase tracking-wider mr-1 flex items-center gap-1 text-muted-foreground">
-            <Filter className="h-3 w-3" /> Status:
-          </span>
-          {(['All', 'Active', 'Inactive'] as const).map((st) => (
-            <button
-              key={st}
-              onClick={() => {
-                setStatusFilter(st)
-              }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                statusFilter === st
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
         </div>
       </div>
 
       {/* Main Sizes Table Card */}
       <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
         <CardContent className="p-0">
-          {displayedSizes.length === 0 ? (
+          {sizes.length === 0 && status !== "loading" ? (
             <div className="p-12 text-center space-y-3">
               <div className="p-3.5 rounded-full bg-muted text-muted-foreground w-fit mx-auto">
                 <Ruler className="h-8 w-8" />
               </div>
-              <h3 className="text-sm font-bold text-foreground">No sizes found</h3>
+              <h3 className="text-sm font-bold text-foreground">
+                No sizes found
+              </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                {searchQuery || statusFilter !== 'All'
-                  ? 'Try adjusting your search criteria or status filter.'
-                  : 'Get started by creating your first clothing size specification.'}
+                {searchQuery
+                  ? "Try adjusting your search criteria."
+                  : "Get started by creating your first clothing size specification."}
               </p>
-              {!searchQuery && statusFilter === 'All' && (
+              {!searchQuery && (
                 <Button
                   onClick={handleOpenAddModal}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-4 py-2 mt-2"
@@ -447,25 +318,28 @@ export default function ClothingSizes() {
             </div>
           ) : (
             <InfiniteScroll
-              dataLength={displayedSizes.length}
+              dataLength={sizes.length}
               next={fetchMoreSizes}
-              hasMore={visibleCount < filteredSizes.length}
+              hasMore={sizes.length < total}
               loader={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                <div className="py-6 text-center text-xs text-muted-foreground font-semibold flex items-center justify-center gap-2">
+                  <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   Loading more sizes...
                 </div>
               }
               endMessage={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                  Showing all {filteredSizes.length} sizes
-                </div>
+                sizes.length > 0 && (
+                  <div className="py-6 text-center text-xs text-muted-foreground font-medium border-t border-border/50">
+                    Showing all {sizes.length} of {total} sizes
+                  </div>
+                )
               }
             >
               {/* Mobile & Tablet Card Layout (< lg screens) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
-                {displayedSizes.map((size) => (
+                {sizes.map((size) => (
                   <div
-                    key={size.id}
+                    key={size._id}
                     className="p-4 rounded-xl border border-border bg-card hover:border-border/80 transition-all shadow-xs flex flex-col justify-between space-y-3"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -475,21 +349,27 @@ export default function ClothingSizes() {
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-foreground">
-                            {formatAgeRange(size.minAge, size.maxAge)}
+                            {formatAgeRange(
+                              size.minAge,
+                              size.maxAge,
+                              size.ageUnit,
+                            )}
                           </p>
                         </div>
                       </div>
 
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          size.status === 'Active'
-                            ? 'bg-emerald-500/15 text-emerald-600'
-                            : 'bg-muted text-muted-foreground'
+                          size.status === "Active"
+                            ? "bg-emerald-500/15 text-emerald-600"
+                            : "bg-muted text-muted-foreground"
                         }`}
                       >
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
-                            size.status === 'Active' ? 'bg-emerald-500' : 'bg-muted-foreground'
+                            size.status === "Active"
+                              ? "bg-emerald-500"
+                              : "bg-muted-foreground"
                           }`}
                         />
                         {size.status}
@@ -548,50 +428,58 @@ export default function ClothingSizes() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {displayedSizes.map((size) => (
+                    {sizes.map((size) => (
                       <tr
-                        key={size.id}
+                        key={size._id}
                         className="hover:bg-muted/30 transition-colors group"
                       >
                         {/* Size Name */}
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-2.5">
-                            <span className="font-bold text-muted-foreground">{size.name}</span>
+                            <span className="font-bold text-muted-foreground">
+                              {size.name}
+                            </span>
                           </div>
                         </td>
 
                         {/* Age Range */}
                         <td className="py-4 px-4 font-semibold text-muted-foreground">
-                          {formatAgeRange(size.minAge, size.maxAge)}
+                          {formatAgeRange(
+                            size.minAge,
+                            size.maxAge,
+                            size.ageUnit,
+                          )}
                         </td>
 
                         {/* Min Age */}
                         <td className="py-4 px-4 font-medium text-muted-foreground">
-                          {size.minAge} {size.minAge === 1 ? 'Year' : 'Years'}
+                          {size.minAge} {size.ageUnit}
                         </td>
 
                         {/* Max Age */}
                         <td className="py-4 px-4 font-medium text-muted-foreground">
-                          {size.maxAge} {size.maxAge === 1 ? 'Year' : 'Years'}
+                          {size.maxAge} {size.ageUnit}
                         </td>
 
                         {/* Description */}
                         <td className="py-4 px-4 text-muted-foreground max-w-xs truncate">
-                          {size.description || '—'}
+                          {size.description || "—"}
                         </td>
 
                         {/* Status */}
                         <td className="py-4 px-4">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              size.status === 'Active'
-                                ? 'bg-emerald-500/15 text-emerald-600'
-                                : 'bg-muted text-muted-foreground'
+                              size.status === "Active"
+                                ? "bg-emerald-500/15 text-emerald-600"
+                                : "bg-muted text-muted-foreground"
                             }`}
                           >
                             <span
                               className={`h-1.5 w-1.5 rounded-full ${
-                                size.status === 'Active' ? 'bg-emerald-500' : 'bg-muted-foreground'
+                                size.status === "Active"
+                                  ? "bg-emerald-500"
+                                  : "bg-muted-foreground"
                               }`}
                             />
                             {size.status}
@@ -643,7 +531,7 @@ export default function ClothingSizes() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base font-bold">
                 <Ruler className="h-5 w-5 text-foreground" />
-                {editingSize ? 'Edit Clothing Size' : 'Add New Clothing Size'}
+                {editingSize ? "Edit Clothing Size" : "Add New Clothing Size"}
               </DialogTitle>
               <DialogDescription className="text-xs">
                 Enter size name, minimum/maximum age ranges, and status.
@@ -673,11 +561,11 @@ export default function ClothingSizes() {
                 />
               </div>
 
-              {/* Age Range Inputs */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Age Range & Unit Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Minimum Age (Years) <span className="text-destructive">*</span>
+                    Min Age <span className="text-destructive">*</span>
                   </label>
                   <Input
                     type="number"
@@ -693,7 +581,7 @@ export default function ClothingSizes() {
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Maximum Age (Years) <span className="text-destructive">*</span>
+                    Max Age <span className="text-destructive">*</span>
                   </label>
                   <Input
                     type="number"
@@ -706,6 +594,23 @@ export default function ClothingSizes() {
                     required
                   />
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Age Unit <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={formAgeUnit}
+                    onChange={(e) =>
+                      setFormAgeUnit(e.target.value as SIZE["ageUnit"])
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
+                    required
+                  >
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                  </select>
+                </div>
               </div>
 
               {/* Status Select */}
@@ -715,22 +620,27 @@ export default function ClothingSizes() {
                 </label>
                 <select
                   value={formStatus}
-                  onChange={(e) => setFormStatus(e.target.value as 'Active' | 'Inactive' | '')}
+                  onChange={(e) =>
+                    setFormStatus(e.target.value as SIZE["status"])
+                  }
                   className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
                   required
                 >
                   <option value="" disabled>
                     Select Status
                   </option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
                 </select>
               </div>
 
               {/* Description */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                  Description <span className="text-muted-foreground font-normal">(Optional)</span>
+                  Description{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (Optional)
+                  </span>
                 </label>
                 <textarea
                   placeholder="Optional details e.g., Toddlers aged 3 to 4 years..."
@@ -744,7 +654,8 @@ export default function ClothingSizes() {
               <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2 text-[11px] text-muted-foreground">
                 <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p>
-                  Sizes will be automatically displayed to customers on product detail pages when filtering by age group.
+                  Sizes will be automatically displayed to customers on product
+                  detail pages when filtering by age group.
                 </p>
               </div>
             </div>
@@ -760,9 +671,14 @@ export default function ClothingSizes() {
               </Button>
               <Button
                 type="submit"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-5 cursor-pointer"
+                disabled={status === "loading"}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-5 cursor-pointer disabled:opacity-50"
               >
-                {editingSize ? 'Update Size' : 'Save Size'}
+                {status === "loading"
+                  ? "Saving..."
+                  : editingSize
+                    ? "Update Size"
+                    : "Save Size"}
               </Button>
             </DialogFooter>
           </form>
@@ -770,7 +686,10 @@ export default function ClothingSizes() {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={Boolean(deletingSize)} onOpenChange={(open) => !open && setDeletingSize(null)}>
+      <Dialog
+        open={Boolean(deletingSize)}
+        onOpenChange={(open) => !open && setDeletingSize(null)}
+      >
         {deletingSize && (
           <DialogContent className="sm:max-w-[420px] rounded-2xl">
             <DialogHeader>
@@ -778,18 +697,26 @@ export default function ClothingSizes() {
                 <AlertTriangle className="h-5 w-5" /> Delete Size
               </DialogTitle>
               <DialogDescription className="text-xs pt-1 text-muted-foreground">
-                Are you sure you want to delete this size? This action cannot be undone.
+                Are you sure you want to delete this size? This action cannot be
+                undone.
               </DialogDescription>
             </DialogHeader>
 
             <div className="p-4 rounded-xl bg-muted border border-border my-2 space-y-1">
               <p className="text-xs font-bold text-foreground">
-                Size Name: <span className="font-extrabold text-foreground">{deletingSize.name}</span>
+                Size Name:{" "}
+                <span className="font-extrabold text-foreground">
+                  {deletingSize.name}
+                </span>
               </p>
               <p className="text-xs text-muted-foreground">
-                Age Range:{' '}
+                Age Range:{" "}
                 <span className="font-semibold text-foreground">
-                  {formatAgeRange(deletingSize.minAge, deletingSize.maxAge)}
+                  {formatAgeRange(
+                    deletingSize.minAge,
+                    deletingSize.maxAge,
+                    deletingSize.ageUnit,
+                  )}
                 </span>
               </p>
             </div>
@@ -815,5 +742,5 @@ export default function ClothingSizes() {
         )}
       </Dialog>
     </div>
-  )
+  );
 }

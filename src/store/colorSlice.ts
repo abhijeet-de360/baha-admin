@@ -13,7 +13,7 @@ export interface ColorItem {
   name: string;
   slug: string;
   hexCode: string;
-  status: "active" | "inactive" | "deleted";
+  status: "active" | "inactive";
   createdAt?: string;
   updatedAt?: string;
 }

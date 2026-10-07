@@ -58,7 +58,7 @@ const PRESET_SWATCHES = [
   '#1E293B', '#64748B', '#F8FAFC', '#78350F'
 ]
 
-const PAGE_LIMIT = 5
+const PAGE_LIMIT = 10
 
 export default function Colors() {
   const dispatch = useDispatch<AppDispatch>()
@@ -199,6 +199,7 @@ export default function Colors() {
             name: formName.trim(),
             hexCode: cleanHex,
             status: formStatus,
+            slug: editingColor.slug
           },
           () => {
             setIsModalOpen(false)

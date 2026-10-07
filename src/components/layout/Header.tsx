@@ -84,7 +84,7 @@ export default function Header({
   };
 
   // User
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, error } = useSelector((state: RootState) => state.auth);
 
   const confirmLogout = () => {
     dispatch(logoutUser(navigate));
@@ -325,6 +325,11 @@ export default function Header({
                     Passwords do not match
                   </p>
                 )}
+                {error && (
+                  <p className="text-[11px] text-destructive font-medium animate-in fade-in">
+                    {error}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -340,7 +345,8 @@ export default function Header({
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" /> Updating...
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />{" "}
+                    Updating...
                   </>
                 ) : (
                   "Update Password"

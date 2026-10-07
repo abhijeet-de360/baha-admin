@@ -105,7 +105,7 @@ export function getMe() {
     try {
       await me()
         .then((res) => {
-          console.log("me res : ", res);
+          // console.log("me res : ", res);
           if (res.status === 200) {
             dispatch(setProfileData(res.data));
             dispatch(setStatus(STATUS.IDLE));
@@ -164,6 +164,7 @@ export function resetPasswordThunk(
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(setStatus(STATUS.LOADING));
+    dispatch(setError(null));
     try {
       const res = await resetPassword(data);
       if (res.status === 200) {
@@ -175,9 +176,9 @@ export function resetPasswordThunk(
       dispatch(setStatus(STATUS.IDLE));
       return false;
     } catch (err: any) {
-      console.log("reset password err : ", err);
+      // console.log("reset password err : ", err.response);
       // dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(err?.response.message || err));
+      dispatch(setError(err?.response?.data?.message || err));
       errorHandler(err?.response || err);
       return false;
     }
