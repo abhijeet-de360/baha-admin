@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 
 type TabType =
+  | 'contact'
   | 'social'
   | 'delivery'
   | 'privacy'
@@ -40,10 +41,16 @@ interface TabItem {
 
 const TAB_ITEMS: TabItem[] = [
   {
+    id: 'contact',
+    title: 'Contact Info',
+    desc: 'Store phone, email, and WhatsApp',
+    icon: Phone,
+  },
+  {
     id: 'social',
-    title: 'Social & Contact Info',
-    desc: 'Phone, email, and social profiles',
-    icon: Globe,
+    title: 'Social Info',
+    desc: 'Social media profile handles & links',
+    icon: Share2,
   },
   {
     id: 'delivery',
@@ -78,14 +85,18 @@ const TAB_ITEMS: TabItem[] = [
 ]
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<TabType>('social')
+  const [activeTab, setActiveTab] = useState<TabType>('contact')
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 
-  // Social & Contact State
+  // Contact State
   const [contactInfo, setContactInfo] = useState({
     email: 'info@baha.com',
     phone: '+919876543210',
     whatsapp: '+919876543210',
+  })
+
+  // Social Media State
+  const [socialInfo, setSocialInfo] = useState({
     instagram: 'https://instagram.com',
     facebook: 'https://facebook.com',
     twitter: 'https://x.com',
@@ -176,18 +187,17 @@ export default function Settings() {
 
         {/* Right Configuration View Viewport */}
         <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-          {/* TAB 1: SOCIAL & CONTACT INFO */}
-          {activeTab === 'social' && (
+          {/* TAB 1: CONTACT INFO */}
+          {activeTab === 'contact' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Contact Points Card */}
-                <Card className="rounded-2xl border-border shadow-sm">
-                  <CardHeader className="py-4 px-6 border-b border-border/60">
-                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <span>#</span> CONTACT POINTS
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-5">
+              <Card className="rounded-2xl border-border shadow-sm">
+                <CardHeader className="py-4 px-6 border-b border-border/60">
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5" /> CONTACT POINTS
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
                         STORE EMAIL ADDRESS
@@ -235,17 +245,40 @@ export default function Settings() {
                         />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Social Media Handles Card */}
-                <Card className="rounded-2xl border-border shadow-sm">
-                  <CardHeader className="py-4 px-6 border-b border-border/60">
-                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <Globe className="h-3.5 w-3.5" /> SOCIAL MEDIA HANDLES
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-4">
+              {/* Bottom Action Bar */}
+              <div className="flex items-center justify-between pt-2">
+                {saveSuccess ? (
+                  <span className="text-xs font-semibold text-emerald-600 animate-in fade-in">
+                    ✓ {saveSuccess}
+                  </span>
+                ) : (
+                  <span />
+                )}
+                <Button
+                  onClick={() => triggerSaveSuccess('Contact details saved successfully!')}
+                  className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
+                >
+                  <Save className="h-4 w-4" /> Save Contact Details
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: SOCIAL INFO */}
+          {activeTab === 'social' && (
+            <div className="space-y-6">
+              <Card className="rounded-2xl border-border shadow-sm">
+                <CardHeader className="py-4 px-6 border-b border-border/60">
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <Share2 className="h-3.5 w-3.5" /> SOCIAL MEDIA HANDLES
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
                         INSTAGRAM PAGE URL
@@ -253,9 +286,9 @@ export default function Settings() {
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={contactInfo.instagram}
+                          value={socialInfo.instagram}
                           onChange={(e) =>
-                            setContactInfo({ ...contactInfo, instagram: e.target.value })
+                            setSocialInfo({ ...socialInfo, instagram: e.target.value })
                           }
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
@@ -269,9 +302,9 @@ export default function Settings() {
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={contactInfo.facebook}
+                          value={socialInfo.facebook}
                           onChange={(e) =>
-                            setContactInfo({ ...contactInfo, facebook: e.target.value })
+                            setSocialInfo({ ...socialInfo, facebook: e.target.value })
                           }
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
@@ -285,9 +318,9 @@ export default function Settings() {
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={contactInfo.twitter}
+                          value={socialInfo.twitter}
                           onChange={(e) =>
-                            setContactInfo({ ...contactInfo, twitter: e.target.value })
+                            setSocialInfo({ ...socialInfo, twitter: e.target.value })
                           }
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
@@ -301,17 +334,17 @@ export default function Settings() {
                       <div className="relative">
                         <Tv className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={contactInfo.youtube}
+                          value={socialInfo.youtube}
                           onChange={(e) =>
-                            setContactInfo({ ...contactInfo, youtube: e.target.value })
+                            setSocialInfo({ ...socialInfo, youtube: e.target.value })
                           }
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Bottom Action Bar */}
               <div className="flex items-center justify-between pt-2">
@@ -323,10 +356,10 @@ export default function Settings() {
                   <span />
                 )}
                 <Button
-                  onClick={() => triggerSaveSuccess('Contact & Social details saved successfully!')}
+                  onClick={() => triggerSaveSuccess('Social media details saved successfully!')}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  <Save className="h-4 w-4" /> Save Contact & Social Details
+                  <Save className="h-4 w-4" /> Save Social Details
                 </Button>
               </div>
             </div>
