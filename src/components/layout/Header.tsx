@@ -46,7 +46,7 @@ import {
 import bigLogo from "@/assets/big-logo.png";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
-import { logoutUser, resetPasswordThunk } from "@/store/authSlice";
+import { logoutUser, resetPassword } from "@/store/authSlice";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +84,7 @@ export default function Header({
   };
 
   // User
-  const { user, error } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const confirmLogout = () => {
     dispatch(logoutUser(navigate));
@@ -103,7 +103,7 @@ export default function Header({
 
     setIsSubmitting(true);
     const success = await dispatch(
-      resetPasswordThunk({
+      resetPassword({
         oldPassword: passwords.current,
         newPassword: passwords.new,
       }),
@@ -323,11 +323,6 @@ export default function Header({
                 {passwordMismatch && (
                   <p className="text-[11px] text-destructive font-medium animate-in fade-in">
                     Passwords do not match
-                  </p>
-                )}
-                {error && (
-                  <p className="text-[11px] text-destructive font-medium animate-in fade-in">
-                    {error}
                   </p>
                 )}
               </div>

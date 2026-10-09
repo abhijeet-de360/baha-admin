@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import {
   Ruler,
@@ -6,13 +6,11 @@ import {
   Search,
   SquarePen,
   Trash2,
-  CheckCircle2,
   AlertTriangle,
   Sparkles,
   Info,
   Calendar,
   Layers,
-  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,24 +26,36 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
 import {
-  addSizeThunk,
-  deleteSizeThunk,
-  getAllSizeThunk,
-  updateSizeThunk,
+  addSize,
+  deleteSize,
+  getAllSize,
+  toogleAddModal,
+  updateSize,
   type SIZE,
 } from "@/store/sizeSlice";
-
-const PAGE_LIMIT = 10;
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ClothingSizes() {
   const {
+    isAddModalOpen,
     sizes = [],
     total = 0,
     status,
   } = useSelector((state: RootState) => state.size);
   const dispatch = useDispatch<AppDispatch>();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  // Ref
+  const searchTimeoutRef = useRef<any>(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,6 +70,15 @@ export default function ClothingSizes() {
   const [formStatus, setFormStatus] = useState<SIZE["status"]>("active");
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [formVar, setFormVar] = useState({
+    limit: 10,
+    offset: 0,
+    keyword: "",
+    status: "",
+  });
+
+  const [hasMore, setHasMore] = useState(true);
+
   // Delete State
   const [deletingSize, setDeletingSize] = useState<SIZE | null>(null);
 
@@ -73,7 +92,7 @@ export default function ClothingSizes() {
     setFormDescription("");
     setFormStatus("");
     setFormError(null);
-    setIsModalOpen(true);
+    dispatch(toogleAddModal(true));
   };
 
   // Open Modal for Edit
@@ -86,7 +105,7 @@ export default function ClothingSizes() {
     setFormDescription(size.description);
     setFormStatus(size.status);
     setFormError(null);
-    setIsModalOpen(true);
+    dispatch(toogleAddModal(true));
   };
 
   // Format age for display
@@ -128,7 +147,7 @@ export default function ClothingSizes() {
     if (editingSize) {
       // Update
       const res = await dispatch(
-        updateSizeThunk(editingSize._id, {
+        updateSize(editingSize._id, {
           name: formName.trim(),
           minAge: minNum,
           maxAge: maxNum,
@@ -138,13 +157,12 @@ export default function ClothingSizes() {
         }),
       );
       if (res) {
-        setIsModalOpen(false);
         setEditingSize(null);
       }
     } else {
       // Add
-      const res = await dispatch(
-        addSizeThunk({
+      await dispatch(
+        addSize({
           name: formName.trim(),
           minAge: minNum,
           maxAge: maxNum,
@@ -153,54 +171,77 @@ export default function ClothingSizes() {
           status: selectedStatus,
         }),
       );
-      if (res) {
-        setIsModalOpen(false);
-      }
     }
   };
 
   // Delete Handler
   const handleConfirmDelete = async () => {
     if (!deletingSize) return;
-    const res = await dispatch(deleteSizeThunk(deletingSize._id));
+    const res = await dispatch(deleteSize(deletingSize._id));
     if (res) {
       setDeletingSize(null);
     }
   };
 
   // Infinite Scroll fetch more
-  const fetchMoreSizes = () => {
+  const fetchMoreSizes = async () => {
     if (status === "loading" || sizes.length >= total) return;
-    dispatch(
-      getAllSizeThunk({
-        query: searchQuery.trim(),
-        offset: sizes.length,
-        limit: PAGE_LIMIT,
-      }),
+
+    const newOffset = formVar.offset + formVar.limit;
+
+    await dispatch(
+      getAllSize(formVar.keyword, formVar.limit, newOffset, formVar.status),
     );
+
+    setFormVar((prev) => ({
+      ...prev,
+      offset: newOffset,
+    }));
+
+    if (newOffset + formVar.limit >= total) {
+      setHasMore(false);
+    }
   };
 
-  // Debounced initial fetch & search query
   useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
+    if (sizes.length >= total && total > 0) {
+      setHasMore(false);
+    } else {
+      setHasMore(true);
+    }
+  }, [sizes.length, total]);
+
+  // Handle search sizes
+  const handleSearch = (searchTerm: string) => {
+    setFormVar((prev) => ({
+      ...prev,
+      keyword: searchTerm,
+      offset: 0,
+    }));
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
       dispatch(
-        getAllSizeThunk(
-          {
-            query: searchQuery.trim(),
-            offset: 0,
-            limit: PAGE_LIMIT,
-          },
-          controller.signal,
+        getAllSize(searchTerm, formVar.limit, formVar.offset, formVar.status),
+      );
+    }, 500);
+  };
+
+  useEffect(() => {
+    if (sizes.length <= 0) {
+      dispatch(
+        getAllSize(
+          formVar.keyword,
+          formVar.limit,
+          formVar.offset,
+          formVar.status,
         ),
       );
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [searchQuery, dispatch]);
+    }
+  }, []);
 
   return (
     <div className="space-y-6 md:space-y-8 w-full font-sans pb-16">
@@ -229,52 +270,6 @@ export default function ClothingSizes() {
         </Button>
       </div>
 
-      {/* Quick Stats Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-card p-4 rounded-2xl border border-border flex items-center gap-4 shadow-xs">
-          <div className="p-3 rounded-xl bg-muted text-foreground">
-            <Ruler className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Total Sizes
-            </p>
-            <p className="text-xl font-extrabold text-foreground">{total}</p>
-          </div>
-        </div>
-
-        <div className="bg-card p-4 rounded-2xl border border-border flex items-center gap-4 shadow-xs">
-          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Active Sizes
-            </p>
-            <p className="text-xl font-extrabold text-foreground">
-              {sizes.filter((s) => s.status?.toLowerCase() === "active").length}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card p-4 rounded-2xl border border-border flex items-center gap-4 shadow-xs">
-          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-600">
-            <Layers className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Inactive Sizes
-            </p>
-            <p className="text-xl font-extrabold text-foreground">
-              {
-                sizes.filter((s) => s.status?.toLowerCase() === "inactive")
-                  .length
-              }
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Search & Filter Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-card p-4 rounded-2xl border border-border shadow-xs">
         <div className="relative flex-1 min-w-0">
@@ -282,10 +277,8 @@ export default function ClothingSizes() {
           <Input
             type="text"
             placeholder="Search size name, age range, description..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-            }}
+            value={formVar.keyword}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
           />
         </div>
@@ -303,11 +296,11 @@ export default function ClothingSizes() {
                 No sizes found
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                {searchQuery
+                {formVar.keyword
                   ? "Try adjusting your search criteria."
                   : "Get started by creating your first clothing size specification."}
               </p>
-              {!searchQuery && (
+              {!formVar.keyword && (
                 <Button
                   onClick={handleOpenAddModal}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-4 py-2 mt-2"
@@ -320,7 +313,7 @@ export default function ClothingSizes() {
             <InfiniteScroll
               dataLength={sizes.length}
               next={fetchMoreSizes}
-              hasMore={sizes.length < total}
+              hasMore={hasMore}
               loader={
                 <div className="py-6 text-center text-xs text-muted-foreground font-semibold flex items-center justify-center gap-2">
                   <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -503,7 +496,7 @@ export default function ClothingSizes() {
                             >
                               <SquarePen className="h-3.5 w-3.5" />
                             </Button>
-                            <Button
+                            {/* <Button
                               variant="outline"
                               size="icon"
                               onClick={() => setDeletingSize(size)}
@@ -511,7 +504,40 @@ export default function ClothingSizes() {
                               className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            </Button> */}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Delete this Size?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will
+                                    permanently delete this Size.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    // onClick={() => handleDelete(mcq?._id)}
+                                  >
+                                    Yes, delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </td>
                       </tr>
@@ -525,7 +551,13 @@ export default function ClothingSizes() {
       </Card>
 
       {/* Add / Edit Size Modal Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={isAddModalOpen}
+        onOpenChange={(open) => {
+          dispatch(toogleAddModal(open));
+          setEditingSize(null);
+        }}
+      >
         <DialogContent className="sm:max-w-[480px] rounded-2xl">
           <form onSubmit={handleSaveSize}>
             <DialogHeader>
@@ -539,14 +571,6 @@ export default function ClothingSizes() {
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              {/* Form Error Banner */}
-              {formError && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold">
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
               {/* Size Name */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -664,7 +688,7 @@ export default function ClothingSizes() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => dispatch(toogleAddModal(false))}
                 className="rounded-xl text-xs cursor-pointer"
               >
                 Cancel
@@ -686,7 +710,7 @@ export default function ClothingSizes() {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog
+      {/* <Dialog
         open={Boolean(deletingSize)}
         onOpenChange={(open) => !open && setDeletingSize(null)}
       >
@@ -740,7 +764,7 @@ export default function ClothingSizes() {
             </DialogFooter>
           </DialogContent>
         )}
-      </Dialog>
+      </Dialog> */}
     </div>
   );
 }

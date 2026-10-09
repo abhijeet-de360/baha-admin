@@ -5,7 +5,6 @@ import {
   Search,
   SquarePen,
   Trash2,
-  CheckCircle2,
   MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
-import { addFaqThunk, deleteFaqThunk, getAllFaqThunk, updateFaqThunk, type FAQ } from "@/store/faqSlice";
+import { addFaq, deleteFaq, getAllFaq, updateFaq, type FAQ } from "@/store/faqSlice";
 
 const STATUS = [
   { label: "Active", value: "active" },
@@ -39,9 +38,8 @@ const STATUS = [
 ];
 
 export default function FaqPage() {
-  const { faqs, error, total } = useSelector((state: RootState) => state.faq);
+  const { faqs } = useSelector((state: RootState) => state.faq);
   const dispatch = useDispatch<AppDispatch>();
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,7 +73,7 @@ export default function FaqPage() {
   };
 
   // Save (Create or Update)
-  const handleSaveFaq = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSaveFaq = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!formQuestion.trim() || !formAnswer.trim()) return;
@@ -88,51 +86,39 @@ export default function FaqPage() {
       if (formAnswer !== editingFaq.answer) body.answer = formAnswer;
       if (formOrder !== editingFaq.order) body.order = formOrder;
 
-      dispatch(
-        updateFaqThunk(
-          editingFaq._id,
-          body,
-          () => {
-            setIsModalOpen(false);
-            setEditingFaq(null);
-          },
-        ),
-      );
+      const success = await dispatch(updateFaq(editingFaq._id, body));
+      if (success) {
+        setIsModalOpen(false);
+        setEditingFaq(null);
+      }
     } else {
       // Create
-      dispatch(
-        addFaqThunk(
-          { question: formQuestion, answer: formAnswer, status: formStatus, order: formOrder },
-          () => {
-            setIsModalOpen(false);
-          },
-        ),
+      const success = await dispatch(
+        addFaq({
+          question: formQuestion,
+          answer: formAnswer,
+          status: formStatus,
+          order: formOrder,
+        }),
       );
+      if (success) {
+        setIsModalOpen(false);
+      }
     }
   };
 
   // Confirm Delete
   const handleConfirmDelete = async () => {
-    const res = await dispatch(deleteFaqThunk(deletingFaqId as string))
-    console.log("res ==> ", res)
+    if (!deletingFaqId) return;
+    const res = await dispatch(deleteFaq(deletingFaqId));
     if (res) {
       setDeletingFaqId(null);
     }
   };
 
-  // Filtered FAQs
-  const filteredFaqs = useMemo(() => {
-    return faqs.filter((item) => {
-      const matchesSearch =
-        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.answer.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
-    });
-  }, [searchQuery, faqs]);
-
   useEffect(() => {
     const controller = new AbortController();
-    dispatch(getAllFaqThunk(controller.signal));
+    dispatch(getAllFaq(controller.signal));
 
     return () => {
       controller.abort();
@@ -167,24 +153,9 @@ export default function FaqPage() {
         </Button>
       </div>
 
-      {/* Search & Category Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-card p-4 rounded-2xl border border-border shadow-xs">
-        {/* Search Bar */}
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search questions or answers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-10 bg-background text-xs"
-          />
-        </div>
-      </div>
-
       {/* FAQ List Cards */}
       <div className="space-y-4">
-        {filteredFaqs.length === 0 ? (
+        {faqs.length === 0 ? (
           <Card className="rounded-2xl border-border p-12 text-center">
             <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
             <p className="text-sm font-semibold text-foreground">
@@ -195,7 +166,7 @@ export default function FaqPage() {
             </p>
           </Card>
         ) : (
-          filteredFaqs.map((faq) => (
+          faqs.map((faq) => (
             <Card
               key={faq._id}
               className="rounded-2xl border-border shadow-xs hover:border-border/80 transition-all group"

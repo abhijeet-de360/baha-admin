@@ -1,13 +1,9 @@
-import {
-  loginUser,
-  me,
-  updateProfile,
-  resetPassword,
-} from "@/shared/_services/api_services";
+import { service } from "@/shared/_services/api_services";
 import { createSlice } from "@reduxjs/toolkit";
 import type { AppDispatch } from "./store";
 import { localService } from "@/shared/_session/local";
 import { errorHandler, successHandler } from "@/shared/_helper/responseHelper";
+import { setLoading } from "./loader";
 
 export const STATUS = Object.freeze({
   IDLE: "idle",
@@ -32,14 +28,12 @@ export interface AuthState {
   user: AdminUser | null;
   isAuthenticated: boolean;
   status: AuthStatus;
-  error: any;
 }
 
 const initialState: AuthState = {
   user: null,
   isAuthenticated: !!localService.get("token"),
   status: STATUS.IDLE,
-  error: null,
 };
 
 const authSlice = createSlice({
@@ -61,23 +55,20 @@ const authSlice = createSlice({
       localService.clearAll();
       state.isAuthenticated = false;
     },
-    setError(state, { payload }) {
-      state.status = STATUS.ERROR;
-      state.error = payload;
-    },
   },
 });
 
-export const { setUser, setProfileData, setStatus, setLogout, setError } =
+export const { setUser, setProfileData, setStatus, setLogout } =
   authSlice.actions;
 
 export default authSlice.reducer;
 
 export function login(email: string, password: string, navigate) {
-  return async (dispatch: AppDispatch) => {
+  return async function loginThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
     try {
-      await loginUser({ email, password })
+      await service
+        .loginUser({ email, password })
         .then((res) => {
           // console.log("login res : ", res);
           if (res.status === 200) {
@@ -101,24 +92,27 @@ export function login(email: string, password: string, navigate) {
 
 export function getMe() {
   return async (dispatch: AppDispatch) => {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     try {
-      await me()
+      await service
+        .me()
         .then((res) => {
           // console.log("me res : ", res);
-          if (res.status === 200) {
-            dispatch(setProfileData(res.data));
-            dispatch(setStatus(STATUS.IDLE));
-          }
+          dispatch(setProfileData(res.data));
+          dispatch(setStatus(STATUS.IDLE));
+          dispatch(setLoading(false));
         })
         .catch((err) => {
-          console.log("me err : ", err);
+          // console.log("me err : ", err);
           dispatch(setStatus(STATUS.ERROR));
           errorHandler(err.response);
+          dispatch(setLoading(false));
         });
     } catch (error) {
       dispatch(setStatus(STATUS.ERROR));
-      throw error;
+      dispatch(setLoading(false));
+      errorHandler(error.response || error);
     }
   };
 }
@@ -137,50 +131,52 @@ export function updateAdminProfile(
   data: { name: string; email: string },
   onSuccess?: () => void,
 ) {
-  return async (dispatch: AppDispatch) => {
+  return async function updateProfileThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      const res = await updateProfile(data);
-      if (res.status === 200) {
-        dispatch(setProfileData(res.data));
-        dispatch(setStatus(STATUS.IDLE));
-        successHandler("Profile updated successfully.");
-        if (onSuccess) onSuccess();
-        return true;
-      }
-    } catch (err: any) {
-      console.log("update profile err : ", err);
-      dispatch(setStatus(STATUS.ERROR));
-      errorHandler(err?.response || err);
-      return false;
-    }
+    return await service
+      .updateProfile(data)
+      .then((res) => {
+        if (res.status === 200) {
+          dispatch(setProfileData(res.data));
+          dispatch(setStatus(STATUS.IDLE));
+          successHandler("Profile updated successfully.");
+          if (onSuccess) onSuccess();
+          return true;
+        }
+        return false;
+      })
+      .catch((err: any) => {
+        console.log("update profile err : ", err);
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(err?.response || err);
+        return false;
+      });
   };
 }
 
 // Reset password thunk
-export function resetPasswordThunk(
-  data: { oldPassword: string; newPassword: string },
-  onSuccess?: () => void,
-) {
-  return async (dispatch: AppDispatch) => {
+export function resetPassword(data: {
+  oldPassword: string;
+  newPassword: string;
+}) {
+  return async function resetPasswordThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    dispatch(setError(null));
-    try {
-      const res = await resetPassword(data);
-      if (res.status === 200) {
+    return await service
+      .resetPassword(data)
+      .then((res) => {
+        if (res.status === 200) {
+          dispatch(setStatus(STATUS.IDLE));
+          successHandler(res.data?.message || "Password updated successfully.");
+          return true;
+        }
         dispatch(setStatus(STATUS.IDLE));
-        successHandler(res.data?.message || "Password updated successfully.");
-        if (onSuccess) onSuccess();
-        return true;
-      }
-      dispatch(setStatus(STATUS.IDLE));
-      return false;
-    } catch (err: any) {
-      // console.log("reset password err : ", err.response);
-      // dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(err?.response?.data?.message || err));
-      errorHandler(err?.response || err);
-      return false;
-    }
+        return false;
+      })
+      .catch((err: any) => {
+        // console.log("reset password err : ", err.response);
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(err?.response || err);
+        return false;
+      });
   };
 }

@@ -1,8 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { AppDispatch } from "./store";
 import { errorHandler, successHandler } from "@/shared/_helper/responseHelper";
-import { addFaq, deleteFaq, getAllFaqs, updateFaq } from "@/shared/_services/api_services";
+import { service } from "@/shared/_services/api_services";
 import axios from "axios";
+import { setLoading } from "./loader";
 
 const STATUS = Object.freeze({
   IDLE: "idle",
@@ -24,14 +25,12 @@ interface InitialState {
   faqs: FAQ[];
   total: number;
   status: string;
-  error: any;
 }
 
 const initialState: InitialState = {
   faqs: [],
   total: 0,
   status: STATUS.IDLE,
-  error: null,
 };
 
 export const faqSlice = createSlice({
@@ -40,9 +39,6 @@ export const faqSlice = createSlice({
   reducers: {
     setStatus(state, { payload }) {
       state.status = payload;
-    },
-    setError(state, { payload }) {
-      state.error = payload;
     },
     setTotal(state, { payload }) {
       state.total = payload;
@@ -60,103 +56,110 @@ export const faqSlice = createSlice({
       );
     },
     deleteFaqSuccess(state, { payload }) {
-      state.faqs = state.faqs.filter((faq) => faq._id !== payload._id);
-    }
+      const id = payload?._id ?? payload;
+      state.faqs = state.faqs.filter((faq) => faq._id !== id);
+      state.total = Math.max(0, state.total - 1);
+    },
   },
 });
 
-export const { setStatus, setError, setTotal, setFaqs, addFaqSuccess, updateFaqSuccess, deleteFaqSuccess } =
-  faqSlice.actions;
+export const {
+  setStatus,
+  setTotal,
+  setFaqs,
+  addFaqSuccess,
+  updateFaqSuccess,
+  deleteFaqSuccess,
+} = faqSlice.actions;
 
 export default faqSlice.reducer;
 
 // Thunks
 // Add faq thunk
-export function addFaqThunk(data: object, onSuccess?: () => void) {
-  return async (dispatch: AppDispatch) => {
+export function addFaq(data: object) {
+  return async function addFaqThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      const res = await addFaq(data);
-      if (res?.status === 200 || res?.status === 201) {
+    return await service
+      .addFaq(data)
+      .then((res) => {
         dispatch(addFaqSuccess(res?.data?.result ?? res?.data));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("FAQ added successfully");
-        onSuccess?.();
-      }
-    } catch (error: any) {
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-    }
+        return true;
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error?.response);
+        return false;
+      });
   };
 }
 
 // Get All faq thunk
-export function getAllFaqThunk(signal?: AbortSignal) {
-  return async (dispatch: AppDispatch) => {
+export function getAllFaq(signal?: AbortSignal) {
+  return async function getAllFaqThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true))
     dispatch(setStatus(STATUS.LOADING));
 
-    try {
-      const res = await getAllFaqs(signal);
-      if (res.status === 200) {
+    return await service
+      .getAllFaqs(signal)
+      .then((res) => {
         dispatch(setFaqs(res?.data?.result));
         dispatch(setTotal(res?.data?.total));
-      }
-      dispatch(setStatus(STATUS.IDLE));
-    } catch (error) {
-      // manual abort
-      if (axios.isCancel(error) || error?.name === "CanceledError") return;
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-    }
+        dispatch(setStatus(STATUS.IDLE));
+        dispatch(setLoading(false))
+      })
+      .catch((error: any) => {
+        // manual abort
+        if (axios.isCancel(error) || error?.name === "CanceledError") return;
+        dispatch(setLoading(false))
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error?.response);
+      });
   };
 }
 
 // Update faq thunk
-export function updateFaqThunk(
+export function updateFaq(
   id: string,
   data: object,
   onSuccess?: () => void,
 ) {
-  return async (dispatch: AppDispatch) => {
+  return async function updateFaqThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      const res = await updateFaq(id, data);
-      if (res?.status === 200 || res?.status === 201) {
+    return await service
+      .updateFaq(id, data)
+      .then((res) => {
+        dispatch(updateFaqSuccess(res?.data?.result ?? res?.data));
         dispatch(setStatus(STATUS.IDLE));
-        dispatch(updateFaqSuccess(res?.data));
         successHandler("FAQ updated successfully");
         onSuccess?.();
-      }
-    } catch (error: any) {
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-    }
+        return true;
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error?.response);
+        return false;
+      });
   };
 }
 
 // Delete faq thunk
-export function deleteFaqThunk(id: string) {
-  return async (dispatch: AppDispatch) => {
+export function deleteFaq(id: string) {
+  return async function deleteFaqThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      const res = await deleteFaq(id);
-      if (res?.status === 200 || res?.status === 201) {
-        dispatch(deleteFaqSuccess(res?.data));
-        dispatch(setTotal((prev: number) => prev - 1))
+    return await service
+      .deleteFaq(id)
+      .then((res) => {
+        dispatch(deleteFaqSuccess(res?.data?.result ?? res?.data ?? id));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("FAQ deleted successfully");
-
         return true;
-      }
-    } catch (error: any) {
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-
-      return false;
-    }
-  }
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error?.response);
+        return false;
+      });
+  };
 }

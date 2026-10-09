@@ -1,43 +1,38 @@
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice } from "@reduxjs/toolkit";
 
 const STATUS = Object.freeze({
-  IDLE: 'idle',
-  ERROR: 'error',
-  LOADING: 'loading'
+  IDLE: "idle",
+  ERROR: "error",
+  LOADING: "loading",
 });
 
 const initialState = {
   loadingStatus: STATUS.IDLE,
   loading: false,
-  bodyClass:'page-body'
-}
+  bodyClass: "page-body",
+};
 
 export const loadingSlice = createSlice({
   name: "loading",
   initialState,
   reducers: {
     setLoading(state, { payload }) {
-      state.loading=payload
+      state.loading = payload;
     },
     changeBodyClass(state, { payload }) {
-      state.bodyClass=payload
+      state.bodyClass = payload;
     },
-  }
-})
+  },
+});
 
-export const { setLoading,changeBodyClass } = loadingSlice.actions;
+export const { setLoading, changeBodyClass } = loadingSlice.actions;
 
 export default loadingSlice.reducer;
 
 export function callSetLoading(status) {
   return async function loadingThunk(dispatch) {
     try {
-      dispatch(setLoading(status))
-    } catch (err) {
-
-    }
-  }
+      dispatch(setLoading(status));
+    } catch (err) {}
+  };
 }
-
-
-

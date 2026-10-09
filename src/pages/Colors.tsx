@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
-import InfiniteScroll from 'react-infinite-scroll-component'
+import { useState, useMemo, useEffect } from "react";
+import InfiniteScroll from "react-infinite-scroll-component";
 import {
   Palette,
   Plus,
@@ -16,12 +16,12 @@ import {
   List as ListIcon,
   RefreshCw,
   Hash,
-} from 'lucide-react'
-import Wheel from '@uiw/react-color-wheel'
-import Sketch from '@uiw/react-color-sketch'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
+} from "lucide-react";
+import Wheel from "@uiw/react-color-wheel";
+import Sketch from "@uiw/react-color-sketch";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,219 +39,234 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from "@/components/ui/alert-dialog";
 
-import { useDispatch, useSelector } from 'react-redux'
-import type { AppDispatch, RootState } from '@/store/store'
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/store/store";
 import {
   type ColorItem,
-  addColorThunk,
-  updateColorThunk,
-  deleteColorThunk,
-  getColorsThunk,
-} from '@/store/colorSlice'
+  addColor,
+  updateColor,
+  deleteColor,
+  getColors,
+} from "@/store/colorSlice";
 
 // Preset popular kids clothing colors
 const PRESET_SWATCHES = [
-  '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6',
-  '#AF52DE', '#FF2D55', '#38BDF8', '#F472B6', '#A7F3D0', '#FEF08A',
-  '#1E293B', '#64748B', '#F8FAFC', '#78350F'
-]
+  "#FF3B30",
+  "#FF9500",
+  "#FFCC00",
+  "#34C759",
+  "#007AFF",
+  "#5856D6",
+  "#AF52DE",
+  "#FF2D55",
+  "#38BDF8",
+  "#F472B6",
+  "#A7F3D0",
+  "#FEF08A",
+  "#1E293B",
+  "#64748B",
+  "#F8FAFC",
+  "#78350F",
+];
 
-const PAGE_LIMIT = 10
+const PAGE_LIMIT = 10;
 
 export default function Colors() {
-  const dispatch = useDispatch<AppDispatch>()
-  const { colors = [], total = 0, loading } = useSelector(
-    (state: RootState) => state.color
-  )
+  const dispatch = useDispatch<AppDispatch>();
+  const {
+    colors = [],
+    total = 0,
+    status,
+  } = useSelector((state: RootState) => state.color);
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table')
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
 
   // Modal States
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingColor, setEditingColor] = useState<ColorItem | null>(null)
-  const [deletingColor, setDeletingColor] = useState<ColorItem | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingColor, setEditingColor] = useState(null);
+  const [deletingColor, setDeletingColor] = useState(null);
 
   // Form State
-  const [formName, setFormName] = useState('')
-  const [formHex, setFormHex] = useState('#38BDF8')
-  const [formStatus, setFormStatus] = useState<'active' | 'inactive'>('active')
-  const [formError, setFormError] = useState<string | null>(null)
+  const [formName, setFormName] = useState("");
+  const [formHex, setFormHex] = useState("#38BDF8");
+  const [formStatus, setFormStatus] = useState<"active" | "inactive">("active");
+  const [formError, setFormError] = useState<string | null>(null);
 
   // UI state
-  const [copiedHex, setCopiedHex] = useState<string | null>(null)
-  const [pickerMode, setPickerMode] = useState<'wheel' | 'sketch'>('wheel')
+  const [copiedHex, setCopiedHex] = useState<string | null>(null);
+  const [pickerMode, setPickerMode] = useState<"wheel" | "sketch">("wheel");
 
   // Debounced initial fetch & search query
   useEffect(() => {
     const timer = setTimeout(() => {
       dispatch(
-        getColorsThunk({
+        getColors({
           query: searchQuery.trim(),
           offset: 0,
           limit: PAGE_LIMIT,
-        })
-      )
-    }, 300)
+        }),
+      );
+    }, 300);
 
-    return () => clearTimeout(timer)
-  }, [searchQuery, dispatch])
+    return () => clearTimeout(timer);
+  }, [searchQuery, dispatch]);
 
   // Filter Logic (Status filtering on client over loaded dataset)
   const filteredColors = useMemo(() => {
-    if (!Array.isArray(colors)) return []
+    if (!Array.isArray(colors)) return [];
     return colors.filter((c) => {
       const matchesStatus =
-        statusFilter === 'all' ||
-        c.status?.toLowerCase() === statusFilter.toLowerCase()
-      return matchesStatus
-    })
-  }, [colors, statusFilter])
+        statusFilter === "all" ||
+        c.status?.toLowerCase() === statusFilter.toLowerCase();
+      return matchesStatus;
+    });
+  }, [colors, statusFilter]);
 
   // Infinite Scroll fetch more
   const fetchMoreColors = () => {
-    if (loading || colors.length >= total) return
+    if (status || colors.length >= total) return;
     dispatch(
-      getColorsThunk({
+      getColors({
         query: searchQuery.trim(),
         offset: colors.length,
         limit: PAGE_LIMIT,
-      })
-    )
-  }
+      }),
+    );
+  };
 
   // Hex Validation helper
   const isValidHex = (hex: string): boolean => {
-    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i.test(hex)
-  }
+    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i.test(hex);
+  };
 
   // Handle Hex Input change with auto # prefix
   const handleHexInputChange = (val: string) => {
-    let formatted = val.trim()
-    if (formatted && !formatted.startsWith('#')) {
-      formatted = '#' + formatted
+    let formatted = val.trim();
+    if (formatted && !formatted.startsWith("#")) {
+      formatted = "#" + formatted;
     }
-    setFormHex(formatted)
+    setFormHex(formatted);
 
     if (isValidHex(formatted)) {
-      setFormError(null)
+      setFormError(null);
     }
-  }
+  };
 
   // Open Modal for Add
   const handleOpenAddModal = () => {
-    setEditingColor(null)
-    setFormName('')
-    setFormHex('#38BDF8')
-    setFormStatus('active')
-    setFormError(null)
-    setIsModalOpen(true)
-  }
+    setEditingColor(null);
+    setFormName("");
+    setFormHex("#38BDF8");
+    setFormStatus("active");
+    setFormError(null);
+    setIsModalOpen(true);
+  };
 
   // Open Modal for Edit
-  const handleOpenEditModal = (color: ColorItem) => {
-    setEditingColor(color)
-    setFormName(color.name)
-    setFormHex(color.hexCode)
-    setFormStatus(color.status === 'inactive' ? 'inactive' : 'active')
-    setFormError(null)
-    setIsModalOpen(true)
-  }
+  const handleOpenEditModal = (color) => {
+    setEditingColor(color);
+    setFormName(color.name);
+    setFormHex(color.hexCode);
+    setFormStatus(color.status === "inactive" ? "inactive" : "active");
+    setFormError(null);
+    setIsModalOpen(true);
+  };
 
   // Save / Update Color
   const handleSaveColor = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!formName.trim()) {
-      setFormError('Please enter a color name.')
-      return
+      setFormError("Please enter a color name.");
+      return;
     }
 
     if (!isValidHex(formHex)) {
-      setFormError('Please enter a valid HEX code (e.g. #FF5733 or #FFF).')
-      return
+      setFormError("Please enter a valid HEX code (e.g. #FF5733 or #FFF).");
+      return;
     }
 
-    const cleanHex = formHex.toUpperCase()
+    const cleanHex = formHex.toUpperCase();
 
     // Check duplicate hex code (excluding current editing color)
     const duplicate = colors.find(
       (c) =>
-        c.hexCode.toUpperCase() === cleanHex &&
-        c._id !== editingColor?._id
-    )
+        c.hexCode.toUpperCase() === cleanHex && c._id !== editingColor?._id,
+    );
     if (duplicate) {
       setFormError(
-        `Color with HEX code ${cleanHex} already exists (${duplicate.name}).`
-      )
-      return
+        `Color with HEX code ${cleanHex} already exists (${duplicate.name}).`,
+      );
+      return;
     }
 
     if (editingColor) {
       // Update Color
-      await dispatch(
-        updateColorThunk(
-          editingColor._id,
-          {
-            name: formName.trim(),
-            hexCode: cleanHex,
-            status: formStatus,
-            slug: editingColor.slug
-          },
-          () => {
-            setIsModalOpen(false)
-          }
-        )
-      )
+      const success = await dispatch(
+        updateColor(editingColor._id, {
+          name: formName.trim(),
+          hexCode: cleanHex,
+          status: formStatus,
+          slug: editingColor.slug,
+        }),
+      );
+      if (success) {
+        setIsModalOpen(false);
+      }
     } else {
       // Create Color
-      await dispatch(
-        addColorThunk(
-          {
-            name: formName.trim(),
-            hexCode: cleanHex,
-            status: formStatus,
-          },
-          () => {
-            setIsModalOpen(false)
-          }
-        )
-      )
+      const success = await dispatch(
+        addColor({
+          name: formName.trim(),
+          hexCode: cleanHex,
+          status: formStatus,
+        }),
+      );
+      if (success) {
+        setIsModalOpen(false);
+      }
     }
-  }
+  };
 
   // Delete Color
   const handleConfirmDelete = async () => {
     if (deletingColor) {
-      await dispatch(
-        deleteColorThunk(deletingColor._id, () => {
-          setDeletingColor(null)
-        })
-      )
+      const success = await dispatch(deleteColor(deletingColor._id));
+      if (success) {
+        setDeletingColor(null);
+      }
     }
-  }
+  };
 
   // Copy HEX to clipboard
   const handleCopyHex = (hex: string) => {
-    navigator.clipboard.writeText(hex)
-    setCopiedHex(hex)
-    setTimeout(() => setCopiedHex(null), 2000)
-  }
+    navigator.clipboard.writeText(hex);
+    setCopiedHex(hex);
+    setTimeout(() => setCopiedHex(null), 2000);
+  };
 
   // Calculate Contrast Color for badge/text
   const getContrastTextColor = (hex: string) => {
-    if (!isValidHex(hex)) return '#ffffff'
-    const c = hex.replace('#', '')
-    const fullHex = c.length === 3 ? c.split('').map((x) => x + x).join('') : c
-    const r = parseInt(fullHex.substring(0, 2), 16)
-    const g = parseInt(fullHex.substring(2, 4), 16)
-    const b = parseInt(fullHex.substring(4, 6), 16)
-    const yiq = (r * 299 + g * 587 + b * 114) / 1000
-    return yiq >= 128 ? '#0f172a' : '#ffffff'
-  }
+    if (!isValidHex(hex)) return "#ffffff";
+    const c = hex.replace("#", "");
+    const fullHex =
+      c.length === 3
+        ? c
+            .split("")
+            .map((x) => x + x)
+            .join("")
+        : c;
+    const r = parseInt(fullHex.substring(0, 2), 16);
+    const g = parseInt(fullHex.substring(2, 4), 16);
+    const b = parseInt(fullHex.substring(4, 6), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? "#0f172a" : "#ffffff";
+  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -267,7 +282,8 @@ export default function Colors() {
             </h1>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Manage product colors and HEX swatches available for your kids clothing products.
+            Manage product colors and HEX swatches available for your kids
+            clothing products.
           </p>
         </div>
 
@@ -277,69 +293,6 @@ export default function Colors() {
         >
           <Plus className="h-4 w-4" /> Add Color
         </Button>
-      </div>
-
-      {/* Stats Quick Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="rounded-2xl border border-border shadow-xs bg-card/60">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Total Colors
-              </p>
-              <h3 className="text-2xl font-extrabold text-foreground mt-0.5">
-                {total}
-              </h3>
-            </div>
-            <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-600">
-              <Layers className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-border shadow-xs bg-card/60">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Active Swatches
-              </p>
-              <h3 className="text-2xl font-extrabold text-emerald-600 mt-0.5">
-                {colors.filter((c) => c.status?.toLowerCase() === 'active').length}
-              </h3>
-            </div>
-            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-border shadow-xs bg-card/60">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Palette Preview
-              </p>
-              <div className="flex items-center -space-x-1.5 mt-1.5 overflow-hidden">
-                {colors.slice(0, 6).map((c) => (
-                  <div
-                    key={c._id}
-                    className="h-6 w-6 rounded-full border-2 border-background shadow-xs shrink-0"
-                    style={{ backgroundColor: c.hexCode }}
-                    title={`${c.name} (${c.hexCode})`}
-                  />
-                ))}
-                {colors.length > 6 && (
-                  <span className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-background flex items-center justify-center text-[9px] font-bold text-muted-foreground shrink-0">
-                    +{colors.length - 6}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="p-3 rounded-2xl bg-pink-500/10 text-pink-600">
-              <Sparkles className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Main List Container */}
@@ -362,45 +315,19 @@ export default function Colors() {
             <div className="flex items-center gap-2 shrink-0">
               {/* Status Filter */}
               <div className="flex items-center gap-1 bg-muted p-1 rounded-xl">
-                {(['all', 'active', 'inactive'] as const).map((st) => (
+                {(["all", "active", "inactive"] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setStatusFilter(st)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer capitalize ${
                       statusFilter === st
-                        ? 'bg-background text-foreground shadow-2xs'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? "bg-background text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {st}
                   </button>
                 ))}
-              </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center bg-muted p-1 rounded-xl">
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                    viewMode === 'table'
-                      ? 'bg-background text-foreground shadow-2xs'
-                      : 'text-muted-foreground'
-                  }`}
-                  title="Table View"
-                >
-                  <ListIcon className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                    viewMode === 'grid'
-                      ? 'bg-background text-foreground shadow-2xs'
-                      : 'text-muted-foreground'
-                  }`}
-                  title="Grid View"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
               </div>
             </div>
           </div>
@@ -414,12 +341,12 @@ export default function Colors() {
                 <Palette className="h-8 w-8" />
               </div>
               <h3 className="text-sm font-bold text-foreground">
-                {loading ? 'Loading colors...' : 'No colors found'}
+                {status === "loading" ? "Loading colors..." : "No colors found"}
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 {searchQuery
                   ? `No color matched your search "${searchQuery}". Try searching for another color name or add a new color.`
-                  : 'Get started by creating your first product color.'}
+                  : "Get started by creating your first product color."}
               </p>
               <Button
                 onClick={handleOpenAddModal}
@@ -445,57 +372,137 @@ export default function Colors() {
                 </div>
               }
             >
-              {viewMode === 'table' ? (
-                /* Table View Mode */
-                <>
-                  {/* Mobile & Tablet Card View (screens smaller than lg) */}
-                  <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                    {filteredColors.map((color) => {
-                      const isCopied = copiedHex === color.hexCode
-                      return (
-                        <Card
-                          key={color._id}
-                          className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3"
+              {/* Mobile & Tablet Card View (screens smaller than lg) */}
+              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                {filteredColors.map((color) => {
+                  const isCopied = copiedHex === color.hexCode;
+                  return (
+                    <Card
+                      key={color._id}
+                      className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3"
+                    >
+                      {/* Swatch & Status Header */}
+                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0"
+                            style={{ backgroundColor: color.hexCode }}
+                          />
+                          <div>
+                            <h4 className="font-bold text-foreground text-sm">
+                              {color.name}
+                            </h4>
+                            <p className="text-[11px] text-muted-foreground font-mono">
+                              {color.createdAt
+                                ? new Date(color.createdAt)
+                                    .toISOString()
+                                    .split("T")[0]
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize shrink-0 ${
+                            color.status?.toLowerCase() === "active"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              : "bg-muted text-muted-foreground border-border"
+                          }`}
                         >
-                          {/* Swatch & Status Header */}
-                          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                          {color.status}
+                        </span>
+                      </div>
+
+                      {/* HEX Code Bar */}
+                      <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-xl border border-border/40 text-xs">
+                        <span className="text-muted-foreground font-medium">
+                          HEX Code:
+                        </span>
+                        <div className="inline-flex items-center gap-1.5 font-mono font-bold text-foreground">
+                          <span>{color.hexCode}</span>
+                          <button
+                            onClick={() => handleCopyHex(color.hexCode)}
+                            className="cursor-pointer text-muted-foreground hover:text-foreground"
+                            title="Copy HEX"
+                          >
+                            {isCopied ? (
+                              <Check className="h-3.5 w-3.5 text-primary" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleOpenEditModal(color)}
+                          className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
+                          title="Edit"
+                        >
+                          <SquarePen className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setDeletingColor(color)}
+                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View (screens lg and larger) */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <th className="py-3.5 px-6">Color Swatch</th>
+                      <th className="py-3.5 px-6">Color Name</th>
+                      <th className="py-3.5 px-6">HEX Code</th>
+                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6">Created Date</th>
+                      <th className="py-3.5 px-6 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border text-xs">
+                    {filteredColors.map((color) => {
+                      const isCopied = copiedHex === color.hexCode;
+                      return (
+                        <tr
+                          key={color._id}
+                          className="hover:bg-muted/30 transition-colors group"
+                        >
+                          {/* Swatch */}
+                          <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <div
-                                className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0"
+                                className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
                                 style={{ backgroundColor: color.hexCode }}
                               />
-                              <div>
-                                <h4 className="font-bold text-foreground text-sm">
-                                  {color.name}
-                                </h4>
-                                <p className="text-[11px] text-muted-foreground font-mono">
-                                  {color.createdAt
-                                    ? new Date(color.createdAt).toISOString().split('T')[0]
-                                    : '—'}
-                                </p>
-                              </div>
                             </div>
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize shrink-0 ${
-                                color.status?.toLowerCase() === 'active'
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                  : 'bg-muted text-muted-foreground border-border'
-                              }`}
-                            >
-                              {color.status}
-                            </span>
-                          </div>
+                          </td>
 
-                          {/* HEX Code Bar */}
-                          <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-xl border border-border/40 text-xs">
-                            <span className="text-muted-foreground font-medium">
-                              HEX Code:
-                            </span>
-                            <div className="inline-flex items-center gap-1.5 font-mono font-bold text-foreground">
+                          {/* Name */}
+                          <td className="py-4 px-6 font-bold text-foreground text-sm">
+                            {color.name}
+                          </td>
+
+                          {/* HEX Code */}
+                          <td className="py-4 px-6 font-mono font-semibold">
+                            <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
+                              <Hash className="h-3 w-3 text-muted-foreground" />
                               <span>{color.hexCode}</span>
                               <button
                                 onClick={() => handleCopyHex(color.hexCode)}
-                                className="cursor-pointer text-muted-foreground hover:text-foreground"
+                                className="cursor-pointer text-muted-foreground hover:text-foreground ml-1"
                                 title="Copy HEX"
                               >
                                 {isCopied ? (
@@ -505,228 +512,59 @@ export default function Colors() {
                                 )}
                               </button>
                             </div>
-                          </div>
+                          </td>
 
-                          {/* Action Buttons */}
-                          <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleOpenEditModal(color)}
-                              className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
-                              title="Edit"
+                          {/* Status */}
+                          <td className="py-4 px-6">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize ${
+                                color.status?.toLowerCase() === "active"
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                  : "bg-muted text-muted-foreground border-border"
+                              }`}
                             >
-                              <SquarePen className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setDeletingColor(color)}
-                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </Card>
-                      )
-                    })}
-                  </div>
+                              {color.status}
+                            </span>
+                          </td>
 
-                  {/* Desktop Table View (screens lg and larger) */}
-                  <div className="hidden lg:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                          <th className="py-3.5 px-6">Color Swatch</th>
-                          <th className="py-3.5 px-6">Color Name</th>
-                          <th className="py-3.5 px-6">HEX Code</th>
-                          <th className="py-3.5 px-6">Status</th>
-                          <th className="py-3.5 px-6">Created Date</th>
-                          <th className="py-3.5 px-6 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border text-xs">
-                        {filteredColors.map((color) => {
-                          const isCopied = copiedHex === color.hexCode
-                          return (
-                            <tr
-                              key={color._id}
-                              className="hover:bg-muted/30 transition-colors group"
-                            >
-                              {/* Swatch */}
-                              <td className="py-4 px-6">
-                                <div className="flex items-center gap-3">
-                                  <div
-                                    className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
-                                    style={{ backgroundColor: color.hexCode }}
-                                  />
-                                </div>
-                              </td>
+                          {/* Created Date */}
+                          <td className="py-4 px-6 text-muted-foreground font-mono">
+                            {color.createdAt
+                              ? new Date(color.createdAt)
+                                  .toISOString()
+                                  .split("T")[0]
+                              : "—"}
+                          </td>
 
-                              {/* Name */}
-                              <td className="py-4 px-6 font-bold text-foreground text-sm">
-                                {color.name}
-                              </td>
-
-                              {/* HEX Code */}
-                              <td className="py-4 px-6 font-mono font-semibold">
-                                <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
-                                  <Hash className="h-3 w-3 text-muted-foreground" />
-                                  <span>{color.hexCode}</span>
-                                  <button
-                                    onClick={() => handleCopyHex(color.hexCode)}
-                                    className="cursor-pointer text-muted-foreground hover:text-foreground ml-1"
-                                    title="Copy HEX"
-                                  >
-                                    {isCopied ? (
-                                      <Check className="h-3.5 w-3.5 text-primary" />
-                                    ) : (
-                                      <Copy className="h-3.5 w-3.5" />
-                                    )}
-                                  </button>
-                                </div>
-                              </td>
-
-                              {/* Status */}
-                              <td className="py-4 px-6">
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize ${
-                                    color.status?.toLowerCase() === 'active'
-                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                      : 'bg-muted text-muted-foreground border-border'
-                                  }`}
-                                >
-                                  {color.status}
-                                </span>
-                              </td>
-
-                              {/* Created Date */}
-                              <td className="py-4 px-6 text-muted-foreground font-mono">
-                                {color.createdAt
-                                  ? new Date(color.createdAt).toISOString().split('T')[0]
-                                  : '—'}
-                              </td>
-
-                              {/* Actions */}
-                              <td className="py-4 px-6 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handleOpenEditModal(color)}
-                                    title="Edit"
-                                    className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
-                                  >
-                                    <SquarePen className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => setDeletingColor(color)}
-                                    title="Delete"
-                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              ) : (
-                /* Color Swatch Visual Card Grid View Mode */
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 md:p-6">
-                  {filteredColors.map((color) => {
-                    const isCopied = copiedHex === color.hexCode
-                    const textColor = getContrastTextColor(color.hexCode)
-                    return (
-                      <div
-                        key={color._id}
-                        className="rounded-2xl border border-border/80 bg-card p-4 space-y-3.5 shadow-2xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between"
-                      >
-                        {/* Swatch Block */}
-                        <div
-                          className="h-28 w-full rounded-xl shadow-inner flex items-center justify-center relative p-3 border border-border/30 overflow-hidden"
-                          style={{ backgroundColor: color.hexCode }}
-                        >
-                          <span
-                            className="font-mono text-xs font-bold px-2.5 py-1 rounded-full shadow-xs border border-white/20 backdrop-blur-md"
-                            style={{
-                              color: textColor,
-                              backgroundColor:
-                                color.hexCode.toLowerCase() === '#ffffff'
-                                  ? '#00000020'
-                                  : '#ffffff30',
-                            }}
-                          >
-                            {color.hexCode}
-                          </span>
-
-                          <span
-                            className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs border capitalize ${
-                              color.status?.toLowerCase() === 'active'
-                                ? 'bg-emerald-500 text-white border-emerald-400'
-                                : 'bg-muted/90 text-muted-foreground border-border'
-                            }`}
-                          >
-                            {color.status}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-bold text-foreground text-sm">
-                              {color.name}
-                            </h4>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <span className="font-mono text-xs font-semibold text-muted-foreground">
-                                {color.hexCode}
-                              </span>
-                              <button
-                                onClick={() => handleCopyHex(color.hexCode)}
-                                className="cursor-pointer text-muted-foreground hover:text-foreground"
-                                title="Copy HEX"
+                          {/* Actions */}
+                          <td className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenEditModal(color)}
+                                title="Edit"
+                                className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
                               >
-                                {isCopied ? (
-                                  <Check className="h-3 w-3 text-primary" />
-                                ) : (
-                                  <Copy className="h-3 w-3" />
-                                )}
-                              </button>
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setDeletingColor(color)}
+                                title="Delete"
+                                className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleOpenEditModal(color)}
-                              className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
-                              title="Edit"
-                            >
-                              <SquarePen className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setDeletingColor(color)}
-                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </InfiniteScroll>
           )}
         </CardContent>
@@ -739,10 +577,11 @@ export default function Colors() {
             <DialogHeader className="pb-2">
               <DialogTitle className="flex items-center gap-2 text-base font-bold">
                 <Palette className="h-5 w-5 text-primary" />
-                {editingColor ? 'Edit Product Color' : 'Add New Product Color'}
+                {editingColor ? "Edit Product Color" : "Add New Product Color"}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Pick a color visually with the color picker or type a HEX code manually.
+                Pick a color visually with the color picker or type a HEX code
+                manually.
               </DialogDescription>
             </DialogHeader>
 
@@ -778,7 +617,9 @@ export default function Colors() {
                   </label>
                   <select
                     value={formStatus}
-                    onChange={(e) => setFormStatus(e.target.value as 'active' | 'inactive')}
+                    onChange={(e) =>
+                      setFormStatus(e.target.value as "active" | "inactive")
+                    }
                     className="w-full h-9 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring"
                     required
                   >
@@ -799,7 +640,9 @@ export default function Colors() {
                     <button
                       type="button"
                       onClick={() =>
-                        setPickerMode(pickerMode === 'wheel' ? 'sketch' : 'wheel')
+                        setPickerMode(
+                          pickerMode === "wheel" ? "sketch" : "wheel",
+                        )
                       }
                       className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
                     >
@@ -807,29 +650,29 @@ export default function Colors() {
                     </button>
                   </div>
 
-                  {pickerMode === 'wheel' ? (
+                  {pickerMode === "wheel" ? (
                     <Wheel
-                      color={isValidHex(formHex) ? formHex : '#38BDF8'}
+                      color={isValidHex(formHex) ? formHex : "#38BDF8"}
                       onChange={(color) => {
-                        setFormHex(color.hex.toUpperCase())
-                        setFormError(null)
+                        setFormHex(color.hex.toUpperCase());
+                        setFormError(null);
                       }}
                       width={150}
                       height={150}
                     />
                   ) : (
                     <Sketch
-                      color={isValidHex(formHex) ? formHex : '#38BDF8'}
+                      color={isValidHex(formHex) ? formHex : "#38BDF8"}
                       onChange={(color) => {
-                        setFormHex(color.hex.toUpperCase())
-                        setFormError(null)
+                        setFormHex(color.hex.toUpperCase());
+                        setFormError(null);
                       }}
                       disableAlpha
                       style={{
-                        boxShadow: 'none',
-                        borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
-                        width: '100%',
+                        boxShadow: "none",
+                        borderRadius: "12px",
+                        border: "1px solid #e2e8f0",
+                        width: "100%",
                       }}
                     />
                   )}
@@ -840,7 +683,7 @@ export default function Colors() {
                   {/* HEX Input */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                      <Hash className="h-3 w-3" /> HEX Code{' '}
+                      <Hash className="h-3 w-3" /> HEX Code{" "}
                       <span className="text-destructive">*</span>
                     </label>
                     <Input
@@ -861,7 +704,9 @@ export default function Colors() {
                     <div
                       className="h-20 rounded-xl shadow-md border-2 border-background ring-1 ring-border flex flex-col justify-between p-2.5 transition-all"
                       style={{
-                        backgroundColor: isValidHex(formHex) ? formHex : '#e2e8f0',
+                        backgroundColor: isValidHex(formHex)
+                          ? formHex
+                          : "#e2e8f0",
                       }}
                     >
                       <div className="flex items-center justify-between">
@@ -869,18 +714,18 @@ export default function Colors() {
                           className="text-[10px] font-extrabold px-2 py-0.5 rounded-full"
                           style={{
                             color: getContrastTextColor(
-                              isValidHex(formHex) ? formHex : '#ffffff'
+                              isValidHex(formHex) ? formHex : "#ffffff",
                             ),
-                            backgroundColor: 'rgba(0,0,0,0.15)',
+                            backgroundColor: "rgba(0,0,0,0.15)",
                           }}
                         >
-                          {formName || 'Color Swatch'}
+                          {formName || "Color Swatch"}
                         </span>
                         <span
                           className="text-[10px] font-mono font-bold"
                           style={{
                             color: getContrastTextColor(
-                              isValidHex(formHex) ? formHex : '#ffffff'
+                              isValidHex(formHex) ? formHex : "#ffffff",
                             ),
                           }}
                         >
@@ -923,10 +768,10 @@ export default function Colors() {
               </Button>
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={status === "loading"}
                 className="rounded-full font-semibold text-xs px-5 cursor-pointer"
               >
-                {editingColor ? 'Update Color' : 'Save Color'}
+                {editingColor ? "Update Color" : "Save Color"}
               </Button>
             </DialogFooter>
           </form>
@@ -945,7 +790,8 @@ export default function Colors() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground space-y-3 pt-2">
               <span>
-                Are you sure you want to delete this color? This action will remove it from the list.
+                Are you sure you want to delete this color? This action will
+                remove it from the list.
               </span>
 
               {deletingColor && (
@@ -972,7 +818,7 @@ export default function Colors() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              disabled={loading}
+              disabled={status === "loading"}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold text-xs rounded-full cursor-pointer"
             >
               Delete Color
@@ -981,5 +827,5 @@ export default function Colors() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

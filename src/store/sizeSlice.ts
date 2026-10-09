@@ -1,13 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { AppDispatch } from "./store";
 import { errorHandler, successHandler } from "@/shared/_helper/responseHelper";
-import {
-  addSize,
-  deleteSize,
-  getAllSizes,
-  updateSize,
-} from "@/shared/_services/api_services";
+import { service } from "@/shared/_services/api_services";
 import axios from "axios";
+import { setLoading } from "./loader";
 
 const STATUS = Object.freeze({
   IDLE: "idle",
@@ -32,14 +28,14 @@ interface SizeState {
   sizes: SIZE[];
   total: number;
   status: string;
-  error: string | null;
+  isAddModalOpen: boolean;
 }
 
 const initialState: SizeState = {
   sizes: [],
   total: 0,
   status: STATUS.IDLE,
-  error: null,
+  isAddModalOpen: false,
 };
 
 const sizeSlice = createSlice({
@@ -54,9 +50,6 @@ const sizeSlice = createSlice({
     },
     setStatus: (state, { payload }) => {
       state.status = payload;
-    },
-    setError: (state, { payload }) => {
-      state.error = payload;
     },
     appendSizes: (state, { payload }) => {
       const newItems: SIZE[] =
@@ -79,6 +72,9 @@ const sizeSlice = createSlice({
       state.sizes = state.sizes.filter((size) => size._id !== payload);
       state.total = Math.max(0, state.total - 1);
     },
+    toogleAddModal: (state, {payload}) => {
+      state.isAddModalOpen = payload;
+    },
   },
 });
 
@@ -87,102 +83,102 @@ export const {
   appendSizes,
   setTotal,
   setStatus,
-  setError,
   addSizeSuccess,
   updateSizeSuccess,
   deleteSizeSuccess,
+  toogleAddModal,
 } = sizeSlice.actions;
 
 export default sizeSlice.reducer;
 
 // Thunks
 // Get all size thunks
-export function getAllSizeThunk(
-  params?: {
-    offset?: number;
-    limit?: number;
-    query?: string;
-    sort?: "asc" | "desc";
-  },
-  signal?: AbortSignal
-) {
-  return async (dispatch: AppDispatch) => {
+export function getAllSize( keyword: string, limit: number, offset: number, status: string) {
+  return async function getAllSizeThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      const res = await getAllSizes(params, signal);
-      if (params?.offset && params.offset > 0) {
-        dispatch(appendSizes(res.data));
-      } else {
-        dispatch(setSizes(res.data.result));
-        dispatch(setTotal(res.data.total));
-      }
-      dispatch(setStatus(STATUS.IDLE));
-    } catch (error: any) {
-      // manual aborts
-      if (axios.isCancel(error) || error?.name === "CanceledError") return;
+    return await service
+      .getAllSizes(keyword, limit, offset, status)
+      .then((res) => {
+        if (offset > 0) {
+          dispatch(appendSizes(res.data));
+        } else {
+          dispatch(setSizes(res.data.result));
+          dispatch(setTotal(res.data.total));
+        }
+        dispatch(setStatus(STATUS.IDLE));
+        dispatch(setLoading(false));
+      })
+      .catch((error: any) => {
+        // manual aborts
+        if (axios.isCancel(error) || error?.name === "CanceledError") return;
 
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-    }
+        dispatch(setStatus(STATUS.ERROR));
+        dispatch(setLoading(false));
+        errorHandler(error?.response);
+      });
   };
 }
 
 // Add size thunk
-export function addSizeThunk(data: object) {
-  return async (dispatch: AppDispatch) => {
+export function addSize(data: object) {
+  return async function addSizeThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      const res = await addSize(data);
-      const created = res?.data?.result ?? res?.data;
-      dispatch(addSizeSuccess(created));
-      dispatch(setStatus(STATUS.IDLE));
-      successHandler("Size added successfully");
-      return true;
-    } catch (error: any) {
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-      return false;
-    }
+    return await service
+      .addSize(data)
+      .then((res) => {
+        const created = res?.data?.result ?? res?.data;
+        dispatch(addSizeSuccess(created));
+        dispatch(toogleAddModal(false))
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Size added successfully");
+        return true;
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error?.response);
+        return false;
+      });
   };
 }
 
 // Update size thunk
-export function updateSizeThunk(id: string, data: object) {
-  return async (dispatch: AppDispatch) => {
+export function updateSize(id: string, data: object) {
+  return async function updateSizeThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      const res = await updateSize(id, data);
-      const updated = res?.data?.result ?? res?.data;
-      dispatch(updateSizeSuccess(updated));
-      dispatch(setStatus(STATUS.IDLE));
-      successHandler("Size updated successfully");
-      return true;
-    } catch (error: any) {
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-      return false;
-    }
+    return await service
+      .updateSize(id, data)
+      .then((res) => {
+        const updated = res?.data?.result ?? res?.data;
+        dispatch(updateSizeSuccess(updated));
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Size updated successfully");
+        return true;
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error?.response);
+        return false;
+      });
   };
 }
 
 // Delete size thunk
-export function deleteSizeThunk(id: string) {
-  return async (dispatch: AppDispatch) => {
+export function deleteSize(id: string) {
+  return async function deleteSizeThunk(dispatch: AppDispatch) {
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      await deleteSize(id);
-      dispatch(deleteSizeSuccess(id));
-      dispatch(setStatus(STATUS.IDLE));
-      successHandler("Size deleted successfully");
-      return true;
-    } catch (error: any) {
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setError(error?.response?.data?.message));
-      errorHandler(error?.response);
-      return false;
-    }
+    return await service
+      .deleteSize(id)
+      .then(() => {
+        dispatch(deleteSizeSuccess(id));
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Size deleted successfully");
+        return true;
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error?.response);
+        return false;
+      });
   };
 }

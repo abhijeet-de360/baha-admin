@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from "react";
 import {
   Globe,
   CreditCard,
@@ -15,122 +15,272 @@ import {
   Percent,
   Share2,
   Tv,
-} from 'lucide-react'
+  MapPin,
+  Loader2,
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { RichEditor } from "@/components/ui/rich-editor";
+import {
+  getAllSettings,
+  updateSettings,
+  type ContactInfo,
+  type SocialLinks,
+  type PaymentInfo,
+  type SettingsData,
+} from "@/store/settingsSlice";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/store/store";
 
 type TabType =
-  | 'contact'
-  | 'social'
-  | 'delivery'
-  | 'privacy'
-  | 'terms'
-  | 'shipping'
-  | 'refund'
+  | "contact"
+  | "social"
+  | "delivery"
+  | "privacy"
+  | "terms"
+  | "shipping"
+  | "refund";
 
 interface TabItem {
-  id: TabType
-  title: string
-  desc: string
-  icon: React.ElementType
+  id: TabType;
+  title: string;
+  desc: string;
+  icon: React.ElementType;
 }
 
 const TAB_ITEMS: TabItem[] = [
   {
-    id: 'contact',
-    title: 'Contact Info',
-    desc: 'Store phone, email, and WhatsApp',
+    id: "contact",
+    title: "Contact Info",
+    desc: "Store phone, email, WhatsApp & address",
     icon: Phone,
   },
   {
-    id: 'social',
-    title: 'Social Info',
-    desc: 'Social media profile handles & links',
+    id: "social",
+    title: "Social Info",
+    desc: "Social media profile handles & links",
     icon: Share2,
   },
   {
-    id: 'delivery',
-    title: 'Delivery Charges & COD',
-    desc: 'Prepaid/COD fees & partial payments',
+    id: "delivery",
+    title: "Delivery Charges & COD",
+    desc: "Prepaid/COD fees & thresholds",
     icon: CreditCard,
   },
   {
-    id: 'privacy',
-    title: 'Privacy Policy',
-    desc: 'User data & privacy statement',
+    id: "privacy",
+    title: "Privacy Policy",
+    desc: "User data & privacy statement",
     icon: ShieldCheck,
   },
   {
-    id: 'terms',
-    title: 'Terms & Conditions',
-    desc: 'Store rules & service terms',
+    id: "terms",
+    title: "Terms & Conditions",
+    desc: "Store rules & service terms",
     icon: FileText,
   },
   {
-    id: 'shipping',
-    title: 'Shipping & Delivery',
-    desc: 'Timelines and delivery methods',
+    id: "shipping",
+    title: "Shipping & Delivery",
+    desc: "Timelines and delivery methods",
     icon: Truck,
   },
   {
-    id: 'refund',
-    title: 'Return & Refund Policy',
-    desc: 'Returns window & refund rules',
+    id: "refund",
+    title: "Return & Refund Policy",
+    desc: "Returns window & refund rules",
     icon: RotateCcw,
   },
-]
+];
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<TabType>('contact')
-  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const dispatch = useDispatch<AppDispatch>();
+  const { settings, status } = useSelector((state: RootState) => state.settings);
+  const isLoading = status === "loading";
 
-  // Contact State
-  const [contactInfo, setContactInfo] = useState({
-    email: 'info@baha.com',
-    phone: '+919876543210',
-    whatsapp: '+919876543210',
-  })
+  const [activeTab, setActiveTab] = useState<TabType>("contact");
 
-  // Social Media State
-  const [socialInfo, setSocialInfo] = useState({
-    instagram: 'https://instagram.com',
-    facebook: 'https://facebook.com',
-    twitter: 'https://x.com',
-    youtube: 'https://www.youtube.com',
-  })
+  // Contact Info State (matches API contactInfo)
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    address: "",
+    email: "",
+    phone: "",
+    whatsapp: "",
+  });
 
-  // Delivery & COD State
-  const [deliverySetup, setDeliverySetup] = useState({
-    prepaidFee: '0',
-    prepaidFreeThreshold: '0',
-    codFee: '50',
-    codFreeThreshold: '0',
-    maxCodAmount: '5000',
-    partialCodRequired: true,
-    partialType: 'Fixed Amount (₹)',
-    partialValue: '55',
-  })
+  // Social Links State (matches API socialLinks)
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
+    facebook: "",
+    instagram: "",
+    twitter: "",
+    youtube: "",
+  });
 
-  // Policies State
+  // Delivery & Payment State (matches API paymentInfo)
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({
+    prepaidDeliveryFee: 0,
+    freePrepaidDeliveryOn: 0,
+    codDeliveryFee: 0,
+    freeCodDeliveryOn: 0,
+    maxFreeCodDeliveryOn: 0,
+  });
+
+  // Optional local partial payment config
+  // const [partialCodSetup, setPartialCodSetup] = useState({
+  //   partialCodRequired: false,
+  //   partialType: "Fixed Amount (₹)",
+  //   partialValue: "0",
+  // });
+
+  // Policies State (matches API policy keys)
   const [policies, setPolicies] = useState({
-    privacy:
-      'We value your privacy. We collect personal information such as name, email, phone number, and address strictly for processing orders and enhancing your shopping experience. We never sell or share your data with unauthorized third parties.',
-    terms:
-      'By accessing and placing an order with Sree Vedics, you confirm that you are in agreement with and bound by the terms of service contained herein. Orders are subject to stock availability and pricing verification.',
-    shipping:
-      'Orders are processed within 24-48 hours. Standard delivery takes 3-7 business days across India depending on pincode serviceability. Express shipping option is available at checkout.',
-    refund:
-      'We accept returns within 7 days of product delivery. Products must be unopened, in their original packaging, and accompanied by the receipt.',
-  })
+    privacyPolicy: "",
+    termsConditions: "",
+    shippingPolicy: "",
+    returnPolicy: "",
+  });
 
-  const triggerSaveSuccess = (message: string) => {
-    setSaveSuccess(message)
-    setTimeout(() => setSaveSuccess(null), 3000)
-  }
+  // Fetch settings on mount
+  useEffect(() => {
+    dispatch(getAllSettings());
+  }, [dispatch]);
+
+  // Sync state whenever settings from API/store changes
+  useEffect(() => {
+    if (settings) {
+      const data: SettingsData = (settings as any)?.data || settings;
+
+      if (data.contactInfo) {
+        setContactInfo({
+          address: data.contactInfo.address || "",
+          email: data.contactInfo.email || "",
+          phone: data.contactInfo.phone || "",
+          whatsapp: data.contactInfo.whatsapp || "",
+        });
+      }
+
+      if (data.socialLinks) {
+        setSocialLinks({
+          facebook: data.socialLinks.facebook || "",
+          instagram: data.socialLinks.instagram || "",
+          twitter: data.socialLinks.twitter || "",
+          youtube: data.socialLinks.youtube || "",
+        });
+      }
+
+      if (data.paymentInfo) {
+        setPaymentInfo({
+          prepaidDeliveryFee: data.paymentInfo.prepaidDeliveryFee ?? 0,
+          freePrepaidDeliveryOn: data.paymentInfo.freePrepaidDeliveryOn ?? 0,
+          codDeliveryFee: data.paymentInfo.codDeliveryFee ?? 0,
+          freeCodDeliveryOn: data.paymentInfo.freeCodDeliveryOn ?? 0,
+          maxFreeCodDeliveryOn: data.paymentInfo.maxFreeCodDeliveryOn ?? 0,
+        });
+      }
+
+      setPolicies({
+        privacyPolicy: data.privacyPolicy || "",
+        termsConditions: data.termsConditions || "",
+        shippingPolicy: data.shippingPolicy || "",
+        returnPolicy: data.returnPolicy || "",
+      });
+    }
+  }, [settings]);
+
+  // Save Contact Info
+  const handleSaveContact = async () => {
+    await dispatch(
+      updateSettings(
+        { contactInfo },
+        "Contact details saved successfully!"
+      )
+    );
+  };
+
+  // Save Social Links
+  const handleSaveSocial = async () => {
+    await dispatch(
+      updateSettings(
+        { socialLinks },
+        "Social media details saved successfully!"
+      )
+    );
+  };
+
+  // Save Payment & Delivery Setup
+  const handleSaveDelivery = async () => {
+    const payload = {
+      paymentInfo: {
+        prepaidDeliveryFee: Number(paymentInfo.prepaidDeliveryFee) || 0,
+        freePrepaidDeliveryOn: Number(paymentInfo.freePrepaidDeliveryOn) || 0,
+        codDeliveryFee: Number(paymentInfo.codDeliveryFee) || 0,
+        freeCodDeliveryOn: Number(paymentInfo.freeCodDeliveryOn) || 0,
+        maxFreeCodDeliveryOn: Number(paymentInfo.maxFreeCodDeliveryOn) || 0,
+      },
+    };
+    await dispatch(
+      updateSettings(payload, "Delivery & COD settings saved!")
+    );
+  };
+
+  // Save Policy
+  const handleSavePolicy = async () => {
+    const payload: Partial<SettingsData> = {};
+    let label = "Policy";
+
+    if (activeTab === "privacy") {
+      payload.privacyPolicy = policies.privacyPolicy;
+      label = "Privacy Policy";
+    } else if (activeTab === "terms") {
+      payload.termsConditions = policies.termsConditions;
+      label = "Terms & Conditions";
+    } else if (activeTab === "shipping") {
+      payload.shippingPolicy = policies.shippingPolicy;
+      label = "Shipping Policy";
+    } else if (activeTab === "refund") {
+      payload.returnPolicy = policies.returnPolicy;
+      label = "Return & Refund Policy";
+    }
+
+    await dispatch(
+      updateSettings(payload, `${label} updated successfully!`)
+    );
+  };
+
+  // Helper for current policy value
+  const getPolicyValue = (tab: "privacy" | "terms" | "shipping" | "refund") => {
+    switch (tab) {
+      case "privacy":
+        return policies.privacyPolicy;
+      case "terms":
+        return policies.termsConditions;
+      case "shipping":
+        return policies.shippingPolicy;
+      case "refund":
+        return policies.returnPolicy;
+      default:
+        return "";
+    }
+  };
+
+  const handlePolicyChange = (val: string) => {
+    switch (activeTab) {
+      case "privacy":
+        setPolicies((prev) => ({ ...prev, privacyPolicy: val }));
+        break;
+      case "terms":
+        setPolicies((prev) => ({ ...prev, termsConditions: val }));
+        break;
+      case "shipping":
+        setPolicies((prev) => ({ ...prev, shippingPolicy: val }));
+        break;
+      case "refund":
+        setPolicies((prev) => ({ ...prev, returnPolicy: val }));
+        break;
+    }
+  };
 
   return (
     <div className="space-y-6 w-full mx-auto font-sans pb-16">
@@ -145,7 +295,8 @@ export default function Settings() {
           </h1>
         </div>
         <p className="text-xs text-muted-foreground pl-10">
-          Update store contact points, loyalty configurations, policies, and social media handles.
+          Update store contact points, delivery configurations, policies, and
+          social media handles.
         </p>
       </div>
 
@@ -154,25 +305,30 @@ export default function Settings() {
         {/* Left Vertical Navigation Menu */}
         <div className="lg:col-span-4 xl:col-span-3 bg-card rounded-2xl border border-border p-2 sm:p-2.5 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5">
           {TAB_ITEMS.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-start gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-xl border-l-4 transition-all text-left cursor-pointer ${isActive
-                    ? 'bg-muted text-foreground border-primary shadow-xs font-semibold'
-                    : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  }`}
+                className={`w-full flex items-start gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-xl border-l-4 transition-all text-left cursor-pointer ${
+                  isActive
+                    ? "bg-muted text-foreground border-primary shadow-xs font-semibold"
+                    : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                }`}
               >
                 <Icon
-                  className={`h-5 w-5 mt-0.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'
-                    }`}
+                  className={`h-5 w-5 mt-0.5 shrink-0 ${
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  }`}
                 />
                 <div className="min-w-0">
                   <p
-                    className={`text-sm font-semibold leading-snug truncate ${isActive ? 'text-foreground font-bold' : 'text-muted-foreground'
-                      }`}
+                    className={`text-sm font-semibold leading-snug truncate ${
+                      isActive
+                        ? "text-foreground font-bold"
+                        : "text-muted-foreground"
+                    }`}
                   >
                     {tab.title}
                   </p>
@@ -181,14 +337,14 @@ export default function Settings() {
                   </p>
                 </div>
               </button>
-            )
+            );
           })}
         </div>
 
         {/* Right Configuration View Viewport */}
         <div className="lg:col-span-8 xl:col-span-9 space-y-6">
           {/* TAB 1: CONTACT INFO */}
-          {activeTab === 'contact' && (
+          {activeTab === "contact" && (
             <div className="space-y-6">
               <Card className="rounded-2xl border-border shadow-sm">
                 <CardHeader className="py-4 px-6 border-b border-border/60">
@@ -205,10 +361,15 @@ export default function Settings() {
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
+                          type="email"
                           value={contactInfo.email}
                           onChange={(e) =>
-                            setContactInfo({ ...contactInfo, email: e.target.value })
+                            setContactInfo({
+                              ...contactInfo,
+                              email: e.target.value,
+                            })
                           }
+                          placeholder="e.g. contact@baha.in"
                           className="pl-9 h-10 bg-background"
                         />
                       </div>
@@ -221,10 +382,15 @@ export default function Settings() {
                       <div className="relative">
                         <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
+                          type="tel"
                           value={contactInfo.phone}
                           onChange={(e) =>
-                            setContactInfo({ ...contactInfo, phone: e.target.value })
+                            setContactInfo({
+                              ...contactInfo,
+                              phone: e.target.value,
+                            })
                           }
+                          placeholder="e.g. +911234567890"
                           className="pl-9 h-10 bg-background"
                         />
                       </div>
@@ -239,8 +405,32 @@ export default function Settings() {
                         <Input
                           value={contactInfo.whatsapp}
                           onChange={(e) =>
-                            setContactInfo({ ...contactInfo, whatsapp: e.target.value })
+                            setContactInfo({
+                              ...contactInfo,
+                              whatsapp: e.target.value,
+                            })
                           }
+                          placeholder="e.g. +910987654321"
+                          className="pl-9 h-10 bg-background"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+                        STORE PHYSICAL ADDRESS
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={contactInfo.address}
+                          onChange={(e) =>
+                            setContactInfo({
+                              ...contactInfo,
+                              address: e.target.value,
+                            })
+                          }
+                          placeholder="e.g. 23 jump street, New York, USA, 120034"
                           className="pl-9 h-10 bg-background"
                         />
                       </div>
@@ -251,25 +441,24 @@ export default function Settings() {
 
               {/* Bottom Action Bar */}
               <div className="flex items-center justify-between pt-2">
-                {saveSuccess ? (
-                  <span className="text-xs font-semibold text-emerald-600 animate-in fade-in">
-                    ✓ {saveSuccess}
-                  </span>
-                ) : (
-                  <span />
-                )}
                 <Button
-                  onClick={() => triggerSaveSuccess('Contact details saved successfully!')}
+                  disabled={isLoading}
+                  onClick={handleSaveContact}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  <Save className="h-4 w-4" /> Save Contact Details
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save Contact Details
                 </Button>
               </div>
             </div>
           )}
 
           {/* TAB 2: SOCIAL INFO */}
-          {activeTab === 'social' && (
+          {activeTab === "social" && (
             <div className="space-y-6">
               <Card className="rounded-2xl border-border shadow-sm">
                 <CardHeader className="py-4 px-6 border-b border-border/60">
@@ -281,15 +470,19 @@ export default function Settings() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-                        INSTAGRAM PAGE URL
+                        FACEBOOK PAGE URL
                       </label>
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialInfo.instagram}
+                          value={socialLinks.facebook}
                           onChange={(e) =>
-                            setSocialInfo({ ...socialInfo, instagram: e.target.value })
+                            setSocialLinks({
+                              ...socialLinks,
+                              facebook: e.target.value,
+                            })
                           }
+                          placeholder="https://facebook.com/"
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
                       </div>
@@ -297,15 +490,19 @@ export default function Settings() {
 
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-                        FACEBOOK PAGE URL
+                        INSTAGRAM PAGE URL
                       </label>
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialInfo.facebook}
+                          value={socialLinks.instagram}
                           onChange={(e) =>
-                            setSocialInfo({ ...socialInfo, facebook: e.target.value })
+                            setSocialLinks({
+                              ...socialLinks,
+                              instagram: e.target.value,
+                            })
                           }
+                          placeholder="https://instagram.com/hello"
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
                       </div>
@@ -318,10 +515,14 @@ export default function Settings() {
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialInfo.twitter}
+                          value={socialLinks.twitter}
                           onChange={(e) =>
-                            setSocialInfo({ ...socialInfo, twitter: e.target.value })
+                            setSocialLinks({
+                              ...socialLinks,
+                              twitter: e.target.value,
+                            })
                           }
+                          placeholder="https://x.com/"
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
                       </div>
@@ -334,10 +535,14 @@ export default function Settings() {
                       <div className="relative">
                         <Tv className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialInfo.youtube}
+                          value={socialLinks.youtube || ""}
                           onChange={(e) =>
-                            setSocialInfo({ ...socialInfo, youtube: e.target.value })
+                            setSocialLinks({
+                              ...socialLinks,
+                              youtube: e.target.value,
+                            })
                           }
+                          placeholder="https://youtube.com/"
                           className="pl-9 h-10 bg-background text-xs font-mono"
                         />
                       </div>
@@ -348,31 +553,31 @@ export default function Settings() {
 
               {/* Bottom Action Bar */}
               <div className="flex items-center justify-between pt-2">
-                {saveSuccess ? (
-                  <span className="text-xs font-semibold text-emerald-600 animate-in fade-in">
-                    ✓ {saveSuccess}
-                  </span>
-                ) : (
-                  <span />
-                )}
                 <Button
-                  onClick={() => triggerSaveSuccess('Social media details saved successfully!')}
+                  disabled={isLoading}
+                  onClick={handleSaveSocial}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  <Save className="h-4 w-4" /> Save Social Details
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save Social Details
                 </Button>
               </div>
             </div>
           )}
 
           {/* TAB 3: DELIVERY CHARGES & COD */}
-          {activeTab === 'delivery' && (
+          {activeTab === "delivery" && (
             <div className="space-y-6">
               {/* Card 1: Prepaid */}
               <Card className="rounded-2xl border-border shadow-sm">
                 <CardHeader className="py-4 px-6 border-b border-border/60">
                   <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <DollarSign className="h-3.5 w-3.5" /> PREPAID ORDER DELIVERY CHARGES
+                    <DollarSign className="h-3.5 w-3.5" /> PREPAID ORDER
+                    DELIVERY CHARGES
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -382,9 +587,14 @@ export default function Settings() {
                         PREPAID DELIVERY FEE (₹)
                       </label>
                       <Input
-                        value={deliverySetup.prepaidFee}
+                        type="number"
+                        min="0"
+                        value={paymentInfo.prepaidDeliveryFee}
                         onChange={(e) =>
-                          setDeliverySetup({ ...deliverySetup, prepaidFee: e.target.value })
+                          setPaymentInfo({
+                            ...paymentInfo,
+                            prepaidDeliveryFee: Number(e.target.value),
+                          })
                         }
                         className="h-10 bg-background font-mono"
                       />
@@ -395,11 +605,13 @@ export default function Settings() {
                         FREE DELIVERY THRESHOLD FOR PREPAID (₹)
                       </label>
                       <Input
-                        value={deliverySetup.prepaidFreeThreshold}
+                        type="number"
+                        min="0"
+                        value={paymentInfo.freePrepaidDeliveryOn}
                         onChange={(e) =>
-                          setDeliverySetup({
-                            ...deliverySetup,
-                            prepaidFreeThreshold: e.target.value,
+                          setPaymentInfo({
+                            ...paymentInfo,
+                            freePrepaidDeliveryOn: Number(e.target.value),
                           })
                         }
                         className="h-10 bg-background font-mono"
@@ -416,7 +628,8 @@ export default function Settings() {
               <Card className="rounded-2xl border-border shadow-sm">
                 <CardHeader className="py-4 px-6 border-b border-border/60">
                   <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <PackageCheck className="h-3.5 w-3.5" /> CASH ON DELIVERY (COD) SETTINGS
+                    <PackageCheck className="h-3.5 w-3.5" /> CASH ON DELIVERY
+                    (COD) SETTINGS
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -426,9 +639,14 @@ export default function Settings() {
                         COD DELIVERY FEE (₹)
                       </label>
                       <Input
-                        value={deliverySetup.codFee}
+                        type="number"
+                        min="0"
+                        value={paymentInfo.codDeliveryFee}
                         onChange={(e) =>
-                          setDeliverySetup({ ...deliverySetup, codFee: e.target.value })
+                          setPaymentInfo({
+                            ...paymentInfo,
+                            codDeliveryFee: Number(e.target.value),
+                          })
                         }
                         className="h-10 bg-background font-mono"
                       />
@@ -439,11 +657,13 @@ export default function Settings() {
                         FREE DELIVERY THRESHOLD FOR COD (₹)
                       </label>
                       <Input
-                        value={deliverySetup.codFreeThreshold}
+                        type="number"
+                        min="0"
+                        value={paymentInfo.freeCodDeliveryOn}
                         onChange={(e) =>
-                          setDeliverySetup({
-                            ...deliverySetup,
-                            codFreeThreshold: e.target.value,
+                          setPaymentInfo({
+                            ...paymentInfo,
+                            freeCodDeliveryOn: Number(e.target.value),
                           })
                         }
                         className="h-10 bg-background font-mono"
@@ -455,20 +675,22 @@ export default function Settings() {
 
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-                        MAX ALLOWED COD AMOUNT (₹)
+                        MAX FREE COD DELIVERY THRESHOLD (₹)
                       </label>
                       <Input
-                        value={deliverySetup.maxCodAmount}
+                        type="number"
+                        min="0"
+                        value={paymentInfo.maxFreeCodDeliveryOn}
                         onChange={(e) =>
-                          setDeliverySetup({
-                            ...deliverySetup,
-                            maxCodAmount: e.target.value,
+                          setPaymentInfo({
+                            ...paymentInfo,
+                            maxFreeCodDeliveryOn: Number(e.target.value),
                           })
                         }
                         className="h-10 bg-background font-mono"
                       />
                       <p className="text-[11px] text-muted-foreground">
-                        Disable COD for orders above this value.
+                        Orders above this amount will not qualify for free COD.
                       </p>
                     </div>
                   </div>
@@ -476,16 +698,20 @@ export default function Settings() {
               </Card>
 
               {/* Card 3: Partial Payment Rules */}
-              <Card className="rounded-2xl border-border shadow-sm">
+              {/* <Card className="rounded-2xl border-border shadow-sm">
                 <CardHeader className="py-4 px-6 border-b border-border/60 flex flex-row items-center justify-between">
                   <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <Percent className="h-3.5 w-3.5" /> COD PARTIAL PAYMENT RULES
+                    <Percent className="h-3.5 w-3.5" /> COD PARTIAL PAYMENT
+                    RULES
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Switch
-                      checked={deliverySetup.partialCodRequired}
+                      checked={partialCodSetup.partialCodRequired}
                       onCheckedChange={(checked) =>
-                        setDeliverySetup({ ...deliverySetup, partialCodRequired: checked })
+                        setPartialCodSetup({
+                          ...partialCodSetup,
+                          partialCodRequired: checked,
+                        })
                       }
                     />
                     <span className="text-xs font-semibold">Required</span>
@@ -498,13 +724,18 @@ export default function Settings() {
                         PARTIAL PAYMENT TYPE
                       </label>
                       <select
-                        value={deliverySetup.partialType}
+                        value={partialCodSetup.partialType}
                         onChange={(e) =>
-                          setDeliverySetup({ ...deliverySetup, partialType: e.target.value })
+                          setPartialCodSetup({
+                            ...partialCodSetup,
+                            partialType: e.target.value,
+                          })
                         }
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
-                        <option value="Fixed Amount (₹)">Fixed Amount (₹)</option>
+                        <option value="Fixed Amount (₹)">
+                          Fixed Amount (₹)
+                        </option>
                         <option value="Percentage (%)">Percentage (%)</option>
                       </select>
                     </div>
@@ -514,10 +745,10 @@ export default function Settings() {
                         PARTIAL VALUE (₹)
                       </label>
                       <Input
-                        value={deliverySetup.partialValue}
+                        value={partialCodSetup.partialValue}
                         onChange={(e) =>
-                          setDeliverySetup({
-                            ...deliverySetup,
+                          setPartialCodSetup({
+                            ...partialCodSetup,
                             partialValue: e.target.value,
                           })
                         }
@@ -526,99 +757,90 @@ export default function Settings() {
                     </div>
                   </div>
                   <p className="text-[11px] text-muted-foreground pt-1">
-                    Partial COD requires users to pay a small token fee online to prevent invalid orders. The remaining amount will be paid during physical delivery.
+                    Partial COD requires users to pay a small token fee online
+                    to prevent invalid orders. The remaining amount will be paid
+                    during physical delivery.
                   </p>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               {/* Action Bar */}
               <div className="flex items-center justify-between pt-2">
-                {saveSuccess ? (
-                  <span className="text-xs font-semibold text-emerald-600 animate-in fade-in">
-                    ✓ {saveSuccess}
-                  </span>
-                ) : (
-                  <span />
-                )}
                 <Button
-                  onClick={() => triggerSaveSuccess('Delivery & COD settings saved!')}
+                  disabled={isLoading}
+                  onClick={handleSaveDelivery}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  <Save className="h-4 w-4" /> Save Delivery Settings
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save Delivery Settings
                 </Button>
               </div>
             </div>
           )}
 
           {/* POLICY TABS: PRIVACY, TERMS, SHIPPING, REFUND */}
-          {(activeTab === 'privacy' ||
-            activeTab === 'terms' ||
-            activeTab === 'shipping' ||
-            activeTab === 'refund') && (
-              <div className="space-y-6">
-                <Card className="rounded-2xl border-border shadow-sm">
-                  <CardHeader className="py-4 px-6 border-b border-border/60">
-                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      {activeTab === 'privacy' && 'PRIVACY POLICY'}
-                      {activeTab === 'terms' && 'TERMS & CONDITIONS'}
-                      {activeTab === 'shipping' && 'SHIPPING & DELIVERY POLICY'}
-                      {activeTab === 'refund' && 'RETURN & REFUND POLICY'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-4">
-                    <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-                      {activeTab === 'privacy' && 'PRIVACY POLICY CONTENT'}
-                      {activeTab === 'terms' && 'TERMS & CONDITIONS CONTENT'}
-                      {activeTab === 'shipping' && 'SHIPPING POLICY CONTENT'}
-                      {activeTab === 'refund' && 'RETURN & REFUND POLICY CONTENT'}
-                    </label>
+          {(activeTab === "privacy" ||
+            activeTab === "terms" ||
+            activeTab === "shipping" ||
+            activeTab === "refund") && (
+            <div className="space-y-6">
+              <Card className="rounded-2xl border-border shadow-sm">
+                <CardHeader className="py-4 px-6 border-b border-border/60">
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    {activeTab === "privacy" && "PRIVACY POLICY"}
+                    {activeTab === "terms" && "TERMS & CONDITIONS"}
+                    {activeTab === "shipping" && "SHIPPING & DELIVERY POLICY"}
+                    {activeTab === "refund" && "RETURN & REFUND POLICY"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+                    {activeTab === "privacy" && "PRIVACY POLICY CONTENT"}
+                    {activeTab === "terms" && "TERMS & CONDITIONS CONTENT"}
+                    {activeTab === "shipping" && "SHIPPING POLICY CONTENT"}
+                    {activeTab === "refund" && "RETURN & REFUND POLICY CONTENT"}
+                  </label>
 
-                    {/* Rich Text Editor */}
-                    <RichTextEditor
-                      value={policies[activeTab]}
-                      onChange={(val) => setPolicies({ ...policies, [activeTab]: val })}
-                      placeholder="Type policy details here..."
-                      minHeight="260px"
-                    />
+                  {/* Rich Text Editor */}
+                  <RichEditor
+                    key={activeTab}
+                    value={getPolicyValue(activeTab)}
+                    onChange={handlePolicyChange}
+                    placeholder="Type policy details here..."
+                    minHeight="260px"
+                  />
 
-                    <p className="text-[11px] text-muted-foreground pt-1">
-                      State return windows (e.g., 7 days), product eligibility (opened vs unopened), shipping fees, and payment channels.
-                    </p>
-                  </CardContent>
-                </Card>
+                  <p className="text-[11px] text-muted-foreground pt-1">
+                    State return windows (e.g., 7 days), product eligibility
+                    (opened vs unopened), shipping fees, and payment channels.
+                  </p>
+                </CardContent>
+              </Card>
 
-                {/* Action Bar */}
-                <div className="flex items-center justify-between pt-2">
-                  {saveSuccess ? (
-                    <span className="text-xs font-semibold text-emerald-600 animate-in fade-in">
-                      ✓ {saveSuccess}
-                    </span>
+              {/* Action Bar */}
+              <div className="flex items-center justify-between pt-2">
+                <Button
+                  disabled={isLoading}
+                  onClick={handleSavePolicy}
+                  className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <span />
+                    <Save className="h-4 w-4" />
                   )}
-                  <Button
-                    onClick={() =>
-                      triggerSaveSuccess(
-                        `${activeTab === 'privacy'
-                          ? 'Privacy Policy'
-                          : activeTab === 'terms'
-                            ? 'Terms & Conditions'
-                            : activeTab === 'shipping'
-                              ? 'Shipping Policy'
-                              : 'Return & Refund Policy'
-                        } updated successfully!`
-                      )
-                    }
-                    className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
-                  >
-                    <Save className="h-4 w-4" /> Save Policy
-                  </Button>
-                </div>
+                  Save Policy
+                </Button>
               </div>
-            )}
+            </div>
+          )}
         </div>
       </div>
     </div>
-  )
+  );
 }
