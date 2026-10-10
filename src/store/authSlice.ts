@@ -90,13 +90,13 @@ export function login(email: string, password: string, navigate) {
   };
 }
 
-export function getMe() {
-  return async (dispatch: AppDispatch) => {
+export function getProfile() {
+  return async function getProfileThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     try {
       await service
-        .me()
+        .getProfile()
         .then((res) => {
           // console.log("me res : ", res);
           dispatch(setProfileData(res.data));

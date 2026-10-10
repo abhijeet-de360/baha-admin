@@ -22,10 +22,18 @@ export interface ColorItem {
   updatedAt?: string;
 }
 
-const initialState = {
+interface ColorState {
+  status: ColorStatus;
+  colors: ColorItem[];
+  total: number;
+  isModalOpen: boolean;
+}
+
+const initialState: ColorState = {
   status: STATUS.IDLE as ColorStatus,
   colors: [],
   total: 0,
+  isModalOpen: false,
 };
 
 const colorSlice = createSlice({
@@ -69,6 +77,9 @@ const colorSlice = createSlice({
       state.colors = state.colors.filter((c) => c._id !== action.payload);
       state.total = Math.max(0, state.total - 1);
     },
+    toogleModal: (state, { payload }) => {
+      state.isModalOpen = payload;
+    },
   },
 });
 
@@ -79,6 +90,7 @@ export const {
   addColorSuccess,
   updateColorSuccess,
   deleteColorSuccess,
+  toogleModal,
 } = colorSlice.actions;
 
 export default colorSlice.reducer;
@@ -90,13 +102,10 @@ export function addColor(data: object) {
     return await service
       .addColor(data)
       .then((res) => {
-        if (res.status === 200 || res.status === 201) {
-          dispatch(addColorSuccess(res.data));
-          dispatch(setStatus(STATUS.IDLE));
-          successHandler("Color added successfully.");
-          return true;
-        }
-        return false;
+        dispatch(addColorSuccess(res.data));
+        dispatch(toogleModal(false));
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Color added successfully.");
       })
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
@@ -114,14 +123,13 @@ export function updateColor(id: string, data: object) {
       .updateColor(id, data)
       .then((res) => {
         dispatch(updateColorSuccess(res.data));
+        dispatch(toogleModal(false));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Color updated successfully.");
-        return true;
       })
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(err?.response || err);
-        return false;
       });
   };
 }
@@ -132,36 +140,32 @@ export function deleteColor(id: string) {
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .deleteColor(id)
-      .then((res) => {
+      .then(() => {
         dispatch(deleteColorSuccess(id));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Color deleted successfully.");
-        return true;
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response || error);
-        return false;
       });
   };
 }
 
 // Get all colors thunk function
-export function getColors(params: {
-  offset?: number;
-  limit?: number;
-  status?: string;
-  query?: string;
-  sort?: "asc" | "desc";
-  sortBy?: "name" | "hexCode" | "createdAt" | "updatedAt";
-}) {
+export function getColors(
+  keyword: string,
+  limit: number,
+  offset: number,
+  status: string,
+) {
   return async function getColorsThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
-      .getAllColors(params)
+      .getAllColors(keyword, limit, offset, status)
       .then((res) => {
-        if (params.offset && params.offset > 0) {
+        if (offset > 0) {
           dispatch(appendColors(res.data));
         } else {
           dispatch(setColors(res.data));

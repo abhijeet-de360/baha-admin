@@ -4,6 +4,7 @@ import colorReducer from "./colorSlice";
 import faqReducer from "./faqSlice";
 import sizeReducer from "./sizeSlice";
 import settingsReducer from "./settingsSlice";
+import couponReducer from "./couponSlice";
 
 export const store = configureStore({
   reducer: {
@@ -11,7 +12,8 @@ export const store = configureStore({
     color: colorReducer,
     faq: faqReducer,
     size: sizeReducer,
-    settings: settingsReducer
+    settings: settingsReducer,
+    coupon: couponReducer
   },
 });
 

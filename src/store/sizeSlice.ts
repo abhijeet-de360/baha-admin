@@ -2,7 +2,6 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { AppDispatch } from "./store";
 import { errorHandler, successHandler } from "@/shared/_helper/responseHelper";
 import { service } from "@/shared/_services/api_services";
-import axios from "axios";
 import { setLoading } from "./loader";
 
 const STATUS = Object.freeze({
@@ -110,9 +109,6 @@ export function getAllSize( keyword: string, limit: number, offset: number, stat
         dispatch(setLoading(false));
       })
       .catch((error: any) => {
-        // manual aborts
-        if (axios.isCancel(error) || error?.name === "CanceledError") return;
-
         dispatch(setStatus(STATUS.ERROR));
         dispatch(setLoading(false));
         errorHandler(error?.response);
@@ -150,6 +146,7 @@ export function updateSize(id: string, data: object) {
       .updateSize(id, data)
       .then((res) => {
         const updated = res?.data?.result ?? res?.data;
+        dispatch(toogleAddModal(false))
         dispatch(updateSizeSuccess(updated));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Size updated successfully");

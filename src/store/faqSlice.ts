@@ -25,12 +25,14 @@ interface InitialState {
   faqs: FAQ[];
   total: number;
   status: string;
+  isModalOpen: boolean;
 }
 
 const initialState: InitialState = {
   faqs: [],
   total: 0,
   status: STATUS.IDLE,
+  isModalOpen: false
 };
 
 export const faqSlice = createSlice({
@@ -60,6 +62,9 @@ export const faqSlice = createSlice({
       state.faqs = state.faqs.filter((faq) => faq._id !== id);
       state.total = Math.max(0, state.total - 1);
     },
+    toogleModal(state, { payload }) {
+      state.isModalOpen = payload;
+    }
   },
 });
 
@@ -70,6 +75,7 @@ export const {
   addFaqSuccess,
   updateFaqSuccess,
   deleteFaqSuccess,
+  toogleModal
 } = faqSlice.actions;
 
 export default faqSlice.reducer;
@@ -83,6 +89,7 @@ export function addFaq(data: object) {
       .addFaq(data)
       .then((res) => {
         dispatch(addFaqSuccess(res?.data?.result ?? res?.data));
+        dispatch(toogleModal(false))
         dispatch(setStatus(STATUS.IDLE));
         successHandler("FAQ added successfully");
         return true;
@@ -96,13 +103,13 @@ export function addFaq(data: object) {
 }
 
 // Get All faq thunk
-export function getAllFaq(signal?: AbortSignal) {
+export function getAllFaq() {
   return async function getAllFaqThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true))
     dispatch(setStatus(STATUS.LOADING));
 
     return await service
-      .getAllFaqs(signal)
+      .getAllFaqs()
       .then((res) => {
         dispatch(setFaqs(res?.data?.result));
         dispatch(setTotal(res?.data?.total));
@@ -131,6 +138,7 @@ export function updateFaq(
       .updateFaq(id, data)
       .then((res) => {
         dispatch(updateFaqSuccess(res?.data?.result ?? res?.data));
+        dispatch(toogleModal(false))
         dispatch(setStatus(STATUS.IDLE));
         successHandler("FAQ updated successfully");
         onSuccess?.();

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import {
   Palette,
@@ -6,14 +6,8 @@ import {
   Search,
   SquarePen,
   Trash2,
-  CheckCircle2,
-  AlertTriangle,
   Copy,
   Check,
-  Sparkles,
-  Layers,
-  LayoutGrid,
-  List as ListIcon,
   RefreshCw,
   Hash,
 } from "lucide-react";
@@ -39,6 +33,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -49,29 +44,9 @@ import {
   updateColor,
   deleteColor,
   getColors,
+  toogleModal,
 } from "@/store/colorSlice";
-
-// Preset popular kids clothing colors
-const PRESET_SWATCHES = [
-  "#FF3B30",
-  "#FF9500",
-  "#FFCC00",
-  "#34C759",
-  "#007AFF",
-  "#5856D6",
-  "#AF52DE",
-  "#FF2D55",
-  "#38BDF8",
-  "#F472B6",
-  "#A7F3D0",
-  "#FEF08A",
-  "#1E293B",
-  "#64748B",
-  "#F8FAFC",
-  "#78350F",
-];
-
-const PAGE_LIMIT = 10;
+import { warningHandler } from "@/shared/_helper/responseHelper";
 
 export default function Colors() {
   const dispatch = useDispatch<AppDispatch>();
@@ -79,63 +54,104 @@ export default function Colors() {
     colors = [],
     total = 0,
     status,
+    isModalOpen,
   } = useSelector((state: RootState) => state.color);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+  const [hasMore, setHasMore] = useState(true);
+
+  // Ref
+  const searchTimeoutRef = useRef<any>(null);
 
   // Modal States
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingColor, setEditingColor] = useState(null);
-  const [deletingColor, setDeletingColor] = useState(null);
+  const [editingColor, setEditingColor] = useState<ColorItem | null>(null);
+  const [deletingColor, setDeletingColor] = useState<ColorItem | null>(null);
 
   // Form State
-  const [formName, setFormName] = useState("");
-  const [formHex, setFormHex] = useState("#38BDF8");
-  const [formStatus, setFormStatus] = useState<"active" | "inactive">("active");
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    hexCode: "#38BDF8",
+    status: "active",
+  });
+
+  const [formVar, setFormVar] = useState({
+    keyword: "",
+    limit: 10,
+    offset: 0,
+    status: "all",
+  });
 
   // UI state
   const [copiedHex, setCopiedHex] = useState<string | null>(null);
   const [pickerMode, setPickerMode] = useState<"wheel" | "sketch">("wheel");
 
-  // Debounced initial fetch & search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      dispatch(
-        getColors({
-          query: searchQuery.trim(),
-          offset: 0,
-          limit: PAGE_LIMIT,
-        }),
-      );
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, dispatch]);
-
-  // Filter Logic (Status filtering on client over loaded dataset)
-  const filteredColors = useMemo(() => {
-    if (!Array.isArray(colors)) return [];
-    return colors.filter((c) => {
-      const matchesStatus =
-        statusFilter === "all" ||
-        c.status?.toLowerCase() === statusFilter.toLowerCase();
-      return matchesStatus;
-    });
-  }, [colors, statusFilter]);
-
   // Infinite Scroll fetch more
   const fetchMoreColors = () => {
-    if (status || colors.length >= total) return;
+    if (status === "loading" || colors.length >= total) return;
+
+    const newOffset = formVar.offset + formVar.limit;
+
     dispatch(
-      getColors({
-        query: searchQuery.trim(),
-        offset: colors.length,
-        limit: PAGE_LIMIT,
-      }),
+      getColors(
+        formVar.keyword,
+        formVar.limit,
+        newOffset,
+        formVar.status === "all" ? "" : formVar.status,
+      ),
+    );
+
+    setFormVar((prev) => ({ ...prev, offset: newOffset }));
+
+    if (newOffset + formVar.limit >= total) {
+      setHasMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (colors.length >= total && total > 0) {
+      setHasMore(false);
+    } else {
+      setHasMore(true);
+    }
+  }, [colors.length, total]);
+
+  // Handle search colors
+  const handleSearch = (searchTerm: string) => {
+    setFormVar((prev) => ({
+      ...prev,
+      keyword: searchTerm,
+      offset: 0,
+    }));
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      dispatch(
+        getColors(
+          searchTerm,
+          formVar.limit,
+          0,
+          formVar.status === "all" ? "" : formVar.status,
+        ),
+      );
+    }, 500);
+  };
+
+  // Handle status change
+  const handleStatusChange = (status: string) => {
+    setFormVar((prev) => ({
+      ...prev,
+      status: status,
+      offset: 0,
+    }));
+    dispatch(
+      getColors(
+        formVar.keyword,
+        formVar.limit,
+        0,
+        status === "all" ? "" : status,
+      ),
     );
   };
 
@@ -150,97 +166,72 @@ export default function Colors() {
     if (formatted && !formatted.startsWith("#")) {
       formatted = "#" + formatted;
     }
-    setFormHex(formatted);
-
-    if (isValidHex(formatted)) {
-      setFormError(null);
-    }
+    handleInputChange("hexCode", formatted);
   };
 
   // Open Modal for Add
   const handleOpenAddModal = () => {
     setEditingColor(null);
-    setFormName("");
-    setFormHex("#38BDF8");
-    setFormStatus("active");
-    setFormError(null);
-    setIsModalOpen(true);
+    setFormData({
+      name: "",
+      hexCode: "#38BDF8",
+      status: "active",
+    });
+    dispatch(toogleModal(true));
   };
 
   // Open Modal for Edit
-  const handleOpenEditModal = (color) => {
+  const handleOpenEditModal = (color: ColorItem) => {
     setEditingColor(color);
-    setFormName(color.name);
-    setFormHex(color.hexCode);
-    setFormStatus(color.status === "inactive" ? "inactive" : "active");
-    setFormError(null);
-    setIsModalOpen(true);
+    setFormData({
+      name: color.name,
+      hexCode: color.hexCode,
+      status: color.status,
+    });
+    dispatch(toogleModal(true));
   };
 
   // Save / Update Color
   const handleSaveColor = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formName.trim()) {
-      setFormError("Please enter a color name.");
+    if (!formData.name.trim()) {
+      warningHandler("Please enter a color name.");
       return;
     }
 
-    if (!isValidHex(formHex)) {
-      setFormError("Please enter a valid HEX code (e.g. #FF5733 or #FFF).");
+    if (!isValidHex(formData.hexCode)) {
+      warningHandler("Please enter a valid HEX code (e.g. #FF5733 or #FFF).");
       return;
     }
 
-    const cleanHex = formHex.toUpperCase();
-
-    // Check duplicate hex code (excluding current editing color)
-    const duplicate = colors.find(
-      (c) =>
-        c.hexCode.toUpperCase() === cleanHex && c._id !== editingColor?._id,
-    );
-    if (duplicate) {
-      setFormError(
-        `Color with HEX code ${cleanHex} already exists (${duplicate.name}).`,
-      );
-      return;
-    }
+    const cleanHex = formData.hexCode.toUpperCase();
 
     if (editingColor) {
       // Update Color
-      const success = await dispatch(
+      await dispatch(
         updateColor(editingColor._id, {
-          name: formName.trim(),
+          name: formData.name.trim(),
           hexCode: cleanHex,
-          status: formStatus,
+          status: formData.status,
           slug: editingColor.slug,
         }),
       );
-      if (success) {
-        setIsModalOpen(false);
-      }
     } else {
       // Create Color
-      const success = await dispatch(
+      await dispatch(
         addColor({
-          name: formName.trim(),
+          name: formData.name.trim(),
           hexCode: cleanHex,
-          status: formStatus,
+          status: formData.status,
         }),
       );
-      if (success) {
-        setIsModalOpen(false);
-      }
     }
   };
 
   // Delete Color
-  const handleConfirmDelete = async () => {
-    if (deletingColor) {
-      const success = await dispatch(deleteColor(deletingColor._id));
-      if (success) {
-        setDeletingColor(null);
-      }
-    }
+  const handleDelete = (id: string) => {
+    dispatch(deleteColor(id));
   };
 
   // Copy HEX to clipboard
@@ -267,6 +258,24 @@ export default function Colors() {
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
     return yiq >= 128 ? "#0f172a" : "#ffffff";
   };
+
+  // Handle input change
+  const handleInputChange = (name: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    if (colors.length <= 0 || total === 0) {
+      dispatch(
+        getColors(
+          formVar.keyword,
+          formVar.limit,
+          formVar.offset,
+          formVar.status === "all" ? "" : formVar.status,
+        ),
+      );
+    }
+  }, []);
 
   return (
     <div className="space-y-6 pb-12">
@@ -305,8 +314,8 @@ export default function Colors() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search color name or #HEX code..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={formVar.keyword}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="pl-10 h-10 text-xs rounded-xl border-border bg-background shadow-2xs font-semibold"
               />
             </div>
@@ -318,9 +327,9 @@ export default function Colors() {
                 {(["all", "active", "inactive"] as const).map((st) => (
                   <button
                     key={st}
-                    onClick={() => setStatusFilter(st)}
+                    onClick={() => handleStatusChange(st)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer capitalize ${
-                      statusFilter === st
+                      formVar.status === st
                         ? "bg-background text-foreground shadow-2xs"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
@@ -335,7 +344,7 @@ export default function Colors() {
 
         {/* Content Body */}
         <CardContent className="p-0">
-          {filteredColors.length === 0 ? (
+          {colors?.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <div className="p-4 rounded-full bg-muted inline-block text-muted-foreground">
                 <Palette className="h-8 w-8" />
@@ -344,8 +353,8 @@ export default function Colors() {
                 {status === "loading" ? "Loading colors..." : "No colors found"}
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                {searchQuery
-                  ? `No color matched your search "${searchQuery}". Try searching for another color name or add a new color.`
+                {formVar.keyword
+                  ? `No color matched your search "${formVar.keyword}". Try searching for another color name or add a new color.`
                   : "Get started by creating your first product color."}
               </p>
               <Button
@@ -358,23 +367,25 @@ export default function Colors() {
             </div>
           ) : (
             <InfiniteScroll
-              dataLength={filteredColors.length}
+              dataLength={colors.length}
               next={fetchMoreColors}
-              hasMore={colors.length < total}
+              hasMore={hasMore}
               loader={
                 <div className="py-4 text-center text-xs text-muted-foreground font-medium">
                   Loading more colors...
                 </div>
               }
               endMessage={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                  Showing all {total} colors
-                </div>
+                colors.length > 0 && (
+                  <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                    Showing all {colors.length} of {total} colors
+                  </div>
+                )
               }
             >
               {/* Mobile & Tablet Card View (screens smaller than lg) */}
               <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                {filteredColors.map((color) => {
+                {colors?.map((color) => {
                   const isCopied = copiedHex === color.hexCode;
                   return (
                     <Card
@@ -444,15 +455,39 @@ export default function Colors() {
                         >
                           <SquarePen className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setDeletingColor(color)}
-                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete this Color?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will
+                                permanently delete this Color.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => handleDelete(color?._id)}
+                              >
+                                Yes, delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </Card>
                   );
@@ -473,7 +508,7 @@ export default function Colors() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {filteredColors.map((color) => {
+                    {colors?.map((color) => {
                       const isCopied = copiedHex === color.hexCode;
                       return (
                         <tr
@@ -548,15 +583,41 @@ export default function Colors() {
                               >
                                 <SquarePen className="h-3.5 w-3.5" />
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setDeletingColor(color)}
-                                title="Delete"
-                                className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Color?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Color.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(color?._id)}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </td>
                         </tr>
@@ -571,7 +632,12 @@ export default function Colors() {
       </Card>
 
       {/* Add / Edit Color Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          dispatch(toogleModal(open));
+        }}
+      >
         <DialogContent className="sm:max-w-xl rounded-3xl p-6 overflow-hidden">
           <form onSubmit={handleSaveColor}>
             <DialogHeader className="pb-2">
@@ -585,14 +651,6 @@ export default function Colors() {
               </DialogDescription>
             </DialogHeader>
 
-            {/* Error Banner */}
-            {formError && (
-              <div className="flex items-center gap-2 p-2.5 mb-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>{formError}</span>
-              </div>
-            )}
-
             <div className="space-y-4 py-2">
               {/* Top inputs: Color Name + Status */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -603,8 +661,8 @@ export default function Colors() {
                   </label>
                   <Input
                     placeholder="e.g. Coral Pink, Sky Blue"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                     className="h-9 text-xs font-semibold placeholder:text-muted-foreground/40"
                     required
                   />
@@ -616,9 +674,9 @@ export default function Colors() {
                     Status <span className="text-destructive">*</span>
                   </label>
                   <select
-                    value={formStatus}
+                    value={formData.status}
                     onChange={(e) =>
-                      setFormStatus(e.target.value as "active" | "inactive")
+                      handleInputChange("status", e.target.value)
                     }
                     className="w-full h-9 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring"
                     required
@@ -652,20 +710,26 @@ export default function Colors() {
 
                   {pickerMode === "wheel" ? (
                     <Wheel
-                      color={isValidHex(formHex) ? formHex : "#38BDF8"}
+                      color={
+                        isValidHex(formData.hexCode)
+                          ? formData.hexCode
+                          : "#38BDF8"
+                      }
                       onChange={(color) => {
-                        setFormHex(color.hex.toUpperCase());
-                        setFormError(null);
+                        handleInputChange("hexCode", color.hex.toUpperCase());
                       }}
                       width={150}
                       height={150}
                     />
                   ) : (
                     <Sketch
-                      color={isValidHex(formHex) ? formHex : "#38BDF8"}
+                      color={
+                        isValidHex(formData.hexCode)
+                          ? formData.hexCode
+                          : "#38BDF8"
+                      }
                       onChange={(color) => {
-                        setFormHex(color.hex.toUpperCase());
-                        setFormError(null);
+                        handleInputChange("hexCode", color.hex.toUpperCase());
                       }}
                       disableAlpha
                       style={{
@@ -688,7 +752,7 @@ export default function Colors() {
                     </label>
                     <Input
                       placeholder="#FF5733"
-                      value={formHex}
+                      value={formData.hexCode}
                       onChange={(e) => handleHexInputChange(e.target.value)}
                       className="h-9 text-xs font-mono font-bold uppercase placeholder:text-muted-foreground/40"
                       maxLength={7}
@@ -704,8 +768,8 @@ export default function Colors() {
                     <div
                       className="h-20 rounded-xl shadow-md border-2 border-background ring-1 ring-border flex flex-col justify-between p-2.5 transition-all"
                       style={{
-                        backgroundColor: isValidHex(formHex)
-                          ? formHex
+                        backgroundColor: isValidHex(formData.hexCode)
+                          ? formData.hexCode
                           : "#e2e8f0",
                       }}
                     >
@@ -714,45 +778,30 @@ export default function Colors() {
                           className="text-[10px] font-extrabold px-2 py-0.5 rounded-full"
                           style={{
                             color: getContrastTextColor(
-                              isValidHex(formHex) ? formHex : "#ffffff",
+                              isValidHex(formData.hexCode)
+                                ? formData.hexCode
+                                : "#ffffff",
                             ),
                             backgroundColor: "rgba(0,0,0,0.15)",
                           }}
                         >
-                          {formName || "Color Swatch"}
+                          {formData.name || "Color Swatch"}
                         </span>
                         <span
                           className="text-[10px] font-mono font-bold"
                           style={{
                             color: getContrastTextColor(
-                              isValidHex(formHex) ? formHex : "#ffffff",
+                              isValidHex(formData.hexCode)
+                                ? formData.hexCode
+                                : "#ffffff",
                             ),
                           }}
                         >
-                          {formHex}
+                          {formData.hexCode}
                         </span>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Preset Palette Suggestions */}
-              <div className="space-y-1.5 pt-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                  Quick Select Presets
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {PRESET_SWATCHES.map((hex) => (
-                    <button
-                      type="button"
-                      key={hex}
-                      onClick={() => handleHexInputChange(hex)}
-                      className="h-6 w-6 rounded-full border border-border shadow-xs transition-all hover:scale-110 cursor-pointer"
-                      style={{ backgroundColor: hex }}
-                      title={hex}
-                    />
-                  ))}
                 </div>
               </div>
             </div>
@@ -761,7 +810,7 @@ export default function Colors() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => dispatch(toogleModal(false))}
                 className="rounded-full text-xs cursor-pointer"
               >
                 Cancel
@@ -777,55 +826,6 @@ export default function Colors() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Alert Dialog */}
-      <AlertDialog
-        open={Boolean(deletingColor)}
-        onOpenChange={(open) => !open && setDeletingColor(null)}
-      >
-        <AlertDialogContent className="rounded-3xl max-w-md p-6">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive font-bold">
-              <AlertTriangle className="h-5 w-5" /> Delete Color Confirmation
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground space-y-3 pt-2">
-              <span>
-                Are you sure you want to delete this color? This action will
-                remove it from the list.
-              </span>
-
-              {deletingColor && (
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted border border-border mt-2">
-                  <div
-                    className="h-10 w-10 rounded-full border-2 border-background shadow-sm ring-1 ring-border shrink-0"
-                    style={{ backgroundColor: deletingColor.hexCode }}
-                  />
-                  <div>
-                    <p className="font-bold text-foreground text-sm">
-                      {deletingColor.name}
-                    </p>
-                    <p className="font-mono text-xs text-muted-foreground">
-                      {deletingColor.hexCode}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 mt-4">
-            <AlertDialogCancel className="rounded-full text-xs cursor-pointer">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={status === "loading"}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold text-xs rounded-full cursor-pointer"
-            >
-              Delete Color
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { localService } from "../_session/local";
 // const isNative = Capacitor.isNativePlatform();
 
 export const errorHandler = async (res) => {
+  console.log("ress ====> ", res);
   if (res.status === 401) {
     // sessionService.clearAll();
     localService.clearAll();
@@ -15,7 +16,7 @@ export const errorHandler = async (res) => {
 
   const message = Array.isArray(res.data.message)
     ? res.data.message[0]
-    : res.data.message;
+    : res.data.message ? res.data.message : res;
 
   //   if (isNative) {
   //     await Toast.show({

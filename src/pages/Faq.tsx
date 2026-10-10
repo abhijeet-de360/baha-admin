@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   HelpCircle,
   Plus,
-  Search,
   SquarePen,
   Trash2,
   MessageSquare,
@@ -27,10 +26,18 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
-import { addFaq, deleteFaq, getAllFaq, updateFaq, type FAQ } from "@/store/faqSlice";
+import {
+  addFaq,
+  deleteFaq,
+  getAllFaq,
+  toogleModal,
+  updateFaq,
+  type FAQ,
+} from "@/store/faqSlice";
 
 const STATUS = [
   { label: "Active", value: "active" },
@@ -38,92 +45,87 @@ const STATUS = [
 ];
 
 export default function FaqPage() {
-  const { faqs } = useSelector((state: RootState) => state.faq);
+  const { faqs, isModalOpen } = useSelector((state: RootState) => state.faq);
   const dispatch = useDispatch<AppDispatch>();
 
   // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
-  const [formQuestion, setFormQuestion] = useState("");
-  const [formAnswer, setFormAnswer] = useState("");
-  const [formStatus, setFormStatus] = useState<"active" | "inactive">("active");
-  const [formOrder, setFormOrder] = useState(0);
 
-  // Delete Alert State
-  const [deletingFaqId, setDeletingFaqId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    question: "",
+    answer: "",
+    status: "active",
+    order: 0,
+  });
 
   // Open modal for Adding new FAQ
   const handleOpenAddModal = () => {
     setEditingFaq(null);
-    setFormQuestion("");
-    setFormAnswer("");
-    setFormStatus("active");
-    setFormOrder(0);
-    setIsModalOpen(true);
+    setFormData({
+      question: "",
+      answer: "",
+      status: "active",
+      order: 0,
+    });
+    dispatch(toogleModal(true));
   };
 
   // Open modal for Editing existing FAQ
   const handleOpenEditModal = (faq: FAQ) => {
     setEditingFaq(faq);
-    setFormQuestion(faq.question);
-    setFormAnswer(faq.answer);
-    setFormStatus(faq.status);
-    setFormOrder(faq.order);
-    setIsModalOpen(true);
+    setFormData({
+      question: faq.question,
+      answer: faq.answer,
+      status: faq.status,
+      order: faq.order,
+    });
+    dispatch(toogleModal(true));
   };
 
   // Save (Create or Update)
   const handleSaveFaq = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!formQuestion.trim() || !formAnswer.trim()) return;
+    if (!formData.question.trim() || !formData.answer.trim()) return;
 
     if (editingFaq) {
       // Update
       const body: Record<string, string | number> = {};
-      if (formStatus !== editingFaq.status) body.status = formStatus;
-      if (formQuestion !== editingFaq.question) body.question = formQuestion;
-      if (formAnswer !== editingFaq.answer) body.answer = formAnswer;
-      if (formOrder !== editingFaq.order) body.order = formOrder;
+      if (formData.status !== editingFaq.status) body.status = formData.status;
+      if (formData.question !== editingFaq.question)
+        body.question = formData.question;
+      if (formData.answer !== editingFaq.answer) body.answer = formData.answer;
+      if (formData.order !== editingFaq.order) body.order = formData.order;
 
-      const success = await dispatch(updateFaq(editingFaq._id, body));
-      if (success) {
-        setIsModalOpen(false);
-        setEditingFaq(null);
-      }
+      dispatch(updateFaq(editingFaq._id, body));
     } else {
       // Create
-      const success = await dispatch(
+      dispatch(
         addFaq({
-          question: formQuestion,
-          answer: formAnswer,
-          status: formStatus,
-          order: formOrder,
+          question: formData.question,
+          answer: formData.answer,
+          status: formData.status,
+          order: formData.order,
         }),
       );
-      if (success) {
-        setIsModalOpen(false);
-      }
     }
   };
 
-  // Confirm Delete
-  const handleConfirmDelete = async () => {
-    if (!deletingFaqId) return;
-    const res = await dispatch(deleteFaq(deletingFaqId));
-    if (res) {
-      setDeletingFaqId(null);
-    }
+  // Delete FAQ
+  const handleDelete = (id: string) => {
+    dispatch(deleteFaq(id));
+  };
+
+  // Handle input change
+  const handleInputChange = (name: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   useEffect(() => {
-    const controller = new AbortController();
-    dispatch(getAllFaq(controller.signal));
-
-    return () => {
-      controller.abort();
-    };
-  }, [dispatch]);
+    if (faqs.length <= 0) {
+      dispatch(getAllFaq());
+    }
+  }, []);
 
   return (
     <div className="space-y-6 md:space-y-8 w-full font-sans pb-16">
@@ -193,15 +195,37 @@ export default function FaqPage() {
                     >
                       <SquarePen className="h-3.5 w-3.5" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setDeletingFaqId(faq._id)}
-                      className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this FAQ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete this FAQ.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => handleDelete(faq?._id)}
+                          >
+                            Yes, delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
 
@@ -215,7 +239,10 @@ export default function FaqPage() {
       </div>
 
       {/* Add / Edit FAQ Modal Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => dispatch(toogleModal(open))}
+      >
         <DialogContent className="sm:max-w-[500px] rounded-2xl">
           <form onSubmit={handleSaveFaq}>
             <DialogHeader>
@@ -237,9 +264,9 @@ export default function FaqPage() {
                     Status
                   </label>
                   <select
-                    value={formStatus}
+                    value={formData.status}
                     onChange={(e) =>
-                      setFormStatus(e.target.value as "active" | "inactive")
+                      handleInputChange("status", e.target.value)
                     }
                     className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
                   >
@@ -259,8 +286,8 @@ export default function FaqPage() {
                   <Input
                     type="number"
                     placeholder="e.g., 0"
-                    value={formOrder}
-                    onChange={(e) => setFormOrder(Number(e.target.value))}
+                    value={formData.order}
+                    onChange={(e) => handleInputChange("order", e.target.value)}
                     className="h-10 text-xs font-medium"
                     min={0}
                   />
@@ -274,8 +301,10 @@ export default function FaqPage() {
                 </label>
                 <Input
                   placeholder="e.g., What is your delivery timeline?"
-                  value={formQuestion}
-                  onChange={(e) => setFormQuestion(e.target.value)}
+                  value={formData.question}
+                  onChange={(e) =>
+                    handleInputChange("question", e.target.value)
+                  }
                   className="h-10 text-xs font-medium"
                   required
                 />
@@ -288,8 +317,8 @@ export default function FaqPage() {
                 </label>
                 <textarea
                   placeholder="Type a clear, detailed answer..."
-                  value={formAnswer}
-                  onChange={(e) => setFormAnswer(e.target.value)}
+                  value={formData.answer}
+                  onChange={(e) => handleInputChange("answer", e.target.value)}
                   rows={4}
                   className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring resize-y"
                   required
@@ -301,7 +330,7 @@ export default function FaqPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => dispatch(toogleModal(false))}
                 className="rounded-full text-xs"
               >
                 Cancel
@@ -316,35 +345,6 @@ export default function FaqPage() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Alert Dialog */}
-      <AlertDialog
-        open={Boolean(deletingFaqId)}
-        onOpenChange={(open) => !open && setDeletingFaqId(null)}
-      >
-        <AlertDialogContent className="rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-base text-foreground">
-              Confirm Deletion
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground">
-              Are you sure you want to delete this FAQ question? This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full text-xs cursor-pointer">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full text-xs font-semibold cursor-pointer"
-            >
-              Delete Question
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

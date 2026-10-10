@@ -101,10 +101,7 @@ export function getAllSettings() {
   };
 }
 
-export function updateSettings(
-  data: Partial<SettingsData>,
-  successMsg?: string,
-) {
+export function updateSettings(data: Partial<SettingsData>) {
   return async function updateSettingsThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
@@ -114,16 +111,12 @@ export function updateSettings(
         dispatch(setSettings(res.data));
         dispatch(setStatus(STATUS.IDLE));
         dispatch(setLoading(false));
-        if (successMsg) {
-          successHandler(successMsg);
-        }
-        return true;
+        successHandler("Settings updated successfully!");
       })
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
         dispatch(setLoading(false));
         errorHandler(err?.response || err);
-        return false;
       });
   };
 }

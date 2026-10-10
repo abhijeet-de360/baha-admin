@@ -8,6 +8,7 @@ const colorUrl = rootUrl + "/color";
 const faqUrl = rootUrl + "/faq";
 const sizeUrl = rootUrl + "/size";
 const settingsUrl = rootUrl + "/settings";
+const couponUrl = rootUrl + "/coupon";
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -16,7 +17,7 @@ async function loginUser(data: object) {
 }
 
 // Admin me api service function
-async function me() {
+async function getProfile() {
   return await axios.get(authUrl + "/profile", {
     headers: await authHeader(),
   });
@@ -45,15 +46,10 @@ async function addColor(data: object) {
 }
 
 // Get all colors api service function
-async function getAllColors(params: {
-  offset?: number;
-  limit?: number;
-  status?: string;
-  query?: string;
-  sort?: "asc" | "desc";
-  sortBy?: "name" | "hexCode" | "createdAt" | "updatedAt";
-}) {
-  return await axios.get(colorUrl + "/list", { params });
+async function getAllColors(keyword: string, limit: number, offset: number, status: string) {
+  return await axios.get(colorUrl + `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`, {
+    headers: await authHeader(),
+  });
 }
 
 // Update color api service function
@@ -79,10 +75,9 @@ async function addFaq(data: object) {
 }
 
 // Get all faqs api service function
-async function getAllFaqs(signal?: AbortSignal) {
+async function getAllFaqs() {
   return await axios.get(faqUrl + "/list", {
     headers: await authHeader(),
-    signal,
   });
 }
 
@@ -145,10 +140,42 @@ async function updateSettings(data:object) {
   });
 }
 
+/********************** Coupon api service function ********************* */
+// Get all coupons service function
+async function getAllCoupons(
+  keyword: string,
+  limit: number,
+  offset: number,
+  status: string,
+) {
+  return await axios.get(couponUrl + `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`);
+}
+
+// Add coupon service function
+async function addCoupon(data: object) {
+  return await axios.post(couponUrl + "/create", data, {
+    headers: await authHeader(),
+  });
+}
+
+// Update coupon service function
+async function updateCoupon(id: string, data: object) {
+  return await axios.patch(`${couponUrl}/update/${id}`, data, {
+    headers: await authHeader(),
+  });
+}
+
+// Delete coupon service function
+async function deleteCoupon(id: string) {
+  return await axios.delete(`${couponUrl}/delete/${id}`, {
+    headers: await authHeader(),
+  });
+}
+
 
 export const service = {
   loginUser,
-  me,
+  getProfile,
   updateProfile,
   resetPassword,
   addColor,
@@ -164,5 +191,9 @@ export const service = {
   updateSize,
   deleteSize,
   getAllSettings,
-  updateSettings
+  updateSettings,
+  getAllCoupons,
+  addCoupon,
+  updateCoupon,
+  deleteCoupon
 }

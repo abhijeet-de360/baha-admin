@@ -12,7 +12,6 @@ import {
   MessageSquare,
   DollarSign,
   PackageCheck,
-  Percent,
   Share2,
   Tv,
   MapPin,
@@ -97,7 +96,9 @@ const TAB_ITEMS: TabItem[] = [
 
 export default function Settings() {
   const dispatch = useDispatch<AppDispatch>();
-  const { settings, status } = useSelector((state: RootState) => state.settings);
+  const { settings, status } = useSelector(
+    (state: RootState) => state.settings,
+  );
   const isLoading = status === "loading";
 
   const [activeTab, setActiveTab] = useState<TabType>("contact");
@@ -126,13 +127,6 @@ export default function Settings() {
     freeCodDeliveryOn: 0,
     maxFreeCodDeliveryOn: 0,
   });
-
-  // Optional local partial payment config
-  // const [partialCodSetup, setPartialCodSetup] = useState({
-  //   partialCodRequired: false,
-  //   partialType: "Fixed Amount (₹)",
-  //   partialValue: "0",
-  // });
 
   // Policies State (matches API policy keys)
   const [policies, setPolicies] = useState({
@@ -191,22 +185,12 @@ export default function Settings() {
 
   // Save Contact Info
   const handleSaveContact = async () => {
-    await dispatch(
-      updateSettings(
-        { contactInfo },
-        "Contact details saved successfully!"
-      )
-    );
+    await dispatch(updateSettings({ contactInfo }));
   };
 
   // Save Social Links
   const handleSaveSocial = async () => {
-    await dispatch(
-      updateSettings(
-        { socialLinks },
-        "Social media details saved successfully!"
-      )
-    );
+    await dispatch(updateSettings({ socialLinks }));
   };
 
   // Save Payment & Delivery Setup
@@ -220,9 +204,7 @@ export default function Settings() {
         maxFreeCodDeliveryOn: Number(paymentInfo.maxFreeCodDeliveryOn) || 0,
       },
     };
-    await dispatch(
-      updateSettings(payload, "Delivery & COD settings saved!")
-    );
+    await dispatch(updateSettings(payload));
   };
 
   // Save Policy
@@ -244,9 +226,7 @@ export default function Settings() {
       label = "Return & Refund Policy";
     }
 
-    await dispatch(
-      updateSettings(payload, `${label} updated successfully!`)
-    );
+    await dispatch(updateSettings(payload));
   };
 
   // Helper for current policy value

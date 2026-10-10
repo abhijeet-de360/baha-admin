@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
-import { getMe, updateAdminProfile } from "@/store/authSlice";
+import { getProfile, updateAdminProfile } from "@/store/authSlice";
 
 export default function ProfilePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -36,7 +36,7 @@ export default function ProfilePage() {
       setName(user.name || "");
       setEmail(user.email || "");
     } else {
-      dispatch(getMe());
+      dispatch(getProfile());
     }
   }, [user, dispatch]);
 

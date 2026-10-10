@@ -4,7 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "@/store/store";
-import { getMe } from "@/store/authSlice";
+import { getProfile } from "@/store/authSlice";
 
 export default function Layout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -18,7 +18,7 @@ export default function Layout() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      dispatch(getMe());
+      dispatch(getProfile());
     }
   }, [isAuthenticated]);
 

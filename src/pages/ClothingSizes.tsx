@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import {
   Ruler,
@@ -6,11 +6,8 @@ import {
   Search,
   SquarePen,
   Trash2,
-  AlertTriangle,
-  Sparkles,
   Info,
   Calendar,
-  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { warningHandler } from "@/shared/_helper/responseHelper";
 
 export default function ClothingSizes() {
   const {
@@ -58,53 +56,52 @@ export default function ClothingSizes() {
   const searchTimeoutRef = useRef<any>(null);
 
   // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSize, setEditingSize] = useState<SIZE | null>(null);
 
-  // Form State
-  const [formName, setFormName] = useState("");
-  const [formMinAge, setFormMinAge] = useState<string>("");
-  const [formMaxAge, setFormMaxAge] = useState<string>("");
-  const [formAgeUnit, setFormAgeUnit] = useState<SIZE["ageUnit"]>("year");
-  const [formDescription, setFormDescription] = useState("");
-  const [formStatus, setFormStatus] = useState<SIZE["status"]>("active");
-  const [formError, setFormError] = useState<string | null>(null);
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    minAge: "",
+    maxAge: "",
+    ageUnit: "year",
+    description: "",
+    status: "active",
+  });
 
   const [formVar, setFormVar] = useState({
+    keyword: "",
     limit: 10,
     offset: 0,
-    keyword: "",
     status: "",
   });
 
   const [hasMore, setHasMore] = useState(true);
 
-  // Delete State
-  const [deletingSize, setDeletingSize] = useState<SIZE | null>(null);
-
   // Open Modal for Add
   const handleOpenAddModal = () => {
     setEditingSize(null);
-    setFormName("");
-    setFormMinAge("");
-    setFormMaxAge("");
-    setFormAgeUnit("year");
-    setFormDescription("");
-    setFormStatus("");
-    setFormError(null);
+    setFormData({
+      name: "",
+      minAge: "",
+      maxAge: "",
+      ageUnit: "year",
+      description: "",
+      status: "active",
+    });
     dispatch(toogleAddModal(true));
   };
 
   // Open Modal for Edit
   const handleOpenEditModal = (size: SIZE) => {
     setEditingSize(size);
-    setFormName(size.name);
-    setFormMinAge(size.minAge.toString());
-    setFormMaxAge(size.maxAge.toString());
-    setFormAgeUnit(size.ageUnit || "year");
-    setFormDescription(size.description);
-    setFormStatus(size.status);
-    setFormError(null);
+    setFormData({
+      name: size.name,
+      minAge: size.minAge.toString(),
+      maxAge: size.maxAge.toString(),
+      ageUnit: size.ageUnit,
+      description: size.description || "",
+      status: size.status,
+    });
     dispatch(toogleAddModal(true));
   };
 
@@ -114,45 +111,49 @@ export default function ClothingSizes() {
     return `${min} – ${max} ${ageUnit}`;
   };
 
+  // Handle input change
+  const handleInputChange = (name: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
   // Save (Create / Edit)
   const handleSaveSize = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
 
-    if (!formName.trim()) {
-      setFormError("Please enter a size name.");
+    if (!formData.name.trim()) {
+      warningHandler("Please enter a size name.");
       return;
     }
 
-    const minNum = parseFloat(formMinAge);
-    const maxNum = parseFloat(formMaxAge);
+    const minNum = parseFloat(formData.minAge);
+    const maxNum = parseFloat(formData.maxAge);
 
     if (isNaN(minNum) || minNum < 0) {
-      setFormError("Minimum age must be a valid number (0 or greater).");
+      warningHandler("Minimum age must be a valid number (0 or greater).");
       return;
     }
 
     if (isNaN(maxNum) || maxNum < 0) {
-      setFormError("Maximum age must be a valid number (0 or greater).");
+      warningHandler("Maximum age must be a valid number (0 or greater).");
       return;
     }
 
     if (maxNum < minNum) {
-      setFormError("Maximum age cannot be lower than Minimum age.");
+      warningHandler("Maximum age cannot be lower than Minimum age.");
       return;
     }
 
-    const selectedStatus: SIZE["status"] = formStatus || "active";
+    const selectedStatus: SIZE["status"] = formData.status || "active";
 
     if (editingSize) {
       // Update
       const res = await dispatch(
         updateSize(editingSize._id, {
-          name: formName.trim(),
+          name: formData.name.trim(),
           minAge: minNum,
           maxAge: maxNum,
-          ageUnit: formAgeUnit,
-          description: formDescription.trim(),
+          ageUnit: formData.ageUnit,
+          description: formData.description.trim(),
           status: selectedStatus,
         }),
       );
@@ -163,24 +164,19 @@ export default function ClothingSizes() {
       // Add
       await dispatch(
         addSize({
-          name: formName.trim(),
+          name: formData.name.trim(),
           minAge: minNum,
           maxAge: maxNum,
-          ageUnit: formAgeUnit,
-          description: formDescription.trim(),
+          ageUnit: formData.ageUnit,
+          description: formData.description.trim(),
           status: selectedStatus,
         }),
       );
     }
   };
 
-  // Delete Handler
-  const handleConfirmDelete = async () => {
-    if (!deletingSize) return;
-    const res = await dispatch(deleteSize(deletingSize._id));
-    if (res) {
-      setDeletingSize(null);
-    }
+  const handleDelete = (id: string) => {
+    dispatch(deleteSize(id));
   };
 
   // Infinite Scroll fetch more
@@ -390,15 +386,39 @@ export default function ClothingSizes() {
                         >
                           <SquarePen className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setDeletingSize(size)}
-                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete this Size?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will
+                                permanently delete this Size.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => handleDelete(size?._id)}
+                              >
+                                Yes, delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </div>
@@ -496,15 +516,6 @@ export default function ClothingSizes() {
                             >
                               <SquarePen className="h-3.5 w-3.5" />
                             </Button>
-                            {/* <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setDeletingSize(size)}
-                              title="Delete"
-                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button> */}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -531,7 +542,7 @@ export default function ClothingSizes() {
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction
                                     className="bg-red-600 hover:bg-red-700"
-                                    // onClick={() => handleDelete(mcq?._id)}
+                                    onClick={() => handleDelete(size?._id)}
                                   >
                                     Yes, delete
                                   </AlertDialogAction>
@@ -578,8 +589,8 @@ export default function ClothingSizes() {
                 </label>
                 <Input
                   placeholder="e.g., 2-3 Years, 4-5 YRS, Newborn"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
                   className="h-10 text-xs font-semibold text-foreground bg-background"
                   required
                 />
@@ -596,8 +607,10 @@ export default function ClothingSizes() {
                     step="0.1"
                     min="0"
                     placeholder="e.g., 2"
-                    value={formMinAge}
-                    onChange={(e) => setFormMinAge(e.target.value)}
+                    value={formData.minAge}
+                    onChange={(e) =>
+                      handleInputChange("minAge", e.target.value)
+                    }
                     className="h-10 text-xs font-semibold text-foreground bg-background"
                     required
                   />
@@ -612,8 +625,10 @@ export default function ClothingSizes() {
                     step="0.1"
                     min="0"
                     placeholder="e.g., 3"
-                    value={formMaxAge}
-                    onChange={(e) => setFormMaxAge(e.target.value)}
+                    value={formData.maxAge}
+                    onChange={(e) =>
+                      handleInputChange("maxAge", e.target.value)
+                    }
                     className="h-10 text-xs font-semibold text-foreground bg-background"
                     required
                   />
@@ -624,9 +639,9 @@ export default function ClothingSizes() {
                     Age Unit <span className="text-destructive">*</span>
                   </label>
                   <select
-                    value={formAgeUnit}
+                    value={formData.ageUnit}
                     onChange={(e) =>
-                      setFormAgeUnit(e.target.value as SIZE["ageUnit"])
+                      handleInputChange("ageUnit", e.target.value)
                     }
                     className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
                     required
@@ -643,10 +658,8 @@ export default function ClothingSizes() {
                   Status <span className="text-destructive">*</span>
                 </label>
                 <select
-                  value={formStatus}
-                  onChange={(e) =>
-                    setFormStatus(e.target.value as SIZE["status"])
-                  }
+                  value={formData.status}
+                  onChange={(e) => handleInputChange("status", e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
                   required
                 >
@@ -668,8 +681,10 @@ export default function ClothingSizes() {
                 </label>
                 <textarea
                   placeholder="Optional details e.g., Toddlers aged 3 to 4 years..."
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
+                  value={formData.description}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
                   rows={3}
                   className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium focus:outline-none focus:ring-1 focus:ring-ring resize-y"
                 />
@@ -708,63 +723,6 @@ export default function ClothingSizes() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Modal */}
-      {/* <Dialog
-        open={Boolean(deletingSize)}
-        onOpenChange={(open) => !open && setDeletingSize(null)}
-      >
-        {deletingSize && (
-          <DialogContent className="sm:max-w-[420px] rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base font-bold text-destructive">
-                <AlertTriangle className="h-5 w-5" /> Delete Size
-              </DialogTitle>
-              <DialogDescription className="text-xs pt-1 text-muted-foreground">
-                Are you sure you want to delete this size? This action cannot be
-                undone.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="p-4 rounded-xl bg-muted border border-border my-2 space-y-1">
-              <p className="text-xs font-bold text-foreground">
-                Size Name:{" "}
-                <span className="font-extrabold text-foreground">
-                  {deletingSize.name}
-                </span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Age Range:{" "}
-                <span className="font-semibold text-foreground">
-                  {formatAgeRange(
-                    deletingSize.minAge,
-                    deletingSize.maxAge,
-                    deletingSize.ageUnit,
-                  )}
-                </span>
-              </p>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDeletingSize(null)}
-                className="rounded-full text-xs cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold text-xs rounded-full px-5 cursor-pointer"
-              >
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog> */}
     </div>
   );
 }
