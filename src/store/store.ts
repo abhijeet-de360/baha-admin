@@ -5,6 +5,7 @@ import faqReducer from "./faqSlice";
 import sizeReducer from "./sizeSlice";
 import settingsReducer from "./settingsSlice";
 import couponReducer from "./couponSlice";
+import categoryReducer from "./categorySlice";
 
 export const store = configureStore({
   reducer: {
@@ -13,7 +14,8 @@ export const store = configureStore({
     faq: faqReducer,
     size: sizeReducer,
     settings: settingsReducer,
-    coupon: couponReducer
+    coupon: couponReducer,
+    category: categoryReducer,
   },
 });
 

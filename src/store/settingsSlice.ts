@@ -63,13 +63,13 @@ const settingsSlice = createSlice({
   name: "settings",
   initialState,
   reducers: {
-    setStatus: (state, action) => {
-      state.status = action.payload;
+    setStatus: (state, { payload }) => {
+      state.status = payload;
     },
-    setSettings: (state, action) => {
-      state.settings = action.payload;
-      if (action.payload?._id) {
-        state._id = action.payload._id;
+    setSettings: (state, { payload }) => {
+      state.settings = payload;
+      if (payload?._id) {
+        state._id = payload._id;
       }
     },
   },
@@ -89,14 +89,13 @@ export function getAllSettings() {
       .then((res: any) => {
         dispatch(setSettings(res.data));
         dispatch(setStatus(STATUS.IDLE));
-        dispatch(setLoading(false));
-        return res.data;
       })
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
-        dispatch(setLoading(false));
         errorHandler(err?.response || err);
-        return null;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -110,13 +109,14 @@ export function updateSettings(data: Partial<SettingsData>) {
       .then((res: any) => {
         dispatch(setSettings(res.data));
         dispatch(setStatus(STATUS.IDLE));
-        dispatch(setLoading(false));
         successHandler("Settings updated successfully!");
       })
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
-        dispatch(setLoading(false));
         errorHandler(err?.response || err);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }

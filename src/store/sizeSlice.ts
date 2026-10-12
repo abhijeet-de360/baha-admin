@@ -71,7 +71,7 @@ const sizeSlice = createSlice({
       state.sizes = state.sizes.filter((size) => size._id !== payload);
       state.total = Math.max(0, state.total - 1);
     },
-    toogleAddModal: (state, {payload}) => {
+    toogleAddModal: (state, { payload }) => {
       state.isAddModalOpen = payload;
     },
   },
@@ -92,7 +92,12 @@ export default sizeSlice.reducer;
 
 // Thunks
 // Get all size thunks
-export function getAllSize( keyword: string, limit: number, offset: number, status: string) {
+export function getAllSize(
+  keyword: string,
+  limit: number,
+  offset: number,
+  status: string,
+) {
   return async function getAllSizeThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
@@ -106,12 +111,13 @@ export function getAllSize( keyword: string, limit: number, offset: number, stat
           dispatch(setTotal(res.data.total));
         }
         dispatch(setStatus(STATUS.IDLE));
-        dispatch(setLoading(false));
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
-        dispatch(setLoading(false));
         errorHandler(error?.response);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -119,21 +125,23 @@ export function getAllSize( keyword: string, limit: number, offset: number, stat
 // Add size thunk
 export function addSize(data: object) {
   return async function addSizeThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .addSize(data)
       .then((res) => {
         const created = res?.data?.result ?? res?.data;
         dispatch(addSizeSuccess(created));
-        dispatch(toogleAddModal(false))
+        dispatch(toogleAddModal(false));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Size added successfully");
-        return true;
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response);
-        return false;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -141,28 +149,30 @@ export function addSize(data: object) {
 // Update size thunk
 export function updateSize(id: string, data: object) {
   return async function updateSizeThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .updateSize(id, data)
       .then((res) => {
         const updated = res?.data?.result ?? res?.data;
-        dispatch(toogleAddModal(false))
+        dispatch(toogleAddModal(false));
         dispatch(updateSizeSuccess(updated));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Size updated successfully");
-        return true;
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response);
-        return false;
-      });
+      }).finally(() => {
+        dispatch(setLoading(false));
+      })
   };
 }
 
 // Delete size thunk
 export function deleteSize(id: string) {
   return async function deleteSizeThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .deleteSize(id)
@@ -170,12 +180,12 @@ export function deleteSize(id: string) {
         dispatch(deleteSizeSuccess(id));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Size deleted successfully");
-        return true;
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response);
-        return false;
+      }).finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }

@@ -96,40 +96,32 @@ const TAB_ITEMS: TabItem[] = [
 
 export default function Settings() {
   const dispatch = useDispatch<AppDispatch>();
-  const { settings, status } = useSelector(
-    (state: RootState) => state.settings,
-  );
-  const isLoading = status === "loading";
+  const settingsVar = useSelector((state: RootState) => state.settings);
 
   const [activeTab, setActiveTab] = useState<TabType>("contact");
 
-  // Contact Info State (matches API contactInfo)
-  const [contactInfo, setContactInfo] = useState<ContactInfo>({
-    address: "",
-    email: "",
-    phone: "",
-    whatsapp: "",
-  });
-
-  // Social Links State (matches API socialLinks)
-  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
-    facebook: "",
-    instagram: "",
-    twitter: "",
-    youtube: "",
-  });
-
-  // Delivery & Payment State (matches API paymentInfo)
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({
-    prepaidDeliveryFee: 0,
-    freePrepaidDeliveryOn: 0,
-    codDeliveryFee: 0,
-    freeCodDeliveryOn: 0,
-    maxFreeCodDeliveryOn: 0,
-  });
-
-  // Policies State (matches API policy keys)
-  const [policies, setPolicies] = useState({
+  // Unified settings form state (mirrors API / ISettings schema)
+  const [settingsForm, setSettingsForm] = useState<SettingsData>({
+    contactInfo: {
+      address: "",
+      email: "",
+      phone: "",
+      whatsapp: "",
+    },
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+      twitter: "",
+      youtube: "",
+      linkedin: "",
+    },
+    paymentInfo: {
+      prepaidDeliveryFee: 0,
+      freePrepaidDeliveryOn: 0,
+      codDeliveryFee: 0,
+      freeCodDeliveryOn: 0,
+      maxFreeCodDeliveryOn: 0,
+    },
     privacyPolicy: "",
     termsConditions: "",
     shippingPolicy: "",
@@ -141,67 +133,65 @@ export default function Settings() {
     dispatch(getAllSettings());
   }, [dispatch]);
 
-  // Sync state whenever settings from API/store changes
+  // Sync settingsForm whenever settings from API/store changes
   useEffect(() => {
-    if (settings) {
-      const data: SettingsData = (settings as any)?.data || settings;
-
-      if (data.contactInfo) {
-        setContactInfo({
-          address: data.contactInfo.address || "",
-          email: data.contactInfo.email || "",
-          phone: data.contactInfo.phone || "",
-          whatsapp: data.contactInfo.whatsapp || "",
-        });
-      }
-
-      if (data.socialLinks) {
-        setSocialLinks({
-          facebook: data.socialLinks.facebook || "",
-          instagram: data.socialLinks.instagram || "",
-          twitter: data.socialLinks.twitter || "",
-          youtube: data.socialLinks.youtube || "",
-        });
-      }
-
-      if (data.paymentInfo) {
-        setPaymentInfo({
-          prepaidDeliveryFee: data.paymentInfo.prepaidDeliveryFee ?? 0,
-          freePrepaidDeliveryOn: data.paymentInfo.freePrepaidDeliveryOn ?? 0,
-          codDeliveryFee: data.paymentInfo.codDeliveryFee ?? 0,
-          freeCodDeliveryOn: data.paymentInfo.freeCodDeliveryOn ?? 0,
-          maxFreeCodDeliveryOn: data.paymentInfo.maxFreeCodDeliveryOn ?? 0,
-        });
-      }
-
-      setPolicies({
-        privacyPolicy: data.privacyPolicy || "",
-        termsConditions: data.termsConditions || "",
-        shippingPolicy: data.shippingPolicy || "",
-        returnPolicy: data.returnPolicy || "",
+    if (settingsVar.settings) {
+      setSettingsForm({
+        contactInfo: {
+          address: settingsVar.settings.contactInfo?.address || "",
+          email: settingsVar.settings.contactInfo?.email || "",
+          phone: settingsVar.settings.contactInfo?.phone || "",
+          whatsapp: settingsVar.settings.contactInfo?.whatsapp || "",
+        },
+        socialLinks: {
+          facebook: settingsVar.settings.socialLinks?.facebook || "",
+          instagram: settingsVar.settings.socialLinks?.instagram || "",
+          twitter: settingsVar.settings.socialLinks?.twitter || "",
+          youtube: settingsVar.settings.socialLinks?.youtube || "",
+          linkedin: settingsVar.settings.socialLinks?.linkedin || "",
+        },
+        paymentInfo: {
+          prepaidDeliveryFee:
+            settingsVar.settings.paymentInfo?.prepaidDeliveryFee ?? 0,
+          freePrepaidDeliveryOn:
+            settingsVar.settings.paymentInfo?.freePrepaidDeliveryOn ?? 0,
+          codDeliveryFee: settingsVar.settings.paymentInfo?.codDeliveryFee ?? 0,
+          freeCodDeliveryOn:
+            settingsVar.settings.paymentInfo?.freeCodDeliveryOn ?? 0,
+          maxFreeCodDeliveryOn:
+            settingsVar.settings.paymentInfo?.maxFreeCodDeliveryOn ?? 0,
+        },
+        privacyPolicy: settingsVar.settings.privacyPolicy || "",
+        termsConditions: settingsVar.settings.termsConditions || "",
+        shippingPolicy: settingsVar.settings.shippingPolicy || "",
+        returnPolicy: settingsVar.settings.returnPolicy || "",
       });
     }
-  }, [settings]);
+  }, [settingsVar.settings]);
 
   // Save Contact Info
   const handleSaveContact = async () => {
-    await dispatch(updateSettings({ contactInfo }));
+    await dispatch(updateSettings({ contactInfo: settingsForm.contactInfo }));
   };
 
   // Save Social Links
   const handleSaveSocial = async () => {
-    await dispatch(updateSettings({ socialLinks }));
+    await dispatch(updateSettings({ socialLinks: settingsForm.socialLinks }));
   };
 
   // Save Payment & Delivery Setup
   const handleSaveDelivery = async () => {
     const payload = {
       paymentInfo: {
-        prepaidDeliveryFee: Number(paymentInfo.prepaidDeliveryFee) || 0,
-        freePrepaidDeliveryOn: Number(paymentInfo.freePrepaidDeliveryOn) || 0,
-        codDeliveryFee: Number(paymentInfo.codDeliveryFee) || 0,
-        freeCodDeliveryOn: Number(paymentInfo.freeCodDeliveryOn) || 0,
-        maxFreeCodDeliveryOn: Number(paymentInfo.maxFreeCodDeliveryOn) || 0,
+        prepaidDeliveryFee:
+          Number(settingsForm.paymentInfo.prepaidDeliveryFee) || 0,
+        freePrepaidDeliveryOn:
+          Number(settingsForm.paymentInfo.freePrepaidDeliveryOn) || 0,
+        codDeliveryFee: Number(settingsForm.paymentInfo.codDeliveryFee) || 0,
+        freeCodDeliveryOn:
+          Number(settingsForm.paymentInfo.freeCodDeliveryOn) || 0,
+        maxFreeCodDeliveryOn:
+          Number(settingsForm.paymentInfo.maxFreeCodDeliveryOn) || 0,
       },
     };
     await dispatch(updateSettings(payload));
@@ -210,20 +200,15 @@ export default function Settings() {
   // Save Policy
   const handleSavePolicy = async () => {
     const payload: Partial<SettingsData> = {};
-    let label = "Policy";
 
     if (activeTab === "privacy") {
-      payload.privacyPolicy = policies.privacyPolicy;
-      label = "Privacy Policy";
+      payload.privacyPolicy = settingsForm.privacyPolicy;
     } else if (activeTab === "terms") {
-      payload.termsConditions = policies.termsConditions;
-      label = "Terms & Conditions";
+      payload.termsConditions = settingsForm.termsConditions;
     } else if (activeTab === "shipping") {
-      payload.shippingPolicy = policies.shippingPolicy;
-      label = "Shipping Policy";
+      payload.shippingPolicy = settingsForm.shippingPolicy;
     } else if (activeTab === "refund") {
-      payload.returnPolicy = policies.returnPolicy;
-      label = "Return & Refund Policy";
+      payload.returnPolicy = settingsForm.returnPolicy;
     }
 
     await dispatch(updateSettings(payload));
@@ -233,13 +218,13 @@ export default function Settings() {
   const getPolicyValue = (tab: "privacy" | "terms" | "shipping" | "refund") => {
     switch (tab) {
       case "privacy":
-        return policies.privacyPolicy;
+        return settingsForm.privacyPolicy;
       case "terms":
-        return policies.termsConditions;
+        return settingsForm.termsConditions;
       case "shipping":
-        return policies.shippingPolicy;
+        return settingsForm.shippingPolicy;
       case "refund":
-        return policies.returnPolicy;
+        return settingsForm.returnPolicy;
       default:
         return "";
     }
@@ -248,16 +233,16 @@ export default function Settings() {
   const handlePolicyChange = (val: string) => {
     switch (activeTab) {
       case "privacy":
-        setPolicies((prev) => ({ ...prev, privacyPolicy: val }));
+        setSettingsForm((prev) => ({ ...prev, privacyPolicy: val }));
         break;
       case "terms":
-        setPolicies((prev) => ({ ...prev, termsConditions: val }));
+        setSettingsForm((prev) => ({ ...prev, termsConditions: val }));
         break;
       case "shipping":
-        setPolicies((prev) => ({ ...prev, shippingPolicy: val }));
+        setSettingsForm((prev) => ({ ...prev, shippingPolicy: val }));
         break;
       case "refund":
-        setPolicies((prev) => ({ ...prev, returnPolicy: val }));
+        setSettingsForm((prev) => ({ ...prev, returnPolicy: val }));
         break;
     }
   };
@@ -342,12 +327,15 @@ export default function Settings() {
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           type="email"
-                          value={contactInfo.email}
+                          value={settingsForm.contactInfo.email}
                           onChange={(e) =>
-                            setContactInfo({
-                              ...contactInfo,
-                              email: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              contactInfo: {
+                                ...prev.contactInfo,
+                                email: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="e.g. contact@baha.in"
                           className="pl-9 h-10 bg-background"
@@ -363,12 +351,15 @@ export default function Settings() {
                         <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           type="tel"
-                          value={contactInfo.phone}
+                          value={settingsForm.contactInfo.phone}
                           onChange={(e) =>
-                            setContactInfo({
-                              ...contactInfo,
-                              phone: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              contactInfo: {
+                                ...prev.contactInfo,
+                                phone: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="e.g. +911234567890"
                           className="pl-9 h-10 bg-background"
@@ -383,12 +374,15 @@ export default function Settings() {
                       <div className="relative">
                         <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={contactInfo.whatsapp}
+                          value={settingsForm.contactInfo.whatsapp}
                           onChange={(e) =>
-                            setContactInfo({
-                              ...contactInfo,
-                              whatsapp: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              contactInfo: {
+                                ...prev.contactInfo,
+                                whatsapp: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="e.g. +910987654321"
                           className="pl-9 h-10 bg-background"
@@ -403,12 +397,15 @@ export default function Settings() {
                       <div className="relative">
                         <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={contactInfo.address}
+                          value={settingsForm.contactInfo.address}
                           onChange={(e) =>
-                            setContactInfo({
-                              ...contactInfo,
-                              address: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              contactInfo: {
+                                ...prev.contactInfo,
+                                address: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="e.g. 23 jump street, New York, USA, 120034"
                           className="pl-9 h-10 bg-background"
@@ -422,11 +419,11 @@ export default function Settings() {
               {/* Bottom Action Bar */}
               <div className="flex items-center justify-between pt-2">
                 <Button
-                  disabled={isLoading}
+                  disabled={settingsVar.status === "loading"}
                   onClick={handleSaveContact}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  {isLoading ? (
+                  {settingsVar.status === "loading" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="h-4 w-4" />
@@ -455,12 +452,15 @@ export default function Settings() {
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialLinks.facebook}
+                          value={settingsForm.socialLinks.facebook}
                           onChange={(e) =>
-                            setSocialLinks({
-                              ...socialLinks,
-                              facebook: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              socialLinks: {
+                                ...prev.socialLinks,
+                                facebook: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="https://facebook.com/"
                           className="pl-9 h-10 bg-background text-xs font-mono"
@@ -475,12 +475,15 @@ export default function Settings() {
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialLinks.instagram}
+                          value={settingsForm.socialLinks.instagram}
                           onChange={(e) =>
-                            setSocialLinks({
-                              ...socialLinks,
-                              instagram: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              socialLinks: {
+                                ...prev.socialLinks,
+                                instagram: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="https://instagram.com/hello"
                           className="pl-9 h-10 bg-background text-xs font-mono"
@@ -495,12 +498,15 @@ export default function Settings() {
                       <div className="relative">
                         <Share2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialLinks.twitter}
+                          value={settingsForm.socialLinks.twitter}
                           onChange={(e) =>
-                            setSocialLinks({
-                              ...socialLinks,
-                              twitter: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              socialLinks: {
+                                ...prev.socialLinks,
+                                twitter: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="https://x.com/"
                           className="pl-9 h-10 bg-background text-xs font-mono"
@@ -515,12 +521,15 @@ export default function Settings() {
                       <div className="relative">
                         <Tv className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          value={socialLinks.youtube || ""}
+                          value={settingsForm.socialLinks.youtube || ""}
                           onChange={(e) =>
-                            setSocialLinks({
-                              ...socialLinks,
-                              youtube: e.target.value,
-                            })
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              socialLinks: {
+                                ...prev.socialLinks,
+                                youtube: e.target.value,
+                              },
+                            }))
                           }
                           placeholder="https://youtube.com/"
                           className="pl-9 h-10 bg-background text-xs font-mono"
@@ -534,11 +543,11 @@ export default function Settings() {
               {/* Bottom Action Bar */}
               <div className="flex items-center justify-between pt-2">
                 <Button
-                  disabled={isLoading}
+                  disabled={settingsVar.status === "loading"}
                   onClick={handleSaveSocial}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  {isLoading ? (
+                  {settingsVar.status === "loading" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="h-4 w-4" />
@@ -569,12 +578,15 @@ export default function Settings() {
                       <Input
                         type="number"
                         min="0"
-                        value={paymentInfo.prepaidDeliveryFee}
+                        value={settingsForm.paymentInfo.prepaidDeliveryFee}
                         onChange={(e) =>
-                          setPaymentInfo({
-                            ...paymentInfo,
-                            prepaidDeliveryFee: Number(e.target.value),
-                          })
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            paymentInfo: {
+                              ...prev.paymentInfo,
+                              prepaidDeliveryFee: Number(e.target.value),
+                            },
+                          }))
                         }
                         className="h-10 bg-background font-mono"
                       />
@@ -587,12 +599,15 @@ export default function Settings() {
                       <Input
                         type="number"
                         min="0"
-                        value={paymentInfo.freePrepaidDeliveryOn}
+                        value={settingsForm.paymentInfo.freePrepaidDeliveryOn}
                         onChange={(e) =>
-                          setPaymentInfo({
-                            ...paymentInfo,
-                            freePrepaidDeliveryOn: Number(e.target.value),
-                          })
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            paymentInfo: {
+                              ...prev.paymentInfo,
+                              freePrepaidDeliveryOn: Number(e.target.value),
+                            },
+                          }))
                         }
                         className="h-10 bg-background font-mono"
                       />
@@ -621,12 +636,15 @@ export default function Settings() {
                       <Input
                         type="number"
                         min="0"
-                        value={paymentInfo.codDeliveryFee}
+                        value={settingsForm.paymentInfo.codDeliveryFee}
                         onChange={(e) =>
-                          setPaymentInfo({
-                            ...paymentInfo,
-                            codDeliveryFee: Number(e.target.value),
-                          })
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            paymentInfo: {
+                              ...prev.paymentInfo,
+                              codDeliveryFee: Number(e.target.value),
+                            },
+                          }))
                         }
                         className="h-10 bg-background font-mono"
                       />
@@ -639,12 +657,15 @@ export default function Settings() {
                       <Input
                         type="number"
                         min="0"
-                        value={paymentInfo.freeCodDeliveryOn}
+                        value={settingsForm.paymentInfo.freeCodDeliveryOn}
                         onChange={(e) =>
-                          setPaymentInfo({
-                            ...paymentInfo,
-                            freeCodDeliveryOn: Number(e.target.value),
-                          })
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            paymentInfo: {
+                              ...prev.paymentInfo,
+                              freeCodDeliveryOn: Number(e.target.value),
+                            },
+                          }))
                         }
                         className="h-10 bg-background font-mono"
                       />
@@ -660,12 +681,15 @@ export default function Settings() {
                       <Input
                         type="number"
                         min="0"
-                        value={paymentInfo.maxFreeCodDeliveryOn}
+                        value={settingsForm.paymentInfo.maxFreeCodDeliveryOn}
                         onChange={(e) =>
-                          setPaymentInfo({
-                            ...paymentInfo,
-                            maxFreeCodDeliveryOn: Number(e.target.value),
-                          })
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            paymentInfo: {
+                              ...prev.paymentInfo,
+                              maxFreeCodDeliveryOn: Number(e.target.value),
+                            },
+                          }))
                         }
                         className="h-10 bg-background font-mono"
                       />
@@ -677,81 +701,14 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              {/* Card 3: Partial Payment Rules */}
-              {/* <Card className="rounded-2xl border-border shadow-sm">
-                <CardHeader className="py-4 px-6 border-b border-border/60 flex flex-row items-center justify-between">
-                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <Percent className="h-3.5 w-3.5" /> COD PARTIAL PAYMENT
-                    RULES
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={partialCodSetup.partialCodRequired}
-                      onCheckedChange={(checked) =>
-                        setPartialCodSetup({
-                          ...partialCodSetup,
-                          partialCodRequired: checked,
-                        })
-                      }
-                    />
-                    <span className="text-xs font-semibold">Required</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-                        PARTIAL PAYMENT TYPE
-                      </label>
-                      <select
-                        value={partialCodSetup.partialType}
-                        onChange={(e) =>
-                          setPartialCodSetup({
-                            ...partialCodSetup,
-                            partialType: e.target.value,
-                          })
-                        }
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      >
-                        <option value="Fixed Amount (₹)">
-                          Fixed Amount (₹)
-                        </option>
-                        <option value="Percentage (%)">Percentage (%)</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-                        PARTIAL VALUE (₹)
-                      </label>
-                      <Input
-                        value={partialCodSetup.partialValue}
-                        onChange={(e) =>
-                          setPartialCodSetup({
-                            ...partialCodSetup,
-                            partialValue: e.target.value,
-                          })
-                        }
-                        className="h-10 bg-background font-mono"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground pt-1">
-                    Partial COD requires users to pay a small token fee online
-                    to prevent invalid orders. The remaining amount will be paid
-                    during physical delivery.
-                  </p>
-                </CardContent>
-              </Card> */}
-
               {/* Action Bar */}
               <div className="flex items-center justify-between pt-2">
                 <Button
-                  disabled={isLoading}
+                  disabled={settingsVar.status === "loading"}
                   onClick={handleSaveDelivery}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  {isLoading ? (
+                  {settingsVar.status === "loading" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="h-4 w-4" />
@@ -805,11 +762,11 @@ export default function Settings() {
               {/* Action Bar */}
               <div className="flex items-center justify-between pt-2">
                 <Button
-                  disabled={isLoading}
+                  disabled={settingsVar.status === "loading"}
                   onClick={handleSavePolicy}
                   className="font-semibold text-xs px-5 py-2.5 rounded-xl gap-2 shadow-md ml-auto"
                 >
-                  {isLoading ? (
+                  {settingsVar.status === "loading" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="h-4 w-4" />

@@ -9,6 +9,7 @@ const faqUrl = rootUrl + "/faq";
 const sizeUrl = rootUrl + "/size";
 const settingsUrl = rootUrl + "/settings";
 const couponUrl = rootUrl + "/coupon";
+const categoryUrl = rootUrl + "/category";
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -46,10 +47,19 @@ async function addColor(data: object) {
 }
 
 // Get all colors api service function
-async function getAllColors(keyword: string, limit: number, offset: number, status: string) {
-  return await axios.get(colorUrl + `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`, {
-    headers: await authHeader(),
-  });
+async function getAllColors(
+  keyword: string,
+  limit: number,
+  offset: number,
+  status: string,
+) {
+  return await axios.get(
+    colorUrl +
+      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`,
+    {
+      headers: await authHeader(),
+    },
+  );
 }
 
 // Update color api service function
@@ -103,7 +113,10 @@ async function getAllSizes(
   offset: number,
   status: string,
 ) {
-  return await axios.get(sizeUrl + `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`);
+  return await axios.get(
+    sizeUrl +
+      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`,
+  );
 }
 
 // Add size service function
@@ -134,7 +147,7 @@ async function getAllSettings() {
 }
 
 // Add or update settings service function
-async function updateSettings(data:object) {
+async function updateSettings(data: object) {
   return await axios.patch(settingsUrl + "/add", data, {
     headers: await authHeader(),
   });
@@ -148,7 +161,10 @@ async function getAllCoupons(
   offset: number,
   status: string,
 ) {
-  return await axios.get(couponUrl + `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`);
+  return await axios.get(
+    couponUrl +
+      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`,
+  );
 }
 
 // Add coupon service function
@@ -172,6 +188,36 @@ async function deleteCoupon(id: string) {
   });
 }
 
+/********************* Category api services function ************************ */
+async function getAllCategories(
+  keyword: string,
+  limit: number,
+  offset: number,
+  status: string,
+) {
+  return await axios.get(
+    categoryUrl +
+      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`,
+  );
+}
+
+async function addCategory(data: object) {
+  return await axios.post(categoryUrl + "/create", data, {
+    headers: await authHeader(),
+  });
+}
+
+async function updateCategory(id: string, data: object) {
+  return await axios.patch(`${categoryUrl}/update/${id}`, data, {
+    headers: await authHeader(),
+  });
+}
+
+async function deleteCategory(id: string) {
+  return await axios.delete(`${categoryUrl}/delete/${id}`, {
+    headers: await authHeader(),
+  });
+}
 
 export const service = {
   loginUser,
@@ -195,5 +241,9 @@ export const service = {
   getAllCoupons,
   addCoupon,
   updateCoupon,
-  deleteCoupon
-}
+  deleteCoupon,
+  getAllCategories,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+};

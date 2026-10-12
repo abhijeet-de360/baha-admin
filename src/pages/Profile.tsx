@@ -25,27 +25,26 @@ import { getProfile, updateAdminProfile } from "@/store/authSlice";
 
 export default function ProfilePage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, status } = useSelector((state: RootState) => state.auth);
+  const authVar = useSelector((state: RootState) => state.auth);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
   // Sync state when user profile is loaded or updated
   useEffect(() => {
-    if (user) {
-      setName(user.name || "");
-      setEmail(user.email || "");
+    if (authVar.user) {
+      setName(authVar.user.name || "");
+      setEmail(authVar.user.email || "");
     } else {
       dispatch(getProfile());
     }
-  }, [user, dispatch]);
+  }, [authVar.user, dispatch]);
 
-  const isLoading = status === "loading";
   const isUnchanged =
-    name.trim() === (user?.name || "").trim() &&
-    email.trim() === (user?.email || "").trim();
+    name.trim() === (authVar.user?.name || "").trim() &&
+    email.trim() === (authVar.user?.email || "").trim();
   const isSaveDisabled =
-    isLoading || isUnchanged || !name.trim() || !email.trim();
+    authVar.status === "loading" || isUnchanged || !name.trim() || !email.trim();
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,10 +76,10 @@ export default function ProfilePage() {
           <Avatar className="h-24 w-24 border-4 border-background shadow-md">
             <AvatarImage
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-              alt={user?.name || "Admin"}
+              alt={authVar.user?.name || "Admin"}
             />
             <AvatarFallback className="text-xl font-extrabold bg-primary text-primary-foreground">
-              {getInitials(user?.name)}
+              {getInitials(authVar.user?.name)}
             </AvatarFallback>
           </Avatar>
         </div>
@@ -88,21 +87,21 @@ export default function ProfilePage() {
         <div className="space-y-2 text-center md:text-left flex-1">
           <div className="flex flex-col md:flex-row md:items-center gap-2">
             <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
-              {user?.name || "Administrator"}
+              {authVar.user?.name || "Administrator"}
             </h1>
             <div className="flex items-center justify-center md:justify-start gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wider bg-primary/10 text-primary border-primary/20">
                 <Shield className="h-3 w-3" />
-                {user?.type || "ADMIN"}
+                {authVar.user?.type || "ADMIN"}
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
                 <ShieldCheck className="h-3 w-3" />
-                {user?.status || "ACTIVE"}
+                {authVar.user?.status || "ACTIVE"}
               </span>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            {user?.email || "No email provided"}
+            {authVar.user?.email || "No email provided"}
           </p>
         </div>
       </div>
@@ -164,7 +163,7 @@ export default function ProfilePage() {
                   <Shield className="h-3 w-3 text-primary" /> Role Type
                 </span>
                 <p className="text-xs font-bold text-foreground capitalize">
-                  {user?.type || "Admin"}
+                  {authVar.user?.type || "Admin"}
                 </p>
               </div>
 
@@ -175,7 +174,7 @@ export default function ProfilePage() {
                   Status
                 </span>
                 <p className="text-xs font-bold text-foreground capitalize">
-                  {user?.status || "Active"}
+                  {authVar.user?.status || "Active"}
                 </p>
               </div>
 
@@ -185,8 +184,8 @@ export default function ProfilePage() {
                   <Calendar className="h-3 w-3 text-amber-500" /> Member Since
                 </span>
                 <p className="text-xs font-mono font-semibold text-foreground">
-                  {user?.createdAt
-                    ? new Date(user.createdAt).toLocaleDateString(undefined, {
+                  {authVar.user?.createdAt
+                    ? new Date(authVar.user.createdAt).toLocaleDateString(undefined, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
@@ -203,7 +202,7 @@ export default function ProfilePage() {
               disabled={isSaveDisabled}
               className="gap-2 rounded-xl text-xs font-semibold px-6 shadow-md cursor-pointer"
             >
-              {isLoading ? (
+              {authVar.status === "loading" ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Saving...
                 </>

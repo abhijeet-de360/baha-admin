@@ -50,12 +50,7 @@ import { warningHandler } from "@/shared/_helper/responseHelper";
 
 export default function Colors() {
   const dispatch = useDispatch<AppDispatch>();
-  const {
-    colors = [],
-    total = 0,
-    status,
-    isModalOpen,
-  } = useSelector((state: RootState) => state.color);
+  const colorsVar = useSelector((state: RootState) => state.color);
 
   const [hasMore, setHasMore] = useState(true);
 
@@ -64,7 +59,6 @@ export default function Colors() {
 
   // Modal States
   const [editingColor, setEditingColor] = useState<ColorItem | null>(null);
-  const [deletingColor, setDeletingColor] = useState<ColorItem | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -86,7 +80,7 @@ export default function Colors() {
 
   // Infinite Scroll fetch more
   const fetchMoreColors = () => {
-    if (status === "loading" || colors.length >= total) return;
+    if (colorsVar.status === "loading" || colorsVar.colors.length >= colorsVar.total) return;
 
     const newOffset = formVar.offset + formVar.limit;
 
@@ -101,18 +95,18 @@ export default function Colors() {
 
     setFormVar((prev) => ({ ...prev, offset: newOffset }));
 
-    if (newOffset + formVar.limit >= total) {
+    if (newOffset + formVar.limit >= colorsVar.total) {
       setHasMore(false);
     }
   };
 
   useEffect(() => {
-    if (colors.length >= total && total > 0) {
+    if (colorsVar.colors.length >= colorsVar.total && colorsVar.total > 0) {
       setHasMore(false);
     } else {
       setHasMore(true);
     }
-  }, [colors.length, total]);
+  }, [colorsVar.colors.length, colorsVar.total]);
 
   // Handle search colors
   const handleSearch = (searchTerm: string) => {
@@ -265,7 +259,7 @@ export default function Colors() {
   };
 
   useEffect(() => {
-    if (colors.length <= 0 || total === 0) {
+    if (colorsVar.colors.length <= 0 || colorsVar.total === 0) {
       dispatch(
         getColors(
           formVar.keyword,
@@ -344,7 +338,7 @@ export default function Colors() {
 
         {/* Content Body */}
         <CardContent className="p-0">
-          {colors?.length === 0 ? (
+          {colorsVar.colors.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <div className="p-4 rounded-full bg-muted inline-block text-muted-foreground">
                 <Palette className="h-8 w-8" />
@@ -367,7 +361,7 @@ export default function Colors() {
             </div>
           ) : (
             <InfiniteScroll
-              dataLength={colors.length}
+              dataLength={colorsVar.colors.length}
               next={fetchMoreColors}
               hasMore={hasMore}
               loader={
@@ -376,16 +370,17 @@ export default function Colors() {
                 </div>
               }
               endMessage={
-                colors.length > 0 && (
+                colorsVar.colors.length > 0 && (
                   <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                    Showing all {colors.length} of {total} colors
+                    Showing all {colorsVar.colors.length} of{" "}
+                    {colorsVar.total} colors
                   </div>
                 )
               }
             >
               {/* Mobile & Tablet Card View (screens smaller than lg) */}
               <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                {colors?.map((color) => {
+                {colorsVar.colors.map((color) => {
                   const isCopied = copiedHex === color.hexCode;
                   return (
                     <Card
@@ -508,7 +503,7 @@ export default function Colors() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {colors?.map((color) => {
+                    {colorsVar.colors?.map((color) => {
                       const isCopied = copiedHex === color.hexCode;
                       return (
                         <tr
@@ -633,7 +628,7 @@ export default function Colors() {
 
       {/* Add / Edit Color Modal */}
       <Dialog
-        open={isModalOpen}
+        open={colorsVar.isModalOpen}
         onOpenChange={(open) => {
           dispatch(toogleModal(open));
         }}

@@ -40,13 +40,13 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    setUser: (state, action) => {
+    setUser: (state, { payload }) => {
       // set token in local storage
-      localService.set("token", action.payload.token);
+      localService.set("token", payload.token);
       state.isAuthenticated = true;
     },
-    setProfileData: (state, action) => {
-      state.user = action.payload;
+    setProfileData: (state, { payload }) => {
+      state.user = payload;
     },
     setStatus(state, { payload }: { payload: AuthStatus }) {
       state.status = payload;
@@ -65,28 +65,24 @@ export default authSlice.reducer;
 
 export function login(email: string, password: string, navigate) {
   return async function loginThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      await service
-        .loginUser({ email, password })
-        .then((res) => {
-          // console.log("login res : ", res);
-          if (res.status === 200) {
-            dispatch(setUser(res.data));
-            successHandler("Login successfully.");
-            dispatch(setStatus(STATUS.IDLE));
-            navigate("/");
-          }
-        })
-        .catch((err) => {
-          console.log("login err : ", err);
-          dispatch(setStatus(STATUS.ERROR));
-          errorHandler(err.response);
-        });
-    } catch (error) {
-      dispatch(setStatus(STATUS.ERROR));
-      errorHandler(error);
-    }
+    await service
+      .loginUser({ email, password })
+      .then((res) => {
+        // console.log("login res : ", res);
+        dispatch(setUser(res.data));
+        successHandler("Login successfully.");
+        dispatch(setStatus(STATUS.IDLE));
+        navigate("/");
+      })
+      .catch((err) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(err.response);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
   };
 }
 
@@ -94,26 +90,21 @@ export function getProfile() {
   return async function getProfileThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
-    try {
-      await service
-        .getProfile()
-        .then((res) => {
-          // console.log("me res : ", res);
-          dispatch(setProfileData(res.data));
-          dispatch(setStatus(STATUS.IDLE));
-          dispatch(setLoading(false));
-        })
-        .catch((err) => {
-          // console.log("me err : ", err);
-          dispatch(setStatus(STATUS.ERROR));
-          errorHandler(err.response);
-          dispatch(setLoading(false));
-        });
-    } catch (error) {
-      dispatch(setStatus(STATUS.ERROR));
-      dispatch(setLoading(false));
-      errorHandler(error.response || error);
-    }
+    await service
+      .getProfile()
+      .then((res) => {
+        // console.log("me res : ", res);
+        dispatch(setProfileData(res.data));
+        dispatch(setStatus(STATUS.IDLE));
+      })
+      .catch((err) => {
+        // console.log("me err : ", err);
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(err.response);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
   };
 }
 
@@ -127,29 +118,23 @@ export function logoutUser(navigate) {
 }
 
 // Update profile thunk
-export function updateAdminProfile(
-  data: { name: string; email: string },
-  onSuccess?: () => void,
-) {
+export function updateAdminProfile(data: { name: string; email: string }) {
   return async function updateProfileThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .updateProfile(data)
       .then((res) => {
-        if (res.status === 200) {
-          dispatch(setProfileData(res.data));
-          dispatch(setStatus(STATUS.IDLE));
-          successHandler("Profile updated successfully.");
-          if (onSuccess) onSuccess();
-          return true;
-        }
-        return false;
+        dispatch(setProfileData(res.data));
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Profile updated successfully.");
       })
       .catch((err: any) => {
-        console.log("update profile err : ", err);
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(err?.response || err);
-        return false;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -160,23 +145,20 @@ export function resetPassword(data: {
   newPassword: string;
 }) {
   return async function resetPasswordThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .resetPassword(data)
       .then((res) => {
-        if (res.status === 200) {
-          dispatch(setStatus(STATUS.IDLE));
-          successHandler(res.data?.message || "Password updated successfully.");
-          return true;
-        }
         dispatch(setStatus(STATUS.IDLE));
-        return false;
+        successHandler(res.data?.message || "Password updated successfully.");
       })
       .catch((err: any) => {
-        // console.log("reset password err : ", err.response);
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(err?.response || err);
-        return false;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }

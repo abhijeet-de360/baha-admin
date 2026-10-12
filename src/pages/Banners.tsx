@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
 import {
   Image,
   Plus,
@@ -13,18 +13,20 @@ import {
   ExternalLink,
   Layers,
   Calendar,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+  Upload,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,52 +36,62 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from "@/components/ui/alert-dialog";
 import {
   type Banner,
   type BannerStatus,
   INITIAL_BANNERS,
-} from '@/data/mockBanners'
+} from "@/data/mockBanners";
+import { warningHandler } from "@/shared/_helper/responseHelper";
+
+// ─── Dummy Data for Button Link Targets ──────────────────────────────────────
+const DUMMY_CATEGORIES = [
+  { label: "Newborn Essentials", value: "/categories/newborn-essentials" },
+  { label: "Organic Cotton", value: "/categories/organic-cotton" },
+  { label: "Baby Clothing", value: "/categories/baby-clothing" },
+  { label: "Feeding & Nursing", value: "/categories/feeding-nursing" },
+  { label: "Bath & Skincare", value: "/categories/bath-skincare" },
+  { label: "Toys & Activity", value: "/categories/toys-activity" },
+  { label: "Safety & Gear", value: "/categories/safety-gear" },
+];
+
+const DUMMY_PRODUCTS = [
+  { label: "Organic Cotton Onesie", value: "/products/organic-cotton-onesie" },
+  {
+    label: "Bamboo Swaddle Blanket",
+    value: "/products/bamboo-swaddle-blanket",
+  },
+  { label: "Baby Carrier Wrap", value: "/products/baby-carrier-wrap" },
+  { label: "Silicone Feeding Set", value: "/products/silicone-feeding-set" },
+  { label: "Natural Baby Lotion", value: "/products/natural-baby-lotion" },
+  { label: "Wooden Rattle Toy", value: "/products/wooden-rattle-toy" },
+  { label: "Anti-Colic Bottle", value: "/products/anti-colic-bottle" },
+];
 
 export default function Banners() {
-  const [banners, setBanners] = useState<Banner[]>(INITIAL_BANNERS)
-  const [search, setSearch] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState<string>('All')
+  const [banners, setBanners] = useState<Banner[]>(INITIAL_BANNERS);
+  const [search, setSearch] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("All");
 
   // Modals state
-  const [isAddEditOpen, setIsAddEditOpen] = useState(false)
-  const [editingBanner, setEditingBanner] = useState<Banner | null>(null)
-  const [previewBanner, setPreviewBanner] = useState<Banner | null>(null)
-  const [deletingBanner, setDeletingBanner] = useState<Banner | null>(null)
+  const [isAddEditOpen, setIsAddEditOpen] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  const [previewBanner, setPreviewBanner] = useState<Banner | null>(null);
+  const [deletingBanner, setDeletingBanner] = useState<Banner | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<{
-    title: string
-    subtitle: string
-    buttonText: string
-    buttonLink: string
-    imageUrl: string
-    mobileImageUrl: string
-    status: BannerStatus
-    order: number
-    startDate: string
-    endDate: string
-  }>({
-    title: '',
-    subtitle: '',
-    buttonText: '',
-    buttonLink: '',
-    imageUrl: '',
-    mobileImageUrl: '',
-    status: 'Active',
+  const [formData, setFormData] = useState<any>({
+    title: "",
+    subTitle: "",
+    buttonLabel: "",
+    buttonLink: "",
+    buttonLinkTarget: "category",
+    image: "",
+    status: "active",
     order: 1,
-    startDate: '',
-    endDate: '',
-  })
-
-  const updateBannersState = (newBanners: Banner[]) => {
-    setBanners(newBanners)
-  }
+    startDate: "",
+    endDate: "",
+  });
 
   // Filter hero sliders
   const filteredBanners = banners
@@ -87,130 +99,100 @@ export default function Banners() {
       const matchesSearch =
         b.title.toLowerCase().includes(search.toLowerCase()) ||
         b.subtitle.toLowerCase().includes(search.toLowerCase()) ||
-        b.id.toLowerCase().includes(search.toLowerCase())
+        b.id.toLowerCase().includes(search.toLowerCase());
 
-      const matchesStatus = selectedStatus === 'All' || b.status === selectedStatus
+      const matchesStatus =
+        selectedStatus === "All" || b.status === selectedStatus;
 
-      return matchesSearch && matchesStatus
+      return matchesSearch && matchesStatus;
     })
-    .sort((a, b) => a.order - b.order)
+    .sort((a, b) => a.order - b.order);
 
   // Open Add modal
   const handleOpenAdd = () => {
-    setEditingBanner(null)
-    const nextOrder = banners.length + 1
+    setEditingBanner(null);
+    const nextOrder = banners.length + 1;
     setFormData({
-      title: '',
-      subtitle: '',
-      buttonText: 'Shop Now',
-      buttonLink: '/shop',
-      imageUrl: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1200&auto=format&fit=crop&q=80',
-      mobileImageUrl: '',
-      status: 'Active',
+      title: "",
+      subTitle: "",
+      buttonLabel: "",
+      buttonLink: "",
+      buttonLinkTarget: "category",
+      image: "",
+      status: "Active",
       order: nextOrder,
-      startDate: '',
-      endDate: '',
-    })
-    setIsAddEditOpen(true)
-  }
+      startDate: "",
+      endDate: "",
+    });
+    setIsAddEditOpen(true);
+  };
 
   // Open Edit modal
-  const handleOpenEdit = (banner: Banner) => {
-    setEditingBanner(banner)
+  const handleOpenEdit = (banner) => {
+    setEditingBanner(banner);
     setFormData({
       title: banner.title,
-      subtitle: banner.subtitle,
-      buttonText: banner.buttonText,
+      subTitle: banner.subTitle,
+      buttonLabel: banner.buttonLabel,
       buttonLink: banner.buttonLink,
-      imageUrl: banner.imageUrl,
-      mobileImageUrl: banner.mobileImageUrl || '',
+      buttonLinkTarget: banner.buttonLinkTarget,
+      image: banner.image,
       status: banner.status,
       order: banner.order,
-      startDate: banner.startDate || '',
-      endDate: banner.endDate || '',
-    })
-    setIsAddEditOpen(true)
-  }
+      startDate: banner.startDate || "",
+      endDate: banner.endDate || "",
+    });
+    setIsAddEditOpen(true);
+  };
 
   // Save Add/Edit
   const handleSaveBanner = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.title || !formData.imageUrl) return
+    e.preventDefault();
+    if (!formData.title || !formData.imageUrl) return;
 
     if (editingBanner) {
-      const updated = banners.map((b) =>
-        b.id === editingBanner.id
-          ? {
-            ...b,
-            ...formData,
-            type: 'Hero Slider' as const,
-          }
-          : b
-      )
-      updateBannersState(updated)
     } else {
-      const newBanner: Banner = {
-        id: `SLD-${Date.now().toString().slice(-4)}`,
-        ...formData,
-        type: 'Hero Slider' as const,
-        createdAt: new Date().toISOString(),
-      }
-      updateBannersState([...banners, newBanner])
     }
 
-    setIsAddEditOpen(false)
-  }
-
-  // Toggle Status
-  const handleToggleStatus = (id: string) => {
-    const updated = banners.map((b) => {
-      if (b.id === id) {
-        const nextStatus: BannerStatus = b.status === 'Active' ? 'Inactive' : 'Active'
-        return { ...b, status: nextStatus }
-      }
-      return b
-    })
-    updateBannersState(updated)
-  }
+    setIsAddEditOpen(false);
+  };
 
   // Delete slider
-  const handleDeleteConfirm = () => {
-    if (!deletingBanner) return
-    const updated = banners
-      .filter((b) => b.id !== deletingBanner.id)
-      .map((b, idx) => ({ ...b, order: idx + 1 }))
-    updateBannersState(updated)
-    setDeletingBanner(null)
-  }
-
-  // Stats calculation
-  const totalBanners = banners.length
-  const activeCount = banners.filter((b) => b.status === 'Active').length
-  const scheduledCount = banners.filter((b) => b.status === 'Scheduled').length
-  const inactiveCount = banners.filter((b) => b.status === 'Inactive').length
+  const handleDeleteConfirm = () => {};
 
   const getStatusBadge = (status: BannerStatus) => {
     switch (status) {
-      case 'Active':
+      case "Active":
         return (
           <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 border-emerald-500/30 gap-1">
             <CheckCircle2 className="w-3 h-3" /> Active
           </Badge>
-        )
-      case 'Inactive':
+        );
+      case "Inactive":
         return (
           <Badge className="bg-slate-500/15 text-slate-600 dark:text-slate-400 hover:bg-slate-500/25 border-slate-500/30 gap-1">
             <AlertCircle className="w-3 h-3" /> Inactive
           </Badge>
-        )
-      case 'Scheduled':
+        );
+      case "Scheduled":
         return (
           <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border-amber-500/30 gap-1">
             <Clock className="w-3 h-3" /> Scheduled
           </Badge>
-        )
+        );
     }
-  }
+  };
+
+  // Image upload handler
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFormData((prev: any) => ({
+      ...prev,
+      image: file,
+    }));
+  };
 
   return (
     <div className="space-y-4 max-w-full mx-auto">
@@ -222,7 +204,8 @@ export default function Banners() {
             Home Hero Sliders
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage main storefront homepage hero carousel slides, sequence order, and promotional CTAs.
+            Manage main storefront homepage hero carousel slides, sequence
+            order, and promotional CTAs.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -230,57 +213,6 @@ export default function Banners() {
             <Plus className="w-4 h-4" /> Add Hero Slide
           </Button>
         </div>
-      </div>
-
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Total Hero Slides</p>
-              <h3 className="text-2xl font-bold mt-1 text-foreground">{totalBanners}</h3>
-            </div>
-            <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
-              <Layers className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Active Live</p>
-              <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">{activeCount}</h3>
-            </div>
-            <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Scheduled</p>
-              <h3 className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">{scheduledCount}</h3>
-            </div>
-            <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
-              <Clock className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Inactive</p>
-              <h3 className="text-2xl font-bold mt-1 text-slate-600 dark:text-slate-400">{inactiveCount}</h3>
-            </div>
-            <div className="p-3 bg-slate-500/10 text-slate-500 rounded-xl">
-              <Image className="w-5 h-5" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filter and Search Bar */}
@@ -321,7 +253,10 @@ export default function Banners() {
           </div>
         ) : (
           filteredBanners.map((banner) => (
-            <Card key={banner.id} className="overflow-hidden border-border bg-card flex flex-col justify-between">
+            <Card
+              key={banner.id}
+              className="overflow-hidden border-border bg-card flex flex-col justify-between"
+            >
               <div>
                 {/* Image Header */}
                 <div className="relative h-44 w-full bg-slate-900 overflow-hidden group">
@@ -341,16 +276,23 @@ export default function Banners() {
                 {/* Body */}
                 <div className="p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-mono text-amber-500">{banner.id}</span>
+                    <span className="font-mono text-amber-500">
+                      {banner.id}
+                    </span>
                     {banner.startDate && (
                       <span className="flex items-center gap-1 text-[11px]">
-                        <Calendar className="w-3 h-3" /> {banner.startDate} to {banner.endDate || 'Ongoing'}
+                        <Calendar className="w-3 h-3" /> {banner.startDate} to{" "}
+                        {banner.endDate || "Ongoing"}
                       </span>
                     )}
                   </div>
 
-                  <h3 className="font-bold text-foreground text-base line-clamp-1">{banner.title}</h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{banner.subtitle}</p>
+                  <h3 className="font-bold text-foreground text-base line-clamp-1">
+                    {banner.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {banner.subtitle}
+                  </p>
                 </div>
               </div>
 
@@ -396,25 +338,35 @@ export default function Banners() {
           <table className="w-full text-left text-sm border-collapse">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
-                <th className="py-3.5 px-4 font-semibold w-16 text-center">Slide #</th>
+                <th className="py-3.5 px-4 font-semibold w-16 text-center">
+                  Slide #
+                </th>
                 <th className="py-3.5 px-4 font-semibold w-32">Slide Image</th>
                 <th className="py-3.5 px-4 font-semibold">Title & Subtitle</th>
                 <th className="py-3.5 px-4 font-semibold">Button CTA</th>
                 <th className="py-3.5 px-4 font-semibold">Schedule</th>
                 <th className="py-3.5 px-4 font-semibold">Status</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
+                <th className="py-3.5 px-4 font-semibold text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredBanners.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={7}
+                    className="py-8 text-center text-muted-foreground"
+                  >
                     No hero slides found.
                   </td>
                 </tr>
               ) : (
                 filteredBanners.map((banner) => (
-                  <tr key={banner.id} className="hover:bg-muted/30 transition-colors">
+                  <tr
+                    key={banner.id}
+                    className="hover:bg-muted/30 transition-colors"
+                  >
                     {/* Sequence Controls */}
                     <td className="py-3 px-4 text-center">
                       <div className="flex flex-col items-center gap-0.5">
@@ -444,17 +396,26 @@ export default function Banners() {
                     {/* Title & Details */}
                     <td className="py-3 px-4 max-w-sm">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[11px] font-mono font-medium text-amber-500">{banner.id}</span>
+                        <span className="text-[11px] font-mono font-medium text-amber-500">
+                          {banner.id}
+                        </span>
                       </div>
-                      <h4 className="font-semibold text-foreground text-sm line-clamp-1">{banner.title}</h4>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{banner.subtitle}</p>
+                      <h4 className="font-semibold text-foreground text-sm line-clamp-1">
+                        {banner.title}
+                      </h4>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {banner.subtitle}
+                      </p>
                     </td>
 
                     {/* CTA */}
                     <td className="py-3 px-4">
-                      <div className="text-xs font-medium text-foreground">{banner.buttonText}</div>
+                      <div className="text-xs font-medium text-foreground">
+                        {banner.buttonText}
+                      </div>
                       <div className="text-[11px] text-muted-foreground flex items-center gap-0.5 font-mono truncate max-w-[140px]">
-                        <ExternalLink className="w-2.5 h-2.5 shrink-0" /> {banner.buttonLink}
+                        <ExternalLink className="w-2.5 h-2.5 shrink-0" />{" "}
+                        {banner.buttonLink}
                       </div>
                     </td>
 
@@ -463,17 +424,20 @@ export default function Banners() {
                       {banner.startDate ? (
                         <div>
                           <div>{banner.startDate}</div>
-                          <div className="text-[11px] text-muted-foreground/70">to {banner.endDate || 'Forever'}</div>
+                          <div className="text-[11px] text-muted-foreground/70">
+                            to {banner.endDate || "Forever"}
+                          </div>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground/60 italic">Always Active</span>
+                        <span className="text-muted-foreground/60 italic">
+                          Always Active
+                        </span>
                       )}
                     </td>
 
                     {/* Status */}
                     <td className="py-3 px-4">
                       <button
-                        onClick={() => handleToggleStatus(banner.id)}
                         className="cursor-pointer hover:opacity-80 transition-opacity"
                         title="Click to toggle status"
                       >
@@ -527,93 +491,171 @@ export default function Banners() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
               <Sliders className="w-5 h-5 text-amber-500" />
-              {editingBanner ? 'Edit Hero Slide' : 'Create New Hero Slide'}
+              {editingBanner ? "Edit Hero Slide" : "Create New Hero Slide"}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSaveBanner} className="space-y-4 py-2">
             {/* Title & Subtitle */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Hero Slide Title *</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Hero Slide Title *
+              </label>
               <Input
                 placeholder="e.g. Spring Organic Collection 2026"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Subtitle / Tagline</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Subtitle / Tagline
+              </label>
               <Input
                 placeholder="e.g. Ultra-soft 100% GOTS certified organic cotton for newborns & toddlers..."
-                value={formData.subtitle}
-                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                value={formData.subTitle}
+                onChange={(e) =>
+                  setFormData({ ...formData, subTitle: e.target.value })
+                }
               />
             </div>
 
-            {/* Image URLs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Desktop Image URL *</label>
-                <Input
-                  placeholder="https://images.unsplash.com/..."
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  required
-                />
-              </div>
+            {/* Banner Image Upload */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-muted-foreground">
+                <Image className="h-3.5 w-3.5 text-foreground" /> Banner Image *
+              </label>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Mobile Image URL (Optional)</label>
-                <Input
-                  placeholder="https://images.unsplash.com/... (optional mobile crop)"
-                  value={formData.mobileImageUrl}
-                  onChange={(e) => setFormData({ ...formData, mobileImageUrl: e.target.value })}
-                />
-              </div>
+              {formData.image ? (
+                <div className="relative h-44 w-full rounded-xl overflow-hidden border border-border bg-muted group shadow-xs">
+                  <img
+                    src={URL.createObjectURL(formData.image)}
+                    alt="Banner Preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-background/80 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <label className="bg-card text-card-foreground hover:bg-muted font-semibold text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 shadow-sm border border-border">
+                      <Upload className="h-3.5 w-3.5" /> Upload Different
+                      Picture
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleUploadImage}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, image: "" })}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-semibold text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1 shadow-sm"
+                    >
+                      <X className="h-3.5 w-3.5" /> Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="border-2 border-dashed border-border hover:border-muted-foreground/50 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-all text-center">
+                  <div className="p-3 rounded-full bg-muted text-muted-foreground">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-foreground">
+                      Click or drag image to upload
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      PNG, JPG, WEBP up to 10 MB
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleUploadImage}
+                  />
+                </label>
+              )}
             </div>
 
-            {/* Image Live Thumbnail Preview */}
-            {formData.imageUrl && (
-              <div className="relative h-36 w-full rounded-lg overflow-hidden border border-border bg-slate-900">
-                <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-4 flex flex-col justify-end">
-                  <Badge className="w-fit mb-1 bg-amber-500 text-white">Hero Slide Preview</Badge>
-                  <h4 className="text-white text-base font-bold">{formData.title || 'Slide Title'}</h4>
-                  <p className="text-white/80 text-xs">{formData.subtitle || 'Slide subtitle...'}</p>
-                </div>
-              </div>
-            )}
-
             {/* CTA Button Text & Link */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Button Label</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Button Label
+                </label>
                 <Input
                   placeholder="Shop New Arrivals"
-                  value={formData.buttonText}
-                  onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })}
+                  value={formData.buttonLabel}
+                  onChange={(e) =>
+                    setFormData({ ...formData, buttonLabel: e.target.value })
+                  }
                 />
               </div>
 
+              {/* Button Redirect to: Select Category or Products */}
+              <div>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Button Redirect to
+                </label>
+                <select
+                  value={formData.buttonLinkTarget}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      buttonLinkTarget: e.target.value as
+                        | "category"
+                        | "product",
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground"
+                >
+                  <option value="category">Category</option>
+                  <option value="product">Product</option>
+                </select>
+              </div>
+
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Button Link Target</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Button Link Target
+                </label>
                 <Input
                   placeholder="/categories/organic-cotton"
                   value={formData.buttonLink}
-                  onChange={(e) => setFormData({ ...formData, buttonLink: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, buttonLink: e.target.value })
+                  }
+                  list="buttonLinkTargets"
                 />
+                <datalist id="buttonLinkTargets">
+                  {(formData.buttonLinkTarget === "category"
+                    ? DUMMY_CATEGORIES
+                    : DUMMY_PRODUCTS
+                  ).map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </datalist>
               </div>
             </div>
 
             {/* Status & Sequence */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Status</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Status
+                </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as BannerStatus })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      status: e.target.value as BannerStatus,
+                    })
+                  }
                   className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground"
                 >
                   <option value="Active">Active</option>
@@ -623,12 +665,19 @@ export default function Banners() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Slide Sequence Order</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Slide Sequence Order
+                </label>
                 <Input
                   type="number"
                   min="1"
                   value={formData.order}
-                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 1 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      order: parseInt(e.target.value) || 1,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -636,30 +685,45 @@ export default function Banners() {
             {/* Schedule Dates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Start Date (Optional)</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Start Date (Optional)
+                </label>
                 <Input
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">End Date (Optional)</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  End Date (Optional)
+                </label>
                 <Input
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
                 />
               </div>
             </div>
 
             <DialogFooter className="pt-4 border-t border-border">
-              <Button type="button" variant="outline" onClick={() => setIsAddEditOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddEditOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white">
-                {editingBanner ? 'Save Changes' : 'Create Slide'}
+              <Button
+                type="submit"
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+              >
+                {editingBanner ? "Save Changes" : "Create Slide"}
               </Button>
             </DialogFooter>
           </form>
@@ -668,7 +732,10 @@ export default function Banners() {
 
       {/* Preview Live Hero Slide Modal */}
       {previewBanner && (
-        <Dialog open={!!previewBanner} onOpenChange={() => setPreviewBanner(null)}>
+        <Dialog
+          open={!!previewBanner}
+          onOpenChange={() => setPreviewBanner(null)}
+        >
           <DialogContent className="sm:max-w-3xl bg-slate-950 text-white border-slate-800 p-0 overflow-hidden">
             <div className="relative h-80 sm:h-96 w-full flex items-center justify-center overflow-hidden">
               <img
@@ -695,10 +762,25 @@ export default function Banners() {
             </div>
             <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-xs text-gray-400">
               <div className="flex items-center gap-3">
-                <span>Slide ID: <strong className="text-white font-mono">{previewBanner.id}</strong></span>
-                <span>Status: <strong className="text-amber-400">{previewBanner.status}</strong></span>
+                <span>
+                  Slide ID:{" "}
+                  <strong className="text-white font-mono">
+                    {previewBanner.id}
+                  </strong>
+                </span>
+                <span>
+                  Status:{" "}
+                  <strong className="text-amber-400">
+                    {previewBanner.status}
+                  </strong>
+                </span>
               </div>
-              <Button size="sm" variant="ghost" className="text-white hover:bg-slate-800" onClick={() => setPreviewBanner(null)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-white hover:bg-slate-800"
+                onClick={() => setPreviewBanner(null)}
+              >
                 Close Preview
               </Button>
             </div>
@@ -707,22 +789,34 @@ export default function Banners() {
       )}
 
       {/* Delete Confirmation Alert */}
-      <AlertDialog open={!!deletingBanner} onOpenChange={() => setDeletingBanner(null)}>
+      <AlertDialog
+        open={!!deletingBanner}
+        onOpenChange={() => setDeletingBanner(null)}
+      >
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">Delete Hero Slide?</AlertDialogTitle>
+            <AlertDialogTitle className="text-foreground">
+              Delete Hero Slide?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <span className="font-semibold text-foreground">"{deletingBanner?.title}"</span>? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-foreground">
+                "{deletingBanner?.title}"
+              </span>
+              ? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-rose-600 hover:bg-rose-700 text-white">
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
               Delete Slide
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

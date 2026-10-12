@@ -45,7 +45,8 @@ const STATUS = [
 ];
 
 export default function FaqPage() {
-  const { faqs, isModalOpen } = useSelector((state: RootState) => state.faq);
+  // const { faqs, isModalOpen } = useSelector((state: RootState) => state.faq);
+  const faqVar = useSelector((state: RootState) => state.faq);
   const dispatch = useDispatch<AppDispatch>();
 
   // Modal State
@@ -122,7 +123,7 @@ export default function FaqPage() {
   };
 
   useEffect(() => {
-    if (faqs.length <= 0) {
+    if (faqVar.faqs.length <= 0) {
       dispatch(getAllFaq());
     }
   }, []);
@@ -157,7 +158,7 @@ export default function FaqPage() {
 
       {/* FAQ List Cards */}
       <div className="space-y-4">
-        {faqs.length === 0 ? (
+        {faqVar.faqs.length === 0 ? (
           <Card className="rounded-2xl border-border p-12 text-center">
             <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
             <p className="text-sm font-semibold text-foreground">
@@ -168,7 +169,7 @@ export default function FaqPage() {
             </p>
           </Card>
         ) : (
-          faqs.map((faq) => (
+          faqVar.faqs.map((faq) => (
             <Card
               key={faq._id}
               className="rounded-2xl border-border shadow-xs hover:border-border/80 transition-all group"
@@ -240,7 +241,7 @@ export default function FaqPage() {
 
       {/* Add / Edit FAQ Modal Dialog */}
       <Dialog
-        open={isModalOpen}
+        open={faqVar.isModalOpen}
         onOpenChange={(open) => dispatch(toogleModal(open))}
       >
         <DialogContent className="sm:max-w-[500px] rounded-2xl">

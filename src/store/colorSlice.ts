@@ -40,17 +40,16 @@ const colorSlice = createSlice({
   name: "color",
   initialState,
   reducers: {
-    setStatus: (state, action) => {
-      state.status = action.payload;
+    setStatus: (state, { payload }) => {
+      state.status = payload;
     },
-    setColors: (state, action) => {
-      if (action.payload?.colors) {
-        state.colors = action.payload.colors;
-        state.total =
-          action.payload.totalColors ?? action.payload.colors.length;
-      } else if (Array.isArray(action.payload)) {
-        state.colors = action.payload;
-        state.total = action.payload.length;
+    setColors: (state, { payload }) => {
+      if (payload?.colors) {
+        state.colors = payload.colors;
+        state.total = payload.totalColors ?? payload.colors.length;
+      } else if (Array.isArray(payload)) {
+        state.colors = payload;
+        state.total = payload.length;
       } else {
         state.colors = [];
         state.total = 0;
@@ -64,17 +63,17 @@ const colorSlice = createSlice({
         state.total = payload.totalColors;
       }
     },
-    addColorSuccess: (state, action) => {
-      state.colors = [action.payload, ...state.colors];
+    addColorSuccess: (state, { payload }) => {
+      state.colors = [payload, ...state.colors];
       state.total += 1;
     },
-    updateColorSuccess: (state, action) => {
+    updateColorSuccess: (state, { payload }) => {
       state.colors = state.colors.map((c) =>
-        c._id === action.payload._id ? action.payload : c,
+        c._id === payload._id ? payload : c,
       );
     },
-    deleteColorSuccess: (state, action) => {
-      state.colors = state.colors.filter((c) => c._id !== action.payload);
+    deleteColorSuccess: (state, { payload }) => {
+      state.colors = state.colors.filter((c) => c._id !== payload);
       state.total = Math.max(0, state.total - 1);
     },
     toogleModal: (state, { payload }) => {
@@ -98,6 +97,7 @@ export default colorSlice.reducer;
 // Color thunk function - Add
 export function addColor(data: object) {
   return async function addColorThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .addColor(data)
@@ -110,7 +110,9 @@ export function addColor(data: object) {
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(err?.response || err);
-        return false;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -118,6 +120,7 @@ export function addColor(data: object) {
 // Color thunk function - Update
 export function updateColor(id: string, data: object) {
   return async function updateColorThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .updateColor(id, data)
@@ -130,6 +133,9 @@ export function updateColor(id: string, data: object) {
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(err?.response || err);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -137,6 +143,7 @@ export function updateColor(id: string, data: object) {
 // Color thunk function - Delete
 export function deleteColor(id: string) {
   return async function deleteColorThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .deleteColor(id)
@@ -148,6 +155,9 @@ export function deleteColor(id: string) {
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response || error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -171,12 +181,13 @@ export function getColors(
           dispatch(setColors(res.data));
         }
         dispatch(setStatus(STATUS.IDLE));
-        dispatch(setLoading(false));
       })
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));
-        dispatch(setLoading(false));
         errorHandler(err?.response || err);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }

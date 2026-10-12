@@ -44,12 +44,7 @@ import {
 import { warningHandler } from "@/shared/_helper/responseHelper";
 
 export default function ClothingSizes() {
-  const {
-    isAddModalOpen,
-    sizes = [],
-    total = 0,
-    status,
-  } = useSelector((state: RootState) => state.size);
+  const sizesVar = useSelector((state: RootState) => state.size);
   const dispatch = useDispatch<AppDispatch>();
 
   // Ref
@@ -147,7 +142,7 @@ export default function ClothingSizes() {
 
     if (editingSize) {
       // Update
-      const res = await dispatch(
+      await dispatch(
         updateSize(editingSize._id, {
           name: formData.name.trim(),
           minAge: minNum,
@@ -156,10 +151,9 @@ export default function ClothingSizes() {
           description: formData.description.trim(),
           status: selectedStatus,
         }),
-      );
-      if (res) {
+      ).finally(() => {
         setEditingSize(null);
-      }
+      });
     } else {
       // Add
       await dispatch(
@@ -181,7 +175,7 @@ export default function ClothingSizes() {
 
   // Infinite Scroll fetch more
   const fetchMoreSizes = async () => {
-    if (status === "loading" || sizes.length >= total) return;
+    if (sizesVar.status === "loading" || sizesVar.sizes.length >= sizesVar.total) return;
 
     const newOffset = formVar.offset + formVar.limit;
 
@@ -194,18 +188,18 @@ export default function ClothingSizes() {
       offset: newOffset,
     }));
 
-    if (newOffset + formVar.limit >= total) {
+    if (newOffset + formVar.limit >= sizesVar.total) {
       setHasMore(false);
     }
   };
 
   useEffect(() => {
-    if (sizes.length >= total && total > 0) {
+    if (sizesVar.sizes.length >= sizesVar.total && sizesVar.total > 0) {
       setHasMore(false);
     } else {
       setHasMore(true);
     }
-  }, [sizes.length, total]);
+  }, [sizesVar.sizes.length, sizesVar.total]);
 
   // Handle search sizes
   const handleSearch = (searchTerm: string) => {
@@ -227,7 +221,7 @@ export default function ClothingSizes() {
   };
 
   useEffect(() => {
-    if (sizes.length <= 0) {
+    if (sizesVar.sizes.length <= 0) {
       dispatch(
         getAllSize(
           formVar.keyword,
@@ -283,7 +277,7 @@ export default function ClothingSizes() {
       {/* Main Sizes Table Card */}
       <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
         <CardContent className="p-0">
-          {sizes.length === 0 && status !== "loading" ? (
+          {sizesVar.sizes.length === 0 && sizesVar.status !== "loading" ? (
             <div className="p-12 text-center space-y-3">
               <div className="p-3.5 rounded-full bg-muted text-muted-foreground w-fit mx-auto">
                 <Ruler className="h-8 w-8" />
@@ -307,7 +301,7 @@ export default function ClothingSizes() {
             </div>
           ) : (
             <InfiniteScroll
-              dataLength={sizes.length}
+              dataLength={sizesVar.sizes.length}
               next={fetchMoreSizes}
               hasMore={hasMore}
               loader={
@@ -317,16 +311,17 @@ export default function ClothingSizes() {
                 </div>
               }
               endMessage={
-                sizes.length > 0 && (
+                sizesVar.sizes.length > 0 && (
                   <div className="py-6 text-center text-xs text-muted-foreground font-medium border-t border-border/50">
-                    Showing all {sizes.length} of {total} sizes
+                    Showing all {sizesVar.sizes.length} of {sizesVar.total}{" "}
+                    sizes
                   </div>
                 )
               }
             >
               {/* Mobile & Tablet Card Layout (< lg screens) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
-                {sizes.map((size) => (
+                {sizesVar.sizes.map((size) => (
                   <div
                     key={size._id}
                     className="p-4 rounded-xl border border-border bg-card hover:border-border/80 transition-all shadow-xs flex flex-col justify-between space-y-3"
@@ -441,7 +436,7 @@ export default function ClothingSizes() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {sizes.map((size) => (
+                    {sizesVar.sizes.map((size) => (
                       <tr
                         key={size._id}
                         className="hover:bg-muted/30 transition-colors group"
@@ -563,7 +558,7 @@ export default function ClothingSizes() {
 
       {/* Add / Edit Size Modal Dialog */}
       <Dialog
-        open={isAddModalOpen}
+        open={sizesVar.isAddModalOpen}
         onOpenChange={(open) => {
           dispatch(toogleAddModal(open));
           setEditingSize(null);

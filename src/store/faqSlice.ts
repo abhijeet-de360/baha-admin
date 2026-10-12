@@ -32,7 +32,7 @@ const initialState: InitialState = {
   faqs: [],
   total: 0,
   status: STATUS.IDLE,
-  isModalOpen: false
+  isModalOpen: false,
 };
 
 export const faqSlice = createSlice({
@@ -64,7 +64,7 @@ export const faqSlice = createSlice({
     },
     toogleModal(state, { payload }) {
       state.isModalOpen = payload;
-    }
+    },
   },
 });
 
@@ -75,7 +75,7 @@ export const {
   addFaqSuccess,
   updateFaqSuccess,
   deleteFaqSuccess,
-  toogleModal
+  toogleModal,
 } = faqSlice.actions;
 
 export default faqSlice.reducer;
@@ -84,20 +84,22 @@ export default faqSlice.reducer;
 // Add faq thunk
 export function addFaq(data: object) {
   return async function addFaqThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .addFaq(data)
       .then((res) => {
         dispatch(addFaqSuccess(res?.data?.result ?? res?.data));
-        dispatch(toogleModal(false))
+        dispatch(toogleModal(false));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("FAQ added successfully");
-        return true;
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response);
-        return false;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -105,7 +107,7 @@ export function addFaq(data: object) {
 // Get All faq thunk
 export function getAllFaq() {
   return async function getAllFaqThunk(dispatch: AppDispatch) {
-    dispatch(setLoading(true))
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
 
     return await service
@@ -114,40 +116,36 @@ export function getAllFaq() {
         dispatch(setFaqs(res?.data?.result));
         dispatch(setTotal(res?.data?.total));
         dispatch(setStatus(STATUS.IDLE));
-        dispatch(setLoading(false))
       })
       .catch((error: any) => {
-        // manual abort
-        if (axios.isCancel(error) || error?.name === "CanceledError") return;
-        dispatch(setLoading(false))
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
 
 // Update faq thunk
-export function updateFaq(
-  id: string,
-  data: object,
-  onSuccess?: () => void,
-) {
+export function updateFaq(id: string, data: object) {
   return async function updateFaqThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .updateFaq(id, data)
       .then((res) => {
         dispatch(updateFaqSuccess(res?.data?.result ?? res?.data));
-        dispatch(toogleModal(false))
+        dispatch(toogleModal(false));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("FAQ updated successfully");
-        onSuccess?.();
-        return true;
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response);
-        return false;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
@@ -155,6 +153,7 @@ export function updateFaq(
 // Delete faq thunk
 export function deleteFaq(id: string) {
   return async function deleteFaqThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     return await service
       .deleteFaq(id)
@@ -162,12 +161,13 @@ export function deleteFaq(id: string) {
         dispatch(deleteFaqSuccess(res?.data?.result ?? res?.data ?? id));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("FAQ deleted successfully");
-        return true;
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
         errorHandler(error?.response);
-        return false;
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
       });
   };
 }
