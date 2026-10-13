@@ -5,6 +5,7 @@ import Header from "@/components/layout/Header";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "@/store/store";
 import { getProfile } from "@/store/authSlice";
+import { getAllCategories } from "@/store/categorySlice";
 
 export default function Layout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function Layout() {
   useEffect(() => {
     if (isAuthenticated) {
       dispatch(getProfile());
+      dispatch(getAllCategories("", 10, 0, ""));
     }
   }, [isAuthenticated]);
 

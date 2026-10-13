@@ -18,6 +18,7 @@ import {
   Sliders,
   Ticket,
   Bell,
+  Folder,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,12 @@ const navItems: NavItem[] = [
   {
     label: "Categories",
     path: "/categories",
+    icon: Folder,
+    iconColor: "text-indigo-500",
+  },
+  {
+    label: "Sub Categories",
+    path: "/sub-categories",
     icon: FolderTree,
     iconColor: "text-indigo-500",
   },

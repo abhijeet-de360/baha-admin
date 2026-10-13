@@ -16,12 +16,9 @@ export interface CategoryItem {
   _id?: string;
   slug: string;
   name: string;
-  description?: string;
   priority?: number;
-  status: "active" | "inactive" | "deleted";
-  image: string;
-  metaTitle: string;
-  metaDescription: string;
+  status?: "active" | "inactive";
+  image?: string | File;
   createdAt?: string;
 }
 
@@ -51,11 +48,10 @@ const categorySlice = createSlice({
       state.total = payload.total;
     },
     appendCategories: (state, { payload }) => {
-      const newItems =
-        payload?.categories || (Array.isArray(payload) ? payload : []);
+      const newItems = payload?.result || [];
       state.categories = [...state.categories, ...newItems];
-      if (payload?.totalCategories !== undefined) {
-        state.total = payload.totalCategories;
+      if (payload?.total !== undefined) {
+        state.total = payload.total;
       }
     },
     addCategorySuccess: (state, { payload }) => {
@@ -108,6 +104,76 @@ export function getAllCategories(
           dispatch(setCategories(res.data));
         }
         dispatch(setStatus(STATUS.IDLE));
+      })
+      .catch((err: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(err?.response || err);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
+  };
+}
+
+// Add category thunk
+export function addCategory(data: FormData) {
+  return async function addCategoryThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .addCategory(data)
+      .then((res) => {
+        const created = res?.data?.result ?? res?.data;
+        dispatch(addCategorySuccess(created));
+        dispatch(toogleModal(false));
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Category added successfully");
+      })
+      .catch((err: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(err?.response || err);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
+  };
+}
+
+export function updateCategory(id: string, data: FormData) {
+  return async function updateCategoryThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .updateCategory(id, data)
+      .then((res) => {
+        const updated = res?.data?.result ?? res?.data;
+        dispatch(updateCategorySuccess(updated));
+        dispatch(toogleModal(false));
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Category updated successfully");
+      })
+      .catch((err: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(err?.response || err);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
+  };
+}
+
+// Delete category thunk
+export function deleteCategory(id: string) {
+  return async function deleteCategoryThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+
+    return await service
+      .deleteCategory(id)
+      .then((res) => {
+        dispatch(deleteCategorySuccess(id));
+        dispatch(setStatus(STATUS.IDLE));
+        successHandler("Category deleted successfully");
       })
       .catch((err: any) => {
         dispatch(setStatus(STATUS.ERROR));

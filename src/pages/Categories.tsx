@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import slugify from "slugify";
 import InfiniteScroll from "react-infinite-scroll-component";
 import {
@@ -7,17 +7,13 @@ import {
   Search,
   SquarePen,
   Trash2,
-  CheckCircle2,
-  AlertTriangle,
   Upload,
   Image as ImageIcon,
   X,
-  Sparkles,
-  Layers,
   Calendar,
-  Tag,
   Link as LinkIcon,
   Globe,
+  Folder,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +40,23 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
 import {
+  addCategory,
+  deleteCategory,
   getAllCategories,
   toogleModal,
+  updateCategory,
   type CategoryItem,
 } from "@/store/categorySlice";
 import { warningHandler } from "@/shared/_helper/responseHelper";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 
 // Generate slug using slugify package
 const generateSlug = (text: string): string => {
@@ -64,7 +72,6 @@ export default function Categories() {
   const dispatch = useDispatch<AppDispatch>();
 
   // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(
     null,
   );
@@ -73,12 +80,8 @@ export default function Categories() {
   const [formData, setFormData] = useState<CategoryItem>({
     name: "",
     slug: "",
-    description: "",
     priority: 0,
-    status: "active",
     image: "",
-    metaTitle: "",
-    metaDescription: "",
   });
 
   const [formVar, setFormVar] = useState({
@@ -88,7 +91,10 @@ export default function Categories() {
     status: "",
   });
 
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+
+  // Ref
+  const searchTimeoutRef = useRef<any>(null);
 
   // Handle input change
   const handleInputChange = (name: keyof typeof formData, value: string) => {
@@ -112,12 +118,8 @@ export default function Categories() {
     setFormData({
       name: "",
       slug: "",
-      description: "",
       priority: 0,
-      status: "active",
       image: "",
-      metaTitle: "",
-      metaDescription: "",
     });
     dispatch(toogleModal(true));
   };
@@ -128,12 +130,8 @@ export default function Categories() {
     setFormData({
       name: cat.name,
       slug: cat.slug,
-      description: cat.description,
       priority: cat.priority || 0,
-      status: cat.status,
       image: cat.image,
-      metaTitle: cat.metaTitle,
-      metaDescription: cat.metaDescription,
     });
     dispatch(toogleModal(true));
   };
@@ -151,15 +149,26 @@ export default function Categories() {
       ? generateSlug(formData.slug)
       : generateSlug(formData.name);
 
-    if (editingCategory) {
-    } else {
+    const data = new FormData();
+    data.append("name", formData.name.trim());
+    data.append("slug", finalSlug);
+    data.append("priority", formData.priority.toString());
+
+    if (formData.image instanceof File) {
+      data.append("image", formData.image);
     }
 
-    dispatch(toogleModal(false));
+    if (editingCategory) {
+      dispatch(updateCategory(editingCategory._id, data));
+    } else {
+      dispatch(addCategory(data));
+    }
   };
 
   // Delete Handler
-  const handleDelete = (id: string) => {};
+  const handleDelete = (id: string) => {
+    dispatch(deleteCategory(id));
+  };
 
   const fetchMoreCategories = async () => {
     if (
@@ -189,6 +198,54 @@ export default function Categories() {
     }
   };
 
+  // Handle status change
+  const handleStatusChange = (status: string) => {
+    setFormVar((prev) => ({
+      ...prev,
+      status: status,
+      offset: 0,
+    }));
+    dispatch(
+      getAllCategories(
+        formVar.keyword,
+        formVar.limit,
+        0,
+        status === "all" ? "" : status,
+      ),
+    );
+  };
+
+  // Handle search
+  const handleSearch = (searchTerm: string) => {
+    setFormVar((prev) => ({
+      ...prev,
+      keyword: searchTerm,
+      offset: 0,
+    }));
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      dispatch(
+        getAllCategories(
+          searchTerm,
+          formVar.limit,
+          0,
+          formVar.status === "all" ? "" : formVar.status,
+        ),
+      );
+    }, 500);
+  };
+
+  // Update status
+  const updateStatus = (id: string, status: string) => {
+    const data = new FormData();
+    data.append("status", status);
+    dispatch(updateCategory(id, data));
+  };
+
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -216,7 +273,7 @@ export default function Categories() {
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary text-primary-foreground shadow-xs">
-              <FolderTree className="h-5 w-5" />
+              <Folder className="h-5 w-5" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Categories
@@ -244,9 +301,7 @@ export default function Categories() {
             type="text"
             placeholder="Search category name or description..."
             value={formVar.keyword}
-            onChange={(e) => {
-              setFormVar((prev) => ({ ...prev, keyword: e.target.value }));
-            }}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
           />
         </div>
@@ -254,9 +309,7 @@ export default function Categories() {
         <div className="flex items-center gap-2 shrink-0">
           <select
             value={formVar.status}
-            onChange={(e) => {
-              setFormVar((prev) => ({ ...prev, status: e.target.value }));
-            }}
+            onChange={(e) => handleStatusChange(e.target.value)}
             className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
           >
             <option value="all">All Statuses</option>
@@ -307,67 +360,66 @@ export default function Categories() {
                 </div>
               }
             >
-              {/* Responsive Grid View for All Screens */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-6">
+              {/* Mobile & Tablet card layout  */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
                 {categoryVar.categories.map((cat) => (
                   <div
                     key={cat._id}
-                    className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between"
+                    className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/20 transition-all flex flex-col"
                   >
-                    {/* Image Banner Container */}
-                    <div className="relative h-40 w-full bg-muted overflow-hidden">
+                    {/* Cover Image */}
+                    <div className="relative h-36 w-full bg-muted overflow-hidden shrink-0">
                       <img
-                        src={cat.image}
+                        src={
+                          typeof cat.image === "string"
+                            ? cat.image
+                            : URL.createObjectURL(cat.image)
+                        }
                         alt={cat.name}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="h-full w-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    </div>
 
-                      {/* Status Badge */}
-                      <div className="absolute top-3 left-3">
+                    {/* Card Body */}
+                    <div className="p-4 flex flex-col gap-3 flex-1">
+                      {/* Name & Slug */}
+                      <div className="space-y-0.5">
+                        <h4 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
+                          {cat.name}
+                        </h4>
+                        <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+                          <LinkIcon className="h-3 w-3 shrink-0" />/{cat.slug}
+                        </p>
+                      </div>
+
+                      {/* Status Switch */}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={cat.status === "active"}
+                          onCheckedChange={(checked) =>
+                            updateStatus(
+                              cat._id,
+                              checked ? "active" : "inactive",
+                            )
+                          }
+                        />
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-md shadow-xs ${
+                          className={`text-[11px] font-semibold capitalize ${
                             cat.status === "active"
-                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                              : "bg-black/40 text-muted-foreground border-white/10"
+                              ? "text-emerald-500"
+                              : "text-muted-foreground"
                           }`}
                         >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              cat.status === "active"
-                                ? "bg-emerald-400"
-                                : "bg-muted-foreground"
-                            }`}
-                          />
                           {cat.status}
                         </span>
                       </div>
 
-                      {/* Products Count Badge */}
-                      {/* <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-white border border-white/10">
-                        <Tag className="h-3 w-3 text-amber-400" />
-                        <span>{cat.productCount} Products</span>
-                      </div> */}
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-foreground text-base group-hover:text-primary transition-colors">
-                          {cat.name}
-                        </h4>
-                        <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
-                          <LinkIcon className="h-3 w-3 shrink-0" /> /{cat.slug}
-                        </p>
-                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed pt-1">
-                          {cat.description}
-                        </p>
-                      </div>
-
-                      {/* Footer Info & Actions */}
-                      <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+                      {/* Footer: date + actions */}
+                      <div className="pt-2 border-t border-border flex items-center justify-between mt-auto">
                         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" /> {cat.createdAt}
+                          <Calendar className="h-3 w-3" />
+                          {new Date(cat.createdAt).toDateString()}
                         </span>
 
                         <div className="flex items-center gap-1.5">
@@ -389,6 +441,99 @@ export default function Categories() {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete this Category?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will
+                                  permanently delete this Category.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-red-600 hover:bg-red-700"
+                                  onClick={() => handleDelete(cat._id)}
+                                >
+                                  Yes, delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table view  */}
+              <div className="hidden xl:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Slug</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created At</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categoryVar.categories.map((cat) => (
+                      <TableRow key={cat._id}>
+                        <TableCell>
+                          <img
+                            src={
+                              typeof cat.image === "string"
+                                ? cat.image
+                                : URL.createObjectURL(cat.image)
+                            }
+                            alt={cat.name}
+                            className="h-10 w-10 object-cover rounded"
+                          />
+                        </TableCell>
+                        <TableCell>{cat.name}</TableCell>
+                        <TableCell>{cat.slug}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={cat.status === "active"}
+                              onCheckedChange={(checked) => {
+                                updateStatus(
+                                  cat._id,
+                                  checked ? "active" : "inactive",
+                                );
+                              }}
+                            />
+                            <span
+                              className={`text-[11px] font-semibold capitalize ${
+                                cat.status === "active"
+                                  ? "text-emerald-500"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {cat.status}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(cat.createdAt).toDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            onClick={() => handleOpenEditModal(cat)}
+                            className="mr-2"
+                          >
+                            Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive">Delete</Button>
                             </AlertDialogTrigger>
 
                             <AlertDialogContent>
@@ -413,11 +558,11 @@ export default function Categories() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </InfiniteScroll>
           )}
@@ -425,7 +570,10 @@ export default function Categories() {
       </Card>
 
       {/* Add / Edit Category Modal Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={categoryVar.isModalOpen}
+        onOpenChange={(open) => dispatch(toogleModal(open))}
+      >
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto rounded-2xl">
           <form onSubmit={handleSaveCategory}>
             <DialogHeader>
@@ -456,22 +604,19 @@ export default function Categories() {
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Status <span className="text-destructive">*</span>
+                    Priority <span className="text-destructive">*</span>
                   </label>
-                  <select
-                    value={formData.status}
+                  <Input
+                    placeholder="e.g., 1"
+                    type="number"
+                    value={formData.priority}
                     onChange={(e) =>
-                      handleInputChange("status", e.target.value)
+                      handleInputChange("priority", e.target.value)
                     }
-                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                    className="h-10 text-xs font-semibold text-foreground bg-background"
                     required
-                  >
-                    <option value="" disabled>
-                      Select Status
-                    </option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                    onWheel={(e) => e.currentTarget.blur()}
+                  />
                 </div>
               </div>
 
@@ -552,74 +697,13 @@ export default function Categories() {
                   </label>
                 )}
               </div>
-
-              {/* Description */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Description <span className="font-normal">(Optional)</span>
-                </label>
-                <textarea
-                  placeholder="Short overview describing this category..."
-                  value={formData.description}
-                  onChange={(e) =>
-                    handleInputChange("description", e.target.value)
-                  }
-                  rows={3}
-                  className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium focus:outline-none focus:ring-1 focus:ring-ring resize-y text-foreground"
-                />
-              </div>
-
-              {/* SEO SETTINGS SECTION */}
-              <div className="pt-3 border-t border-border space-y-3">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-foreground" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    SEO Search Meta Tags
-                  </span>
-                </div>
-
-                {/* Meta Title Tag */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Meta Title Tag
-                    </label>
-                  </div>
-                  <Input
-                    placeholder="e.g., Boys Collection - Kids Fashion & Outfits | Baha"
-                    value={formData.metaTitle}
-                    onChange={(e) =>
-                      handleInputChange("metaTitle", e.target.value)
-                    }
-                    className="h-10 text-xs font-medium placeholder:text-muted-foreground/40 text-foreground bg-background"
-                  />
-                </div>
-
-                {/* Meta Description Tag */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Meta Description Tag
-                    </label>
-                  </div>
-                  <textarea
-                    placeholder="Write a concise meta description summarizing the category for Google search results..."
-                    value={formData.metaDescription}
-                    onChange={(e) =>
-                      handleInputChange("metaDescription", e.target.value)
-                    }
-                    rows={2}
-                    className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring resize-y placeholder:text-muted-foreground/40 text-foreground"
-                  />
-                </div>
-              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => dispatch(toogleModal(false))}
                 className="rounded-xl text-xs cursor-pointer"
               >
                 Cancel

@@ -10,6 +10,7 @@ const sizeUrl = rootUrl + "/size";
 const settingsUrl = rootUrl + "/settings";
 const couponUrl = rootUrl + "/coupon";
 const categoryUrl = rootUrl + "/category";
+const subCategoryUrl = rootUrl + "/subCategory"
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -203,18 +204,51 @@ async function getAllCategories(
 
 async function addCategory(data: object) {
   return await axios.post(categoryUrl + "/create", data, {
-    headers: await authHeader(),
+    headers: await authHeader("FormData"),
   });
 }
 
 async function updateCategory(id: string, data: object) {
   return await axios.patch(`${categoryUrl}/update/${id}`, data, {
-    headers: await authHeader(),
+    headers: await authHeader("FormData"),
   });
 }
 
 async function deleteCategory(id: string) {
   return await axios.delete(`${categoryUrl}/delete/${id}`, {
+    headers: await authHeader(),
+  });
+}
+
+/************************* Sub Category service functions *************************** */
+
+async function getAllSubCategories(
+  keyword: string,
+  limit: number,
+  offset: number,
+  status: string,
+  categoryId: string,
+) {
+  return await axios.get(
+    subCategoryUrl +
+      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}&categoryId=${categoryId}`,
+  );
+}
+
+async function addSubCategory(data: object) {
+  return await axios.post(subCategoryUrl + "/create", data, {
+    headers: await authHeader(),
+  });
+}
+
+async function updateSubCategory(id: string, data: object) {
+  return await axios.patch(`${subCategoryUrl}/update/${id}`, data, {
+    headers: await authHeader(),
+  });
+}
+
+async function deleteSubCategory(id: string) {
+  return await axios.delete(`${subCategoryUrl}/delete/${id}`, {
     headers: await authHeader(),
   });
 }
@@ -246,4 +280,8 @@ export const service = {
   addCategory,
   updateCategory,
   deleteCategory,
+  getAllSubCategories,
+  addSubCategory,
+  updateSubCategory,
+  deleteSubCategory,
 };
