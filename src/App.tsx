@@ -23,6 +23,7 @@ import Notifications from "@/pages/Notifications";
 import { ThemeProvider } from "@/components/theme-provider";
 import CustomerDetails from "./pages/CustomerDetails";
 import SubCategories from "./pages/SubCategories";
+import SizeCharts from "./pages/SizeCharts";
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/sub-categories" element={<SubCategories />} />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/sizes" element={<ClothingSizes />} />
+            <Route path="/size-charts" element={<SizeCharts />} />
             <Route path="/colors" element={<Colors />} />
             <Route path="/testimonials" element={<Testimonials />} />
             <Route path="/profile" element={<Profile />} />

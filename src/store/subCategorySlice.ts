@@ -171,7 +171,7 @@ export function deleteSubCategory(id: string) {
     dispatch(setStatus(STATUS.LOADING));
     await service
       .deleteSubCategory(id)
-      .then((res) => {
+      .then((res: any) => {
         dispatch(deleteSubCategorySuccess(id));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Sub category deleted successfully");

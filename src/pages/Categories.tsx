@@ -254,7 +254,6 @@ export default function Categories() {
   }, [formData.name]);
 
   useEffect(() => {
-    if (categoryVar.categories.length <= 0) {
       dispatch(
         getAllCategories(
           formVar.keyword,
@@ -263,7 +262,6 @@ export default function Categories() {
           formVar.status,
         ),
       );
-    }
   }, []);
 
   return (

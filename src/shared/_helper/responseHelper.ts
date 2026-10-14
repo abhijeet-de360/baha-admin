@@ -6,7 +6,7 @@ import { localService } from "../_session/local";
 
 // const isNative = Capacitor.isNativePlatform();
 
-export const errorHandler = async (res) => {
+export const errorHandler = async (res: any) => {
   console.log("ress ====> ", res);
   if (res.status === 401) {
     // sessionService.clearAll();
@@ -28,7 +28,7 @@ export const errorHandler = async (res) => {
   //   }
 };
 
-export const successHandler = async (msg) => {
+export const successHandler = async (msg: string) => {
   //   if (isNative) {
   //     await Toast.show({
   //       text: msg,
@@ -39,7 +39,7 @@ export const successHandler = async (msg) => {
   sonnerToast.success(msg, { duration: 2000 });
 };
 
-export const warningHandler = async (msg) => {
+export const warningHandler = async (msg: string) => {
   //   if (isNative) {
   //     await Toast.show({
   //       text: msg,

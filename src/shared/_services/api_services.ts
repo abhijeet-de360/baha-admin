@@ -10,7 +10,8 @@ const sizeUrl = rootUrl + "/size";
 const settingsUrl = rootUrl + "/settings";
 const couponUrl = rootUrl + "/coupon";
 const categoryUrl = rootUrl + "/category";
-const subCategoryUrl = rootUrl + "/subCategory"
+const subCategoryUrl = rootUrl + "/subCategory";
+const sizeChartUrl = rootUrl + "/sizeChart";
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -223,11 +224,11 @@ async function deleteCategory(id: string) {
 /************************* Sub Category service functions *************************** */
 
 async function getAllSubCategories(
-  keyword: string,
-  limit: number,
-  offset: number,
-  status: string,
-  categoryId: string,
+  keyword?: string,
+  limit?: number,
+  offset?: number,
+  status?: string,
+  categoryId?: string,
 ) {
   return await axios.get(
     subCategoryUrl +
@@ -249,6 +250,36 @@ async function updateSubCategory(id: string, data: object) {
 
 async function deleteSubCategory(id: string) {
   return await axios.delete(`${subCategoryUrl}/delete/${id}`, {
+    headers: await authHeader(),
+  });
+}
+
+/************************* Size Chart api services function *************************** */
+async function getAllSizeCharts(
+  keyword: string,
+  limit: number,
+  offset: number,
+) {
+  return await axios.get(
+    sizeChartUrl +
+      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}`,
+  );
+}
+
+async function addSizeChart(data: object) {
+  return await axios.post(sizeChartUrl + "/create", data, {
+    headers: await authHeader(),
+  });
+}
+
+async function updateSizeChart(id: string, data: object) {
+  return await axios.patch(`${sizeChartUrl}/update/${id}`, data, {
+    headers: await authHeader(),
+  });
+}
+
+async function deleteSizeChart(id: string) {
+  return await axios.delete(`${sizeChartUrl}/delete/${id}`, {
     headers: await authHeader(),
   });
 }
@@ -284,4 +315,8 @@ export const service = {
   addSubCategory,
   updateSubCategory,
   deleteSubCategory,
+  getAllSizeCharts,
+  addSizeChart,
+  updateSizeChart,
+  deleteSizeChart,
 };

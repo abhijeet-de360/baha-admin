@@ -19,6 +19,7 @@ import {
   Ticket,
   Bell,
   Folder,
+  RulerDimensionLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,6 +80,12 @@ const navItems: NavItem[] = [
     label: "Clothing Sizes",
     path: "/sizes",
     icon: Ruler,
+    iconColor: "text-pink-500",
+  },
+  {
+    label: "Size Charts",
+    path: "/size-charts",
+    icon: RulerDimensionLine,
     iconColor: "text-pink-500",
   },
   {

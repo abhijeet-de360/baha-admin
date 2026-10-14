@@ -2,7 +2,6 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { AppDispatch } from "./store";
 import { errorHandler, successHandler } from "@/shared/_helper/responseHelper";
 import { service } from "@/shared/_services/api_services";
-import axios from "axios";
 import { setLoading } from "./loader";
 
 const STATUS = Object.freeze({

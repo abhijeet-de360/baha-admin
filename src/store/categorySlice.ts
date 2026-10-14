@@ -170,7 +170,7 @@ export function deleteCategory(id: string) {
 
     return await service
       .deleteCategory(id)
-      .then((res) => {
+      .then(() => {
         dispatch(deleteCategorySuccess(id));
         dispatch(setStatus(STATUS.IDLE));
         successHandler("Category deleted successfully");

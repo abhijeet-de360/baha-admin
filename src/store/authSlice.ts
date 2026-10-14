@@ -109,7 +109,7 @@ export function getProfile() {
 }
 
 // Logout thunk
-export function logoutUser(navigate) {
+export function logoutUser(navigate: any) {
   return async function logoutUserThunk(dispatch: AppDispatch) {
     dispatch(setLogout());
     navigate("/");

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import type { AppDispatch } from "./store";
 
 const STATUS = Object.freeze({
   IDLE: "idle",
@@ -29,8 +30,8 @@ export const { setLoading, changeBodyClass } = loadingSlice.actions;
 
 export default loadingSlice.reducer;
 
-export function callSetLoading(status) {
-  return async function loadingThunk(dispatch) {
+export function callSetLoading(status: boolean) {
+  return async function loadingThunk(dispatch: AppDispatch) {
     try {
       dispatch(setLoading(status));
     } catch (err) {}
