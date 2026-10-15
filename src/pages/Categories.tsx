@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import slugify from "slugify";
 import InfiniteScroll from "react-infinite-scroll-component";
 import {
   FolderTree,
@@ -57,15 +56,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { generateSlug } from "@/lib/utils";
 
-// Generate slug using slugify package
-const generateSlug = (text: string): string => {
-  return slugify(text, {
-    lower: true,
-    strict: true,
-    trim: true,
-  });
-};
+
 
 export default function Categories() {
   const categoryVar = useSelector((state: RootState) => state.category);

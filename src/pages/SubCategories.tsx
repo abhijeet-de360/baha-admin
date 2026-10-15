@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { warningHandler } from "@/shared/_helper/responseHelper";
+import { getAllCategories } from "@/store/categorySlice";
 import type { AppDispatch, RootState } from "@/store/store";
 import {
   addSubCategory,
@@ -267,6 +268,7 @@ const SubCategories = () => {
   }, [formData.name]);
 
   useEffect(() => {
+    dispatch(getAllCategories("", 0, 0, ""));
     if (subCategoryVar.subCategories.length === 0) {
       dispatch(
         getAllSubCategories(

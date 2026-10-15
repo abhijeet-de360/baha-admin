@@ -12,6 +12,7 @@ const couponUrl = rootUrl + "/coupon";
 const categoryUrl = rootUrl + "/category";
 const subCategoryUrl = rootUrl + "/subCategory";
 const sizeChartUrl = rootUrl + "/sizeChart";
+const productUrl = rootUrl + "/product";
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -284,6 +285,14 @@ async function deleteSizeChart(id: string) {
   });
 }
 
+/************************* Product service function *************************** */
+
+async function addProduct(data: object) {
+  return await axios.post(productUrl + "/create", data, {
+    headers: await authHeader("FormData"),
+  });
+}
+
 export const service = {
   loginUser,
   getProfile,
@@ -319,4 +328,5 @@ export const service = {
   addSizeChart,
   updateSizeChart,
   deleteSizeChart,
+  addProduct,
 };

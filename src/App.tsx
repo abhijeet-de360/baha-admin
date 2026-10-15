@@ -10,7 +10,6 @@ import ClothingSizes from "@/pages/ClothingSizes";
 import Categories from "@/pages/Categories";
 import Products from "@/pages/Products";
 import ProductDetail from "@/pages/ProductDetail";
-import AddEditProduct from "@/pages/AddEditProduct";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
 import AbandonedCarts from "@/pages/AbandonedCarts";
@@ -24,6 +23,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import CustomerDetails from "./pages/CustomerDetails";
 import SubCategories from "./pages/SubCategories";
 import SizeCharts from "./pages/SizeCharts";
+import AddProduct from "./pages/AddProduct";
 
 export default function App() {
   return (
@@ -43,8 +43,8 @@ export default function App() {
             <Route path="/customers/:id" element={<CustomerDetails />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/products/add" element={<AddEditProduct />} />
-            <Route path="/products/edit/:id" element={<AddEditProduct />} />
+            <Route path="/products/add" element={<AddProduct />} />
+            <Route path="/products/edit/:id" element={<AddProduct />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/sub-categories" element={<SubCategories />} />
             <Route path="/blogs" element={<Blogs />} />

@@ -7,7 +7,6 @@ import { localService } from "../_session/local";
 // const isNative = Capacitor.isNativePlatform();
 
 export const errorHandler = async (res: any) => {
-  console.log("ress ====> ", res);
   if (res.status === 401) {
     // sessionService.clearAll();
     localService.clearAll();
