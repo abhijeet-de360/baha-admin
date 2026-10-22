@@ -107,4 +107,26 @@ export const getAllProducts = (
   };
 };
 
+export const getProductById = (id: string) => {
+  return async function getProductByIdThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .getProductById(id)
+      .then((res: any) => {
+        console.log("Get product by id response ===> ", res);
+        dispatch(setProductDetails(res.data));
+        dispatch(setStatus(STATUS.IDLE));
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+        dispatch(setStatus(STATUS.IDLE));
+      });
+  };
+}
+
 
