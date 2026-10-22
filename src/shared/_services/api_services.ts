@@ -262,8 +262,7 @@ async function getAllSizeCharts(
   offset: number,
 ) {
   return await axios.get(
-    sizeChartUrl +
-      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}`,
+    sizeChartUrl + `/list?keyword=${keyword}&limit=${limit}&offset=${offset}`,
   );
 }
 
@@ -290,6 +289,26 @@ async function deleteSizeChart(id: string) {
 async function addProduct(data: object) {
   return await axios.post(productUrl + "/create", data, {
     headers: await authHeader("FormData"),
+  });
+}
+
+async function getAllProducts(
+  keyword?: string,
+  limit?: number,
+  offset?: number,
+  status?: string,
+  category?: string,
+  size?: string,
+) {
+  return await axios.get(
+    productUrl +
+      `/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}&category=${category}&size=${size}`,
+  );
+}
+
+async function getProductById(id: string) {
+  return await axios.get(`${productUrl}/${id}`, {
+    headers: await authHeader(),
   });
 }
 
@@ -329,4 +348,6 @@ export const service = {
   updateSizeChart,
   deleteSizeChart,
   addProduct,
+  getAllProducts,
+  getProductById,
 };

@@ -8,6 +8,7 @@ import couponReducer from "./couponSlice";
 import categoryReducer from "./categorySlice";
 import subCategoryReducer from "./subCategorySlice";
 import sizeChartReducer from "./sizeChartSlice";
+import productReducer from "./productSlice";
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +21,7 @@ export const store = configureStore({
     category: categoryReducer,
     subCategory: subCategoryReducer,
     sizeChart: sizeChartReducer,
+    product: productReducer,
   },
 });
 

@@ -15,18 +15,18 @@ export type ProductStatus = (typeof STATUS)[keyof typeof STATUS];
 //******************** Product state and reducer********************
 interface ProductState {
   products: any[];
+  productDetails: any;
   status: ProductStatus;
   error: any;
   total: number;
-  isModalOpen: boolean;
 }
 
 const initialState: ProductState = {
   products: [],
+  productDetails: null,
   status: STATUS.IDLE,
   error: null,
   total: 0,
-  isModalOpen: false,
 };
 
 const productSlice = createSlice({
@@ -35,7 +35,8 @@ const productSlice = createSlice({
   reducers: {
     // Set products
     setProducts(state, { payload }: { payload: any }) {
-      state.products = payload;
+      state.products = payload.result;
+      state.total = payload.total;
     },
 
     // Set status
@@ -43,29 +44,67 @@ const productSlice = createSlice({
       state.status = payload;
     },
 
-    // Toggle modal
-    toggleModal(state, { payload }: { payload: boolean }) {
-      state.isModalOpen = payload;
+    // Set product details
+    setProductDetails(state, { payload }: { payload: any }) {
+      state.productDetails = payload;
     },
   },
 });
 
-export const { toggleModal, setStatus, setProducts } = productSlice.actions;
+export const { setStatus, setProducts, setProductDetails } = productSlice.actions;
 export default productSlice.reducer;
 
 //******************** Product api service functions********************
 
-export const addProductService = (data: any) => {
-  return async (dispatch: AppDispatch) => {
-    try {
-      dispatch(setLoading(true));
-      const res = await service.addProduct(data);
-      dispatch(setProducts(res.data.data));
-      dispatch(setStatus(STATUS.IDLE));
-      dispatch(setLoading(false));
-      return res;
-    } catch (error: any) {
-      dispatch(setLoading(false));
-    }
+export const addProduct = (data: any, navigate: any) => {
+  return async function addProductThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .addProduct(data)
+      .then((res: any) => {
+        console.log("Add product response ===> ", res);
+        navigate("/products");
+        successHandler(res);
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+        dispatch(setStatus(STATUS.IDLE));
+      });
   };
 };
+
+export const getAllProducts = (
+  keyword: string = "",
+  limit: number = 0,
+  offset: number = 0,
+  status: string = "",
+  category: string = "",
+  size: string = "",
+) => {
+  return async function getAllProductThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .getAllProducts(keyword, limit, offset, status, category, size)
+      .then((res: any) => {
+        console.log("Get all products response ===> ", res);
+        dispatch(setProducts(res.data));
+        dispatch(setStatus(STATUS.IDLE));
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+        dispatch(setStatus(STATUS.IDLE));
+      });
+  };
+};
+
+

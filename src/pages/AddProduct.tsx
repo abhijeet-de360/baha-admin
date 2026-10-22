@@ -43,6 +43,7 @@ import { getAllSizeCharts } from "@/store/sizeChartSlice";
 import { getAllSubCategories } from "@/store/subCategorySlice";
 import { warningHandler } from "@/shared/_helper/responseHelper";
 import { generateSlug } from "@/lib/utils";
+import { addProduct } from "@/store/productSlice";
 
 export type ProductOption = {
   sku: string;
@@ -420,11 +421,7 @@ export default function AddProduct() {
       });
     });
 
-    console.log("Submitting Product:", Object.fromEntries(formDataToSend.entries()));
-
-    // setTimeout(() => {
-    //   navigate("/products");
-    // }, 1000);
+    dispatch(addProduct(formDataToSend, navigate));
   };
 
   // Filter subcategories based on chosen category
