@@ -1,14 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Package,
   Plus,
   Search,
   SquarePen,
-  Trash2,
   Eye,
-  CheckCircle2,
-  AlertTriangle,
   Filter,
   Sparkles,
 } from "lucide-react";
@@ -24,10 +21,24 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { CATEGORIES_LIST, SIZES_LIST } from "@/data/mockProducts";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Switch } from "@/components/ui/switch";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllProducts } from "@/store/productSlice";
+import {
+  deleteProduct,
+  getAllProducts,
+  toggleProductStatus,
+} from "@/store/productSlice";
 import type { AppDispatch, RootState } from "@/store/store";
 import { getAllCategories } from "@/store/categorySlice";
 import { getAllSize } from "@/store/sizeSlice";
@@ -50,12 +61,6 @@ export default function Products() {
 
   // Ref
   const searchTimeoutRef = useRef<any>(null);
-
-  // Modal States
-  const [deletingProduct, setDeletingProduct] = useState<any | null>(null);
-
-  // Delete product handler
-  const handleConfirmDelete = () => {};
 
   // Badge helpers
   const getStatusBadge = (status: string) => {
@@ -94,12 +99,13 @@ export default function Products() {
     setFormVar((prev) => ({
       ...prev,
       category: value,
+      offset: 0,
     }));
 
     dispatch(
       getAllProducts(
         formVar.keyword,
-        10,
+        formVar.limit,
         0,
         formVar.status,
         value,
@@ -108,17 +114,18 @@ export default function Products() {
     );
   };
 
-  // handle size chage
+  // handle size change
   const handleSizeChange = (value: any) => {
     setFormVar((prev) => ({
       ...prev,
       size: value,
+      offset: 0,
     }));
 
     dispatch(
       getAllProducts(
         formVar.keyword,
-        10,
+        formVar.limit,
         0,
         formVar.status,
         formVar.category,
@@ -127,17 +134,18 @@ export default function Products() {
     );
   };
 
-  // handle size chage
+  // handle status change
   const handleStatusChange = (value: any) => {
     setFormVar((prev) => ({
       ...prev,
       status: value,
+      offset: 0,
     }));
 
     dispatch(
       getAllProducts(
         formVar.keyword,
-        10,
+        formVar.limit,
         0,
         value,
         formVar.category,
@@ -171,17 +179,89 @@ export default function Products() {
     }, 500);
   };
 
+  // handle delete
+  const handleDelete = (id: string) => {
+    dispatch(deleteProduct(id));
+  };
+
+  // handle status toggle
+  const handleStatusToggle = (id: string, newStatus: string) => {
+    dispatch(toggleProductStatus(id, newStatus));
+  };
+
+  // Pagination calculations and handler
+  const totalProducts = productsVar.total || 0;
+  const totalPages = Math.ceil(totalProducts / formVar.limit) || 1;
+  const currentPage = Math.floor(formVar.offset / formVar.limit) + 1;
+
+  const handlePageChange = (page: number) => {
+    const newOffset = (page - 1) * formVar.limit;
+    setFormVar((prev) => ({
+      ...prev,
+      offset: newOffset,
+    }));
+
+    dispatch(
+      getAllProducts(
+        formVar.keyword,
+        formVar.limit,
+        newOffset,
+        formVar.status,
+        formVar.category,
+        formVar.size,
+      ),
+    );
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) {
+          pages.push(i);
+        }
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push("ellipsis");
+        pages.push(currentPage - 1);
+        pages.push(currentPage);
+        pages.push(currentPage + 1);
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
   // Load products on mount
   useEffect(() => {
     Promise.all([
-      dispatch(getAllProducts()),
+      dispatch(
+        getAllProducts(
+          formVar.keyword,
+          formVar.limit,
+          formVar.offset,
+          formVar.status,
+          formVar.category,
+          formVar.size,
+        ),
+      ),
       dispatch(getAllCategories("", 0, 0, "")),
       dispatch(getAllSize("", 0, 0, "")),
     ]);
   }, []);
-
-  console.log("sizeVar ===> ", sizeVar.sizes);
-  console.log("categoryVar ===> ", categoryVar.categories);
 
   return (
     <div className="space-y-4 max-w-full mx-auto">
@@ -423,14 +503,29 @@ export default function Products() {
                         </div>
 
                         <div className="text-right">
-                          <span className="text-[10px] text-muted-foreground block font-medium">
+                          <span className="text-[10px] text-muted-foreground block font-medium mb-1">
                             Status
                           </span>
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${getStatusBadge(product.status)}`}
-                          >
-                            {product.status}
-                          </span>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Switch
+                              checked={product.status === "active"}
+                              onCheckedChange={(checked) => {
+                                handleStatusToggle(
+                                  product._id,
+                                  checked ? "active" : "inactive",
+                                );
+                              }}
+                            />
+                            <span
+                              className={`text-[11px] font-semibold capitalize ${
+                                product.status === "active"
+                                  ? "text-emerald-500"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {product.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -454,14 +549,39 @@ export default function Products() {
                         >
                           <SquarePen className="h-3.5 w-3.5 mr-1" /> Edit
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeletingProduct(product)}
-                          className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                            >
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete this Product?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will
+                                permanently delete this Product.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => handleDelete(product._id)}
+                              >
+                                Yes, delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   );
@@ -591,20 +711,26 @@ export default function Products() {
 
                           {/* Status Column */}
                           <td className="py-4 px-6">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize ${getStatusBadge(product.status)}`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  product.status === "active"
-                                    ? "bg-emerald-500"
-                                    : product.status === "draft"
-                                      ? "bg-amber-500"
-                                      : "bg-muted-foreground"
-                                }`}
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={product.status === "active"}
+                                onCheckedChange={(checked) => {
+                                  handleStatusToggle(
+                                    product._id,
+                                    checked ? "active" : "inactive",
+                                  );
+                                }}
                               />
-                              {product.status}
-                            </span>
+                              <span
+                                className={`text-[11px] font-semibold capitalize ${
+                                  product.status === "active"
+                                    ? "text-emerald-500"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
+                                {product.status}
+                              </span>
+                            </div>
                           </td>
 
                           {/* Actions */}
@@ -630,14 +756,41 @@ export default function Products() {
                               >
                                 <SquarePen className="h-3.5 w-3.5 mr-1" /> Edit
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setDeletingProduct(product)}
-                                className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Product?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Product.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(product._id)}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </td>
                         </tr>
@@ -651,56 +804,88 @@ export default function Products() {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Alert Dialog */}
-      <AlertDialog
-        open={Boolean(deletingProduct)}
-        onOpenChange={(open) => !open && setDeletingProduct(null)}
-      >
-        <AlertDialogContent className="rounded-3xl max-w-md p-6">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive font-bold">
-              <AlertTriangle className="h-5 w-5" /> Confirm Delete Product
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground space-y-3 pt-2">
-              <span>
-                Are you sure you want to delete this product? This action cannot
-                be undone.
-              </span>
-              {deletingProduct && (
-                <div className="p-3 rounded-2xl bg-muted border border-border mt-2 flex items-center gap-3">
-                  <img
-                    src={
-                      deletingProduct.variants?.[0]?.images?.[0]?.imageUrl ?? ""
+      {/* Pagination  */}
+      {totalProducts > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-2">
+          <div className="text-xs text-muted-foreground font-medium">
+            Showing{" "}
+            <span className="font-semibold text-foreground">
+              {Math.min(formVar.offset + 1, totalProducts)}
+            </span>{" "}
+            to{" "}
+            <span className="font-semibold text-foreground">
+              {Math.min(formVar.offset + formVar.limit, totalProducts)}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-foreground">
+              {totalProducts}
+            </span>{" "}
+            products
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination className="mx-0 w-auto justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) {
+                        handlePageChange(currentPage - 1);
+                      }
+                    }}
+                    className={
+                      currentPage <= 1
+                        ? "pointer-events-none opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
                     }
-                    alt={deletingProduct.name}
-                    className="h-10 w-10 rounded-xl object-cover border border-border shrink-0"
                   />
-                  <div>
-                    <p className="font-bold text-foreground text-xs">
-                      {deletingProduct.name}
-                    </p>
-                    <p className="font-mono text-[10px] text-muted-foreground">
-                      SKU:{" "}
-                      {deletingProduct.variants?.[0]?.options?.[0]?.sku ?? "—"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 mt-4">
-            <AlertDialogCancel className="rounded-full text-xs cursor-pointer">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold text-xs rounded-full cursor-pointer"
-            >
-              Delete Product
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                </PaginationItem>
+
+                {getPageNumbers().map((page, idx) => (
+                  <PaginationItem key={idx}>
+                    {page === "ellipsis" ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink
+                        href="#"
+                        isActive={page === currentPage}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (page !== currentPage) {
+                            handlePageChange(page);
+                          }
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) {
+                        handlePageChange(currentPage + 1);
+                      }
+                    }}
+                    className={
+                      currentPage >= totalPages
+                        ? "pointer-events-none opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </div>
+      )}
     </div>
   );
 }

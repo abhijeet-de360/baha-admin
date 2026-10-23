@@ -1,9 +1,26 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Package, Edit2, Trash2, AlertTriangle, Ruler, FileText } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
- import {
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Package,
+  Edit2,
+  FileText,
+  Palette,
+  Sparkles,
+  Tag,
+  Zap,
+  Eye,
+  Globe,
+  Layers,
+  BadgeCheck,
+  Link2,
+  Trash,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -12,91 +29,141 @@ import { Card, CardContent } from '@/components/ui/card'
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/store/store";
 import {
-  type Product,
-  getStoredProducts,
-  saveStoredProducts,
-} from '@/data/mockProducts'
-import { Switch } from '@/components/ui/switch'
+  deleteProduct,
+  getProductById,
+  setProductDetails,
+} from "@/store/productSlice";
 
 export default function ProductDetail() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const productVar = useSelector((state: RootState) => state.product);
 
-  const [products, setProducts] = useState<Product[]>(getStoredProducts)
-  const [product, setProduct] = useState<Product | null>(null)
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
-  const [featured, setFeatured] = useState<Product['featured']>(product?.featured);
-  const [newArrival, setNewArrival] = useState<Product['newArrival']>(product?.newArrival);
-  const [bestSeller, setBestSeller] = useState<Product['bestSeller']>(product?.bestSeller);
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [deletingProduct, setDeletingProduct] = useState(false);
 
+  // Fetch on mount, clear on unmount
   useEffect(() => {
-    const stored = getStoredProducts()
-    setProducts(stored)
-    const found = stored.find((p) => p.id === id || p.slug === id)
-    if (found) {
-      setProduct(found)
-      setSelectedImageIndex(found.primaryImageIndex || 0)
+    if (id) {
+      dispatch(getProductById(id));
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [id])
- 
+    return () => {
+      dispatch(setProductDetails(null));
+    };
+  }, [id, dispatch]);
 
-  const handleConfirmDelete = () => {
-    if (deletingProduct) {
-      const updated = products.filter((p) => p.id !== deletingProduct.id)
-      setProducts(updated)
-      saveStoredProducts(updated)
-      setDeletingProduct(null)
-      navigate('/products')
+  // Reset image index when variant changes
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [selectedVariantIndex]);
+
+  const isLoading = productVar.status === "loading";
+
+  // Derived values from real API shape
+  const defaultVariantIdx =
+    productVar.productDetails?.variants?.findIndex((v: any) => v.defaultView) ??
+    0;
+  const activeVariantIdx =
+    selectedVariantIndex < (productVar.productDetails?.variants?.length ?? 0)
+      ? selectedVariantIndex
+      : defaultVariantIdx;
+
+  const activeVariant = productVar.productDetails?.variants?.[activeVariantIdx];
+  const activeImages: string[] =
+    activeVariant?.images?.map((img: any) => img.imageUrl ?? img) ?? [];
+
+  const totalStock =
+    productVar.productDetails?.variants?.reduce(
+      (acc: number, v: any) =>
+        acc +
+        (v.options ?? []).reduce(
+          (s: number, o: any) => s + (Number(o.stock) || 0),
+          0,
+        ),
+      0,
+    ) ?? 0;
+
+  const stockLabel =
+    totalStock > 10
+      ? "In Stock"
+      : totalStock > 0
+        ? "Low Stock"
+        : "Out of Stock";
+  const stockClass =
+    totalStock > 10
+      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+      : totalStock > 0
+        ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+        : "bg-destructive/10 text-destructive border-destructive/20";
+
+  const categoryName = productVar.productDetails?.category?.[0]?.name ?? "—";
+  const subCategoryName =
+    productVar.productDetails?.subCategory?.[0]?.name ?? null;
+
+  const handleDelete = (id: string) => {
+    if (id) {
+      dispatch(deleteProduct(id, navigate));
     }
-  }
+    setDeletingProduct(false);
+  };
 
-  const getStockBadge = (status: Product['stockStatus']) => {
-    switch (status) {
-      case 'In Stock':
-        return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-      case 'Low Stock':
-        return 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-      case 'Out of Stock':
-        return 'bg-destructive/10 text-destructive border-destructive/20'
-      default:
-        return 'bg-muted text-muted-foreground border-border'
-    }
-  }
-
-  if (!product) {
+  // Loading skeleton / not found
+  if (isLoading || (!productVar.productDetails && !isLoading)) {
     return (
-      <div className="p-8 max-w-4xl mx-auto text-center space-y-4">
-        <div className="p-4 rounded-full bg-muted inline-block text-muted-foreground">
-          <Package className="h-8 w-8" />
-        </div>
-        <h2 className="text-xl font-bold">Product Not Found</h2>
-        <p className="text-xs text-muted-foreground">
-          No product matching identifier "{id}" was found in your catalog.
-        </p>
-        <Button onClick={() => navigate('/products')} className="gap-2 text-xs">
-          <ArrowLeft className="h-4 w-4" /> Back to Products
-        </Button>
+      <div className="p-4 md:p-8 space-y-6 max-w-[1400px] mx-auto pb-16 animate-in fade-in duration-300">
+        {isLoading ? (
+          <>
+            <div className="h-10 w-64 bg-muted rounded-xl animate-pulse" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-7 space-y-4">
+                <div className="h-96 rounded-3xl bg-muted animate-pulse" />
+                <div className="h-48 rounded-3xl bg-muted animate-pulse" />
+              </div>
+              <div className="lg:col-span-5 space-y-4">
+                <div className="h-64 rounded-3xl bg-muted animate-pulse" />
+                <div className="h-48 rounded-3xl bg-muted animate-pulse" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="p-8 max-w-4xl mx-auto text-center space-y-4">
+            <div className="p-4 rounded-full bg-muted inline-block text-muted-foreground">
+              <Package className="h-8 w-8" />
+            </div>
+            <h2 className="text-xl font-bold">Product Not Found</h2>
+            <p className="text-xs text-muted-foreground">
+              No product matching "{id}" was found in your catalog.
+            </p>
+            <Button
+              onClick={() => navigate("/products")}
+              className="gap-2 text-xs"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Products
+            </Button>
+          </div>
+        )}
       </div>
-    )
+    );
   }
-
-  const discountPercent = product.salePrice
-    ? Math.round(((product.regularPrice - product.salePrice) / product.regularPrice) * 100)
-    : 0
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-[1400px] mx-auto pb-16">
-      {/* Navigation Header Bar */}
+    <div className="p-4 md:p-8 space-y-6 max-w-[1400px] mx-auto pb-16 animate-in fade-in duration-300">
+      {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="icon"
-            onClick={() => navigate('/products')}
-            className="h-10 w-10 rounded-2xl border-border hover:bg-muted cursor-pointer shrink-0"
+            onClick={() => navigate("/products")}
+            className="h-10 w-10 rounded-2xl border-border hover:bg-muted shrink-0"
             title="Back to Products"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -104,83 +171,159 @@ export default function ProductDetail() {
 
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {product.title}
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground line-clamp-1">
+                {productVar.productDetails?.name}
               </h1>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                  product.status === 'Active'
-                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                    : 'bg-muted text-muted-foreground border-border'
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    product.status === 'Active' ? 'bg-emerald-500' : 'bg-muted-foreground'
-                  }`}
-                />
-                {product.status}
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {productVar.productDetails?.isFeatured && (
+                  <Badge className="text-[10px] font-semibold bg-amber-500/15 text-amber-600 border-amber-500/25 gap-1">
+                    <Sparkles className="h-2.5 w-2.5" /> Featured
+                  </Badge>
+                )}
+                {productVar.productDetails?.newArrival && (
+                  <Badge className="text-[10px] font-semibold bg-blue-500/15 text-blue-600 border-blue-500/25 gap-1">
+                    <Tag className="h-2.5 w-2.5" /> New Arrival
+                  </Badge>
+                )}
+                {productVar.productDetails?.bestSeller && (
+                  <Badge className="text-[10px] font-semibold bg-rose-500/15 text-rose-600 border-rose-500/25 gap-1">
+                    <Zap className="h-2.5 w-2.5" /> Best Seller
+                  </Badge>
+                )}
+              </div>
             </div>
             <p className="text-xs text-muted-foreground font-mono mt-0.5">
-              SKU: {product.sku} &bull; Category: <span className="font-semibold text-foreground">{product.category}</span>
+              Slug:{" "}
+              <span className="font-semibold text-foreground">
+                {productVar.productDetails?.slug}
+              </span>{" "}
+              &bull; Category:{" "}
+              <span className="font-semibold text-foreground">
+                {categoryName}
+                {subCategoryName && ` › ${subCategoryName}`}
+              </span>
             </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setDeletingProduct(product)}
-            className="gap-2 text-xs font-semibold border-border text-rose-500 hover:bg-rose-500/10 cursor-pointer"
-          >
-            <Trash2 className="h-4 w-4" /> Delete Item
-          </Button>
+        <div className="flex items-center gap-2 self-end sm:self-center">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-xs font-semibold text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+              >
+                <Trash className="h-4 w-4" /> Delete
+              </Button>
+            </AlertDialogTrigger>
 
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this Product?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete
+                  this Product.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={() => handleDelete(productVar.productDetails?._id)}
+                >
+                  Yes, delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button
-            onClick={() => navigate(`/products/edit/${product.id}`)}
-            className="gap-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md cursor-pointer"
+            onClick={() =>
+              navigate(`/products/edit/${productVar.productDetails?._id}`)
+            }
+            className="gap-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
           >
             <Edit2 className="h-4 w-4" /> Edit Product
           </Button>
         </div>
       </div>
 
-      {/* Main Grid: Gallery & Pricing Specs */}
+      {/* MAIN GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Image Gallery (7 cols) */}
-        <div className="lg:col-span-7 space-y-4">
+        {/* LEFT: Gallery + Description */}
+        <div className="lg:col-span-7 space-y-5">
+          {/* Variant Color Tabs */}
+          {(productVar.productDetails?.variants?.length ?? 0) > 1 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {productVar.productDetails?.variants.map(
+                (v: any, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedVariantIndex(idx)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                      idx === activeVariantIdx
+                        ? "border-primary bg-primary/10 text-primary shadow-xs"
+                        : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    {v.color?.hexCode && (
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/15 shrink-0"
+                        style={{ backgroundColor: v.color.hexCode }}
+                      />
+                    )}
+                    {v.color?.name ?? `Variant ${idx + 1}`}
+                    {v.defaultView && (
+                      <span className="text-[9px] font-bold bg-primary/15 text-primary px-1 rounded">
+                        Default
+                      </span>
+                    )}
+                  </button>
+                ),
+              )}
+            </div>
+          )}
+
+          {/* Image Gallery Card */}
           <Card className="rounded-3xl border border-border bg-card shadow-xs overflow-hidden">
             <CardContent className="p-4 space-y-4">
-              {/* Main Feature Display */}
-              <div className="relative h-80 sm:h-96 w-full rounded-2xl overflow-hidden border border-border/60 bg-muted/30">
-                <img
-                  src={product.images[selectedImageIndex] || product.images[0]}
-                  alt={product.title}
-                  className="h-full w-full object-cover transition-all duration-300"
-                />
-                {discountPercent > 0 && (
-                  <span className="absolute top-4 right-4 bg-rose-500 text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-md">
-                    -{discountPercent}% OFF
+              <div className="relative aspect-square sm:aspect-[4/5] max-h-[540px] w-full rounded-2xl overflow-hidden border border-border/60 bg-muted/20 flex items-center justify-center">
+                {activeImages.length > 0 ? (
+                  <img
+                    src={activeImages[selectedImageIndex]}
+                    alt={productVar.productDetails?.name}
+                    className="h-full w-full object-contain transition-all duration-300"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                    <Package className="h-12 w-12 opacity-30" />
+                  </div>
+                )}
+                {activeImages.length > 1 && (
+                  <span className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-[10px] font-bold px-2 py-1 rounded-lg border border-border/60">
+                    {selectedImageIndex + 1} / {activeImages.length}
                   </span>
                 )}
               </div>
 
-              {/* Thumbnails Row */}
-              {product.images.length > 1 && (
-                <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none">
-                  {product.images.map((img, idx) => (
+              {activeImages.length > 1 && (
+                <div className="flex items-center gap-2.5 overflow-x-auto py-2 px-3">
+                  {activeImages.map((img: string, idx: number) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`h-20 w-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                      className={`h-16 w-16 min-w-[64px] rounded-xl overflow-hidden border-2 transition-all shrink-0 bg-muted/20 flex items-center justify-center ${
                         selectedImageIndex === idx
-                          ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md scale-105'
-                          : 'border-border opacity-70 hover:opacity-100'
+                          ? "border-primary ring-2 ring-primary/20 scale-105 shadow-md"
+                          : "border-border opacity-60 hover:opacity-100"
                       }`}
                     >
-                      <img src={img} alt={`Thumb ${idx + 1}`} className="h-full w-full object-cover" />
+                      <img
+                        src={img}
+                        alt={`Thumb ${idx + 1}`}
+                        className="h-full w-full object-contain"
+                      />
                     </button>
                   ))}
                 </div>
@@ -188,165 +331,405 @@ export default function ProductDetail() {
             </CardContent>
           </Card>
 
-          {/* Description & Specifications Card */}
+          {/* Description & Specs */}
           <Card className="rounded-3xl border border-border bg-card shadow-xs">
-            <CardContent className="p-6 space-y-4">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-3">
-                <FileText className="h-4 w-4 text-indigo-500" /> Product Overview & Details
-              </h3>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4 text-indigo-500" /> Product
+                Overview & Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-0">
               <p className="text-xs text-muted-foreground leading-relaxed bg-muted/20 p-4 rounded-2xl border border-border/40">
-                {product.description || 'No detailed product description available for this item.'}
+                {productVar.productDetails?.description ||
+                  "No detailed product description available."}
               </p>
 
-              {/* Specifications List */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2 text-xs">
-                {product.fabric && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                {productVar.productDetails?.fabric && (
                   <div className="p-3 rounded-xl bg-background border border-border">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Fabric</span>
-                    <span className="font-semibold text-foreground mt-0.5 block">{product.fabric}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      Fabric
+                    </span>
+                    <span className="font-semibold text-foreground mt-0.5 block">
+                      {productVar.productDetails?.fabric}
+                    </span>
                   </div>
                 )}
-                {product.color && (
-                  <div className="p-3 rounded-xl bg-background border border-border">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Primary Color</span>
-                    <span className="font-semibold text-foreground mt-0.5 block">{product.color}</span>
+                {productVar.productDetails?.careInstructions && (
+                  <div className="p-3 rounded-xl bg-background border border-border col-span-2">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      Care Instructions
+                    </span>
+                    <span className="font-medium text-foreground mt-0.5 block line-clamp-2">
+                      {productVar.productDetails?.careInstructions}
+                    </span>
                   </div>
                 )}
-                <div className="p-3 rounded-xl bg-background border border-border">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Category</span>
-                  <span className="font-semibold text-foreground mt-0.5 block">{product.category}</span>
-                </div>
+                {productVar.productDetails?.specifications && (
+                  <div className="p-3 rounded-xl bg-background border border-border col-span-full">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      Specifications
+                    </span>
+                    <span className="font-medium text-foreground mt-0.5 block line-clamp-3">
+                      {productVar.productDetails?.specifications}
+                    </span>
+                  </div>
+                )}
+                {productVar.productDetails?.isVirtualTryOnEnabled && (
+                  <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 col-span-full flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-indigo-500 shrink-0" />
+                    <div>
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">
+                        Virtual Try-On Enabled
+                      </span>
+                      {productVar.productDetails?.virtualTryOnAssetUrl && (
+                        <span className="font-mono text-[10px] text-muted-foreground line-clamp-1">
+                          {productVar.productDetails?.virtualTryOnAssetUrl}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column: Pricing, Inventory & Sizes (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Pricing & Stock Card */}
+        {/* RIGHT: Inventory + Meta */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* Inventory Summary */}
           <Card className="rounded-3xl border border-border bg-card shadow-xs">
-            <CardContent className="p-6 space-y-6">
-              {/* Pricing Display */}
-              <div className="space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
-                  Price Info
-                </span>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-extrabold text-foreground">
-                    ${(product.salePrice || product.regularPrice).toFixed(2)}
-                  </span>
-                  {product.salePrice && (
-                    <span className="text-base text-muted-foreground line-through font-medium">
-                      ${product.regularPrice.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Stock Status Box */}
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Layers className="h-4 w-4 text-purple-500" /> Inventory Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-0">
               <div className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Inventory Level
+                    Total Stock
                   </span>
-                  <span className="text-sm font-bold text-foreground mt-0.5 block">
-                    {product.stockQuantity} units available
+                  <span className="text-2xl font-extrabold text-foreground">
+                    {totalStock}
+                    <span className="text-sm font-semibold text-muted-foreground ml-1">
+                      units
+                    </span>
                   </span>
                 </div>
                 <span
-                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold border ${getStockBadge(
-                    product.stockStatus
-                  )}`}
+                  className={`px-3 py-1.5 rounded-full text-xs font-extrabold border ${stockClass}`}
                 >
-                  {product.stockStatus}
+                  {stockLabel}
                 </span>
               </div>
 
-              {/* Available Sizes Section */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Ruler className="h-4 w-4 text-indigo-500" /> Available Sizes
-                </span>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {product.sizes.map((sz) => (
-                    <span
-                      key={sz}
-                      className="px-3 py-1.5 rounded-xl bg-background border border-border font-bold text-xs text-foreground shadow-2xs"
-                    >
-                      {sz}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Product Metadata */}
-              <div className="border-t border-border pt-4 space-y-2 text-xs text-muted-foreground font-mono">
-                <div className="flex justify-between">
-                  <span>Product ID:</span>
-                  <span className="font-semibold text-foreground">{product.id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>SKU Code:</span>
-                  <span className="font-semibold text-foreground">{product.sku}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>URL Slug:</span>
-                  <span className="font-semibold text-foreground truncate max-w-[180px]">{product.slug}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Created Date:</span>
-                  <span className="font-semibold text-foreground">
-                    {new Date(product.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
+              <div className="space-y-3">
+                {(productVar.productDetails?.variants ?? []).map(
+                  (variant: any, vi: number) => {
+                    const colorObj = variant.color;
+                    const variantStock = (variant.options ?? []).reduce(
+                      (s: number, o: any) => s + (Number(o.stock) || 0),
+                      0,
+                    );
+                    return (
+                      <div
+                        key={vi}
+                        className="rounded-xl border border-border bg-muted/10 overflow-hidden"
+                      >
+                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/60">
+                          {colorObj?.hexCode && (
+                            <span
+                              className="h-3.5 w-3.5 rounded-full border border-black/15 shrink-0"
+                              style={{ backgroundColor: colorObj.hexCode }}
+                            />
+                          )}
+                          <span className="text-xs font-bold text-foreground">
+                            {colorObj?.name ?? `Variant ${vi + 1}`}
+                          </span>
+                          {variant.defaultView && (
+                            <Badge className="text-[9px] ml-1 bg-primary/10 text-primary border-primary/20">
+                              Default
+                            </Badge>
+                          )}
+                          <span className="text-[10px] font-mono text-muted-foreground ml-auto">
+                            {variantStock} units
+                          </span>
+                        </div>
+                        <div className="divide-y divide-border/40">
+                          {(variant.options ?? []).map(
+                            (opt: any, oi: number) => {
+                              const regular = Number(opt.price) || 0;
+                              const discount = Number(opt.discountPrice) || 0;
+                              const pct =
+                                regular > 0 &&
+                                discount > 0 &&
+                                discount < regular
+                                  ? Math.round(
+                                      ((regular - discount) / regular) * 100,
+                                    )
+                                  : 0;
+                              return (
+                                <div
+                                  key={oi}
+                                  className="flex items-center justify-between px-3 py-2 text-[11px]"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-foreground bg-background border border-border px-2 py-0.5 rounded-lg">
+                                      {opt.size?.name ?? opt.size}
+                                    </span>
+                                    {opt.sku && (
+                                      <span className="font-mono text-muted-foreground">
+                                        {opt.sku}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <div>
+                                      <span className="font-bold text-foreground">
+                                        ₹{discount || regular}
+                                      </span>
+                                      {pct > 0 && (
+                                        <>
+                                          <span className="text-muted-foreground line-through ml-1">
+                                            ₹{regular}
+                                          </span>
+                                          <span className="text-emerald-500 font-bold ml-1">
+                                            -{pct}%
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`font-bold ${opt.stock > 5 ? "text-emerald-500" : opt.stock > 0 ? "text-amber-500" : "text-destructive"}`}
+                                    >
+                                      {opt.stock} pc
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+                    );
+                  },
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Featured & New Arrival & Best Seller switches */}
+          {/* Product Metadata */}
           <Card className="rounded-3xl border border-border bg-card shadow-xs">
-            <CardContent className="p-6 space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <label htmlFor="featured" className="text-sm font-bold text-foreground">Featured</label>
-                  <Switch id="featured" checked={featured} onCheckedChange={(checked) => setFeatured(checked)} />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                <BadgeCheck className="h-4 w-4 text-emerald-500" /> Product
+                Metadata
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-1.5 text-xs">
+              {[
+                { label: "Product ID", value: productVar.productDetails._id },
+                { label: "Slug", value: productVar.productDetails.slug },
+                {
+                  label: "Category",
+                  value:
+                    categoryName +
+                    (subCategoryName ? ` › ${subCategoryName}` : ""),
+                },
+                {
+                  label: "Size Chart",
+                  value:
+                    productVar.productDetails.sizeChart?.name ??
+                    productVar.productDetails.sizeChart ??
+                    "—",
+                },
+                {
+                  label: "Created",
+                  value: productVar.productDetails.createdAt
+                    ? new Date(
+                        productVar.productDetails.createdAt,
+                      ).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "—",
+                },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className="flex items-start justify-between gap-4 py-1.5 border-b border-border/50 last:border-0"
+                >
+                  <span className="text-muted-foreground font-medium shrink-0">
+                    {label}:
+                  </span>
+                  <span className="font-semibold text-foreground font-mono text-right break-all max-w-[200px]">
+                    {value}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="newArrival" className="text-sm font-bold text-foreground">New Arrival</label>
-                  <Switch id="newArrival" checked={newArrival} onCheckedChange={(checked) => setNewArrival(checked)} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="bestSeller" className="text-sm font-bold text-foreground">Best Seller</label>
-                  <Switch id="bestSeller" checked={bestSeller} onCheckedChange={(checked) => setBestSeller(checked)} />
-                </div>
-              </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* SEO Card */}
+          {(productVar.productDetails.metaTitle ||
+            productVar.productDetails.metaDescription) && (
+            <Card className="rounded-3xl border border-border bg-card shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-sky-500" /> SEO Metadata
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-3 text-xs">
+                {productVar.productDetails.metaTitle && (
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                      Meta Title
+                    </span>
+                    <p className="font-semibold text-foreground bg-muted/20 px-3 py-2 rounded-xl border border-border/50">
+                      {productVar.productDetails.metaTitle}
+                    </p>
+                  </div>
+                )}
+                {productVar.productDetails.metaDescription && (
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                      Meta Description
+                    </span>
+                    <p className="text-muted-foreground leading-relaxed bg-muted/20 px-3 py-2 rounded-xl border border-border/50 line-clamp-3">
+                      {productVar.productDetails.metaDescription}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Color Variants Quick Reference */}
+          <Card className="rounded-3xl border border-border bg-card shadow-xs">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Palette className="h-4 w-4 text-rose-500" /> Color Variants (
+                {productVar.productDetails.variants?.length ?? 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 flex flex-wrap gap-2">
+              {(productVar.productDetails.variants ?? []).map(
+                (v: any, i: number) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/20 border border-border text-xs font-semibold"
+                  >
+                    {v.color?.hexCode && (
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-black/15 shrink-0"
+                        style={{ backgroundColor: v.color.hexCode }}
+                      />
+                    )}
+                    {v.color?.name ?? `Variant ${i + 1}`}
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      {v.images?.length ?? 0} img
+                    </span>
+                  </div>
+                ),
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Delete Confirmation Alert Dialog */}
-      <AlertDialog open={!!deletingProduct} onOpenChange={(open) => !open && setDeletingProduct(null)}>
-        <AlertDialogContent className="bg-card border-border rounded-3xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-rose-500" /> Confirm Product Deletion
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground">
-              Are you sure you want to delete <span className="font-bold text-foreground">"{deletingProduct?.title}"</span>? This action will permanently remove it from your store catalog.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-rose-600 hover:bg-rose-700 text-white"
-            >
-              Delete Product
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* RELATED PRODUCTS */}
+      {productVar.productDetails.relatedProducts &&
+        productVar.productDetails.relatedProducts.length > 0 && (
+          <Card className="rounded-3xl border border-border bg-card shadow-xs overflow-hidden">
+            <CardHeader className="pb-3 border-b border-border/60">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-indigo-500" />
+                  Related Products (
+                  {productVar.productDetails.relatedProducts.length})
+                </CardTitle>
+                <Badge
+                  variant="outline"
+                  className="text-[11px] font-semibold text-muted-foreground"
+                >
+                  Linked Recommendations
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {productVar.productDetails.relatedProducts.map((rel: any) => {
+                  if (!rel || typeof rel !== "object") return null;
+
+                  const coverImg =
+                    rel.variants?.[0]?.images?.[0]?.imageUrl ??
+                    rel.variants?.[0]?.images?.[0] ??
+                    "";
+                  const firstOption = rel.variants?.[0]?.options?.[0];
+                  const regularPrice = Number(firstOption?.price) || 0;
+                  const offerPrice = Number(firstOption?.discountPrice) || 0;
+                  const catName =
+                    rel.category?.[0]?.name ?? rel.category?.name ?? "Clothing";
+
+                  return (
+                    <div
+                      key={rel._id}
+                      onClick={() => navigate(`/products/${rel._id}`)}
+                      className="group rounded-2xl border border-border bg-background p-3.5 hover:border-primary/50 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="aspect-square w-full rounded-xl overflow-hidden bg-muted/20 border border-border/50 flex items-center justify-center relative mb-3">
+                          {coverImg ? (
+                            <img
+                              src={coverImg}
+                              alt={rel.name}
+                              className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-200"
+                            />
+                          ) : (
+                            <Package className="h-8 w-8 text-muted-foreground opacity-30" />
+                          )}
+
+                          {rel.isFeatured && (
+                            <span className="absolute top-2 left-2 text-[9px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/25 px-1.5 py-0.5 rounded-md backdrop-blur-xs">
+                              Featured
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="text-xs font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                          {rel.name}
+                        </h4>
+                        <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5 font-medium">
+                          {catName}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/60">
+                        <div>
+                          <span className="text-xs font-bold text-foreground">
+                            ₹{offerPrice || regularPrice}
+                          </span>
+                          {offerPrice > 0 && regularPrice > offerPrice && (
+                            <span className="text-[10px] text-muted-foreground line-through ml-1.5">
+                              ₹{regularPrice}
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="text-[11px] font-semibold text-primary group-hover:underline flex items-center gap-0.5">
+                          View <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
     </div>
-  )
+  );
 }

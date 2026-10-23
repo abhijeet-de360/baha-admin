@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -12,15 +12,19 @@ import {
   Globe,
   HelpCircle,
   Image as ImageIcon,
+  Link2,
+  Loader2,
   Package,
   Palette,
   Plus,
   RefreshCw,
+  Search,
   Shirt,
   Sparkles,
   Tag,
   Trash2,
   Upload,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -43,7 +47,8 @@ import { getAllSizeCharts } from "@/store/sizeChartSlice";
 import { getAllSubCategories } from "@/store/subCategorySlice";
 import { warningHandler } from "@/shared/_helper/responseHelper";
 import { generateSlug } from "@/lib/utils";
-import { addProduct } from "@/store/productSlice";
+import { addProduct, getAllProducts } from "@/store/productSlice";
+import { service } from "@/shared/_services/api_services";
 
 export type ProductOption = {
   sku: string;
@@ -81,7 +86,7 @@ export interface ProductFormData {
   virtualTryOnAssetUrl: string;
   metaTitle: string;
   metaDescription: string;
-  status: "active" | "draft";
+  relatedProducts: string[];
 }
 
 const STEPS = [
@@ -105,6 +110,12 @@ const STEPS = [
   },
   {
     id: 4,
+    title: "Related Products",
+    description: "Cross-sell recommendations",
+    icon: Link2,
+  },
+  {
+    id: 5,
     title: "SEO & Review",
     description: "Search preview & publish",
     icon: Globe,
@@ -113,10 +124,10 @@ const STEPS = [
 
 export default function AddProduct() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditMode = Boolean(id);
 
   const dispatch = useDispatch<AppDispatch>();
+
+  const searchTimeoutRef = useRef<any>(null);
 
   // Redux store integration
   const categoryVar = useSelector((state: RootState) => state.category);
@@ -124,6 +135,7 @@ export default function AddProduct() {
   const colorVar = useSelector((state: RootState) => state.color);
   const sizeVar = useSelector((state: RootState) => state.size);
   const sizeChartVar = useSelector((state: RootState) => state.sizeChart);
+  const productVar = useSelector((state: RootState) => state.product);
 
   // Stepper state
   const [currentStep, setCurrentStep] = useState(1);
@@ -146,8 +158,50 @@ export default function AddProduct() {
     virtualTryOnAssetUrl: "",
     metaTitle: "",
     metaDescription: "",
-    status: "active",
+    relatedProducts: [],
   });
+
+  // Related products state & search
+  const [relatedSearch, setRelatedSearch] = useState("");
+  const [selectedProductsData, setSelectedProductsData] = useState<any[]>([]);
+
+  const toggleRelatedProduct = (product: any) => {
+    const pId = String(product._id);
+    const isAlreadySelected = (formData.relatedProducts || []).includes(pId);
+
+    if (isAlreadySelected) {
+      setFormData((prev) => ({
+        ...prev,
+        relatedProducts: prev.relatedProducts.filter((id) => id !== pId),
+      }));
+      setSelectedProductsData((prev) =>
+        prev.filter((p) => String(p._id) !== pId),
+      );
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        relatedProducts: [...(prev.relatedProducts || []), pId],
+      }));
+      setSelectedProductsData((prev) => {
+        if (!prev.some((p) => String(p._id) === pId)) {
+          return [...prev, product];
+        }
+        return prev;
+      });
+    }
+  };
+
+  const removeRelatedProduct = (productId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      relatedProducts: (prev.relatedProducts || []).filter(
+        (id) => id !== productId,
+      ),
+    }));
+    setSelectedProductsData((prev) =>
+      prev.filter((p) => String(p._id) !== productId),
+    );
+  };
 
   // Color variants state
   const [variants, setVariants] = useState<ProductVariant[]>([
@@ -424,6 +478,18 @@ export default function AddProduct() {
     dispatch(addProduct(formDataToSend, navigate));
   };
 
+  const handleSearch = (value: string) => {
+    setRelatedSearch(value);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      dispatch(getAllProducts(value, 20, 0, "", ""));
+    }, 300);
+  };
+
   // Filter subcategories based on chosen category
   const filteredSubCategories = subCategoryVar.subCategories.filter(
     (item) =>
@@ -462,6 +528,7 @@ export default function AddProduct() {
       dispatch(getColors("", 0, 0, "")),
       dispatch(getAllSize("", 0, 0, "")),
       dispatch(getAllSizeCharts("", 0, 0)),
+      dispatch(getAllProducts("", 10, 0, "", "", ""))
     ]);
   }, [dispatch]);
 
@@ -485,16 +552,8 @@ export default function AddProduct() {
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                  {isEditMode ? "Edit Product" : "Create New Product"}
+                  Create New Product
                 </h1>
-                <Badge
-                  variant={
-                    formData.status === "active" ? "success" : "secondary"
-                  }
-                  className="capitalize font-semibold text-[11px] px-2.5 py-0.5 rounded-full"
-                >
-                  {formData.status}
-                </Badge>
                 <Badge variant="outline" className="text-[11px] font-semibold">
                   Step {currentStep} of {STEPS.length}
                 </Badge>
@@ -545,7 +604,7 @@ export default function AddProduct() {
                 onClick={handleSubmit}
               >
                 <Check className="h-4 w-4" />
-                {isEditMode ? "Save Changes" : "Publish Product"}
+                Publish Product
               </Button>
             )}
           </div>
@@ -553,7 +612,7 @@ export default function AddProduct() {
 
         {/* STEPPER PROGRESS BAR */}
         <div className="mt-5 pt-4 border-t border-border">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
             {STEPS.map((step) => {
               const Icon = step.icon;
               const isCurrent = step.id === currentStep;
@@ -805,25 +864,6 @@ export default function AddProduct() {
               </CardHeader>
 
               <CardContent className="space-y-3 pt-0">
-                <div className="p-3 rounded-xl border border-border bg-muted/20 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-foreground">
-                      Catalog Visibility
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {formData.status === "active"
-                        ? "Live on website"
-                        : "Hidden in draft"}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.status === "active"}
-                    onCheckedChange={(checked) =>
-                      handleChange("status", checked ? "active" : "draft")
-                    }
-                  />
-                </div>
-
                 <div className="flex items-center justify-between p-2.5 rounded-xl border border-border/70 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-2">
                     <span className="p-1 rounded-md bg-amber-500/15 text-amber-500">
@@ -1542,8 +1582,261 @@ export default function AddProduct() {
         </div>
       )}
 
-      {/* STEP 4: SEO & REVIEW */}
+      {/* STEP 4: RELATED PRODUCTS */}
       {currentStep === 4 && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200">
+          {/* Main search and catalogue selector */}
+          <div className="lg:col-span-8 space-y-6">
+            <Card className="rounded-2xl border-border shadow-xs">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                    <Link2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-foreground">
+                      Select Related Products
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Search and link matching outfits, accessories, or matching sets for product recommendations.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-0">
+                {/* Search input */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products by title, slug, or SKU..."
+                    value={relatedSearch}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="pl-10 pr-10 h-10 text-xs rounded-xl bg-background font-medium"
+                  />
+                  {relatedSearch && (
+                    <button
+                      type="button"
+                      onClick={() => handleSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Candidate products grid */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground font-semibold px-1">
+                    <span>
+                      {productVar.status === "loading"
+                        ? "Searching catalog..."
+                        : `${productVar.products?.length || 0} product(s) available`}
+                    </span>
+                    <span>Click card to toggle selection</span>
+                  </div>
+
+                  {productVar.status === "loading" ? (
+                    <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <p className="text-xs font-medium">Fetching catalog products...</p>
+                    </div>
+                  ) : (productVar.products?.length || 0) === 0 ? (
+                    <div className="p-8 text-center rounded-xl border border-dashed border-border bg-muted/15 space-y-2">
+                      <Package className="h-8 w-8 text-muted-foreground mx-auto opacity-50" />
+                      <p className="text-xs font-semibold text-foreground">No products found</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Try searching with a different term or keyword.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                      {productVar.products?.map((p: any) => {
+                        const isSelected = (formData.relatedProducts || []).includes(String(p._id));
+                        const coverImg =
+                          p.variants?.[0]?.images?.[0]?.imageUrl ??
+                          p.variants?.[0]?.images?.[0] ??
+                          "";
+                        const price =
+                          p.variants?.[0]?.options?.[0]?.discountPrice ||
+                          p.variants?.[0]?.options?.[0]?.price ||
+                          0;
+                        const catName = p.category?.[0]?.name || p.category?.name || "General";
+
+                        return (
+                          <div
+                            key={p._id}
+                            onClick={() => toggleRelatedProduct(p)}
+                            className={`p-3 rounded-xl border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+                              isSelected
+                                ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40"
+                                : "border-border bg-card hover:bg-muted/30 hover:border-border/80"
+                            }`}
+                          >
+                            <div className="h-14 w-14 rounded-lg overflow-hidden border border-border/80 bg-muted/30 shrink-0 flex items-center justify-center">
+                              {coverImg ? (
+                                <img
+                                  src={coverImg}
+                                  alt={p.name}
+                                  className="h-full w-full object-contain"
+                                />
+                              ) : (
+                                <Package className="h-6 w-6 text-muted-foreground opacity-40" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-foreground line-clamp-1">
+                                {p.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground font-medium line-clamp-1 mt-0.5">
+                                {catName} {price > 0 && `• ₹${price}`}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge
+                                  variant={isSelected ? "default" : "outline"}
+                                  className={`text-[9px] px-1.5 py-0 font-semibold ${
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {isSelected ? "Selected" : "Add to Related"}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div
+                              className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                                isSelected
+                                  ? "bg-primary border-primary text-primary-foreground"
+                                  : "border-border text-transparent"
+                              }`}
+                            >
+                              <Check className="h-3 w-3 stroke-[3]" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Selected products summary sidebar */}
+          <div className="lg:col-span-4 space-y-6">
+            <Card className="rounded-2xl border-border shadow-xs">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-bold text-foreground">
+                        Selected ({formData.relatedProducts?.length || 0})
+                      </CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground">
+                        Linked cross-sell items.
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  {formData.relatedProducts?.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, relatedProducts: [] }));
+                        setSelectedProductsData([]);
+                      }}
+                      className="text-[11px] h-7 px-2 text-muted-foreground hover:text-destructive"
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3 pt-0">
+                {formData.relatedProducts?.length === 0 ? (
+                  <div className="p-6 text-center rounded-xl border border-dashed border-border bg-muted/15 space-y-2">
+                    <Link2 className="h-6 w-6 text-muted-foreground mx-auto opacity-50" />
+                    <p className="text-xs font-semibold text-foreground">No items selected</p>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Search and select products from the left to recommend them on this product's page.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                    {formData.relatedProducts.map((pId) => {
+                      const prodObj =
+                        selectedProductsData.find((p) => String(p._id) === String(pId)) ||
+                        productVar.products?.find((p) => String(p._id) === String(pId));
+                      const name = prodObj?.name || `Product ID: ${pId}`;
+                      const coverImg =
+                        prodObj?.variants?.[0]?.images?.[0]?.imageUrl ??
+                        prodObj?.variants?.[0]?.images?.[0] ??
+                        "";
+                      const price =
+                        prodObj?.variants?.[0]?.options?.[0]?.discountPrice ||
+                        prodObj?.variants?.[0]?.options?.[0]?.price;
+
+                      return (
+                        <div
+                          key={pId}
+                          className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-muted/20"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-border bg-background shrink-0 flex items-center justify-center">
+                              {coverImg ? (
+                                <img
+                                  src={coverImg}
+                                  alt={name}
+                                  className="h-full w-full object-contain"
+                                />
+                              ) : (
+                                <Package className="h-4 w-4 text-muted-foreground opacity-40" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-foreground truncate">
+                                {name}
+                              </p>
+                              {price !== undefined && (
+                                <p className="text-[10px] text-muted-foreground font-mono">
+                                  ₹{price}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeRelatedProduct(pId)}
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0 rounded-lg"
+                            title="Remove related product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 5: SEO & REVIEW */}
+      {currentStep === 5 && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200">
           <div className="lg:col-span-7 space-y-6">
             {/* SEO Card */}
@@ -1692,15 +1985,6 @@ export default function AddProduct() {
                           ` › ${selectedSubCategoryObj.name}`}
                       </p>
                     </div>
-
-                    <div className="ml-auto text-right">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Status
-                      </span>
-                      <p className="font-semibold text-emerald-600 dark:text-emerald-400 capitalize">
-                        {formData.status}
-                      </p>
-                    </div>
                   </div>
                 </div>
 
@@ -1827,6 +2111,23 @@ export default function AddProduct() {
                   </div>
                 )}
 
+                {/* Related Products overview */}
+                <div className="p-3.5 rounded-xl border border-border bg-muted/20 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Related Products
+                    </span>
+                    <Badge variant="outline" className="text-[10px] font-semibold">
+                      {formData.relatedProducts?.length || 0} Linked
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {formData.relatedProducts?.length > 0
+                      ? `${formData.relatedProducts.length} product(s) linked for cross-sell recommendations.`
+                      : "No related products linked."}
+                  </p>
+                </div>
+
                 {/* Final Submission Button */}
                 <Button
                   type="button"
@@ -1834,9 +2135,7 @@ export default function AddProduct() {
                   className="w-full h-11 text-xs font-bold rounded-xl shadow-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 mt-4"
                 >
                   <Check className="h-4 w-4" />
-                  {isEditMode
-                    ? "Save & Update Product"
-                    : "Confirm & Publish Product"}
+                  Confirm & Publish Product
                 </Button>
               </CardContent>
             </Card>

@@ -24,6 +24,7 @@ import CustomerDetails from "./pages/CustomerDetails";
 import SubCategories from "./pages/SubCategories";
 import SizeCharts from "./pages/SizeCharts";
 import AddProduct from "./pages/AddProduct";
+import EditProduct from "./pages/EditProduct";
 
 export default function App() {
   return (
@@ -44,7 +45,7 @@ export default function App() {
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/products/add" element={<AddProduct />} />
-            <Route path="/products/edit/:id" element={<AddProduct />} />
+            <Route path="/products/edit/:id" element={<EditProduct />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/sub-categories" element={<SubCategories />} />
             <Route path="/blogs" element={<Blogs />} />

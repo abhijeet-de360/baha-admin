@@ -48,10 +48,36 @@ const productSlice = createSlice({
     setProductDetails(state, { payload }: { payload: any }) {
       state.productDetails = payload;
     },
+
+    // Delete product
+    removeProduct(state, { payload }: { payload: string }) {
+      state.products = state.products.filter((product) => product._id !== payload);
+      state.total = state.total - 1;
+    },
+
+    // Update product status
+    changeProductStatus(
+      state,
+      { payload }: { payload: { id: string; status: string } },
+    ) {
+      const prod = state.products.find((product) => product._id === payload.id);
+      if (prod) {
+        prod.status = payload.status;
+      }
+      if (state.productDetails && state.productDetails._id === payload.id) {
+        state.productDetails.status = payload.status;
+      }
+    },
   },
 });
 
-export const { setStatus, setProducts, setProductDetails } = productSlice.actions;
+export const {
+  setStatus,
+  setProducts,
+  setProductDetails,
+  removeProduct,
+  changeProductStatus,
+} = productSlice.actions;
 export default productSlice.reducer;
 
 //******************** Product api service functions********************
@@ -65,7 +91,7 @@ export const addProduct = (data: any, navigate: any) => {
       .then((res: any) => {
         console.log("Add product response ===> ", res);
         navigate("/products");
-        successHandler(res);
+        successHandler("Product added successfully");
       })
       .catch((error: any) => {
         dispatch(setStatus(STATUS.ERROR));
@@ -92,7 +118,6 @@ export const getAllProducts = (
     await service
       .getAllProducts(keyword, limit, offset, status, category, size)
       .then((res: any) => {
-        console.log("Get all products response ===> ", res);
         dispatch(setProducts(res.data));
         dispatch(setStatus(STATUS.IDLE));
       })
@@ -114,7 +139,6 @@ export const getProductById = (id: string) => {
     await service
       .getProductById(id)
       .then((res: any) => {
-        console.log("Get product by id response ===> ", res);
         dispatch(setProductDetails(res.data));
         dispatch(setStatus(STATUS.IDLE));
       })
@@ -127,6 +151,65 @@ export const getProductById = (id: string) => {
         dispatch(setStatus(STATUS.IDLE));
       });
   };
-}
+};
 
+export const updateProduct = (id: string, data: any, navigate: any) => {
+  return async function updateProductThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .updateProduct(id, data)
+      .then((res: any) => {
+        navigate("/products");
+        successHandler("Product updated successfully");
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+        dispatch(setStatus(STATUS.IDLE));
+      });
+  };
+};
 
+export const deleteProduct = (id: string, navigate?: any) => {
+  return async function deleteProductThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+
+    await service
+      .deleteProduct(id)
+      .then(() => {
+        dispatch(removeProduct(id));
+        navigate && navigate("/products");
+        successHandler("Product deleted successfully");
+      })
+      .catch((error: any) => {
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+        dispatch(setStatus(STATUS.IDLE));
+      });
+  };
+};
+
+export const toggleProductStatus = (id: string, newStatus: string) => {
+  return async function toggleProductStatusThunk(dispatch: AppDispatch) {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify({ status: newStatus }));
+
+    await service
+      .updateProduct(id, formData)
+      .then(() => {
+        dispatch(changeProductStatus({ id, status: newStatus }));
+        successHandler(`Product status changed to ${newStatus}`);
+      })
+      .catch((error: any) => {
+        errorHandler(error);
+      });
+  };
+};
