@@ -9,6 +9,7 @@ import categoryReducer from "./categorySlice";
 import subCategoryReducer from "./subCategorySlice";
 import sizeChartReducer from "./sizeChartSlice";
 import productReducer from "./productSlice";
+import bannerReducer from "./bannerSlice";
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ export const store = configureStore({
     subCategory: subCategoryReducer,
     sizeChart: sizeChartReducer,
     product: productReducer,
+    banner: bannerReducer,
   },
 });
 

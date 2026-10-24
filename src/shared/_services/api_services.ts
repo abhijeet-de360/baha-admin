@@ -13,6 +13,7 @@ const categoryUrl = rootUrl + "/category";
 const subCategoryUrl = rootUrl + "/subCategory";
 const sizeChartUrl = rootUrl + "/sizeChart";
 const productUrl = rootUrl + "/product";
+const bannerUrl = rootUrl + "/heroBanner";
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -323,6 +324,46 @@ async function deleteProduct(id: string) {
   });
 }
 
+/************************* Banner service function *************************** */
+async function addBanner(data: FormData) {
+  return await axios.post(bannerUrl + "/create", data, {
+    headers: await authHeader("FormData"),
+  });
+}
+
+async function updateBanner(id: string, data: FormData) {
+  return await axios.patch(`${bannerUrl}/update/${id}`, data, {
+    headers: await authHeader("FormData"),
+  });
+}
+
+async function getAllBanners(
+  keyword?: string,
+  status?: string,
+) {
+  return await axios.get(
+    `${bannerUrl}/list?keyword=${keyword}&status=${status}`,
+  );
+}
+
+async function getBannerById(id: string) {
+  return await axios.get(`${bannerUrl}/${id}`, {
+    headers: await authHeader(),
+  });
+}
+
+async function deleteBanner(id: string) {
+  return await axios.delete(`${bannerUrl}/delete/${id}`, {
+    headers: await authHeader(),
+  });
+}
+
+async function changeBannerStatus(id: string, data: { status: string }) {
+  return await axios.patch(`${bannerUrl}/status/${id}`, data, {
+    headers: await authHeader(),
+  });
+}
+
 export const service = {
   loginUser,
   getProfile,
@@ -362,5 +403,7 @@ export const service = {
   updateProduct,
   getAllProducts,
   getProductById,
-  deleteProduct
+  deleteProduct,
+  addBanner,
+  getAllBanners,
 };

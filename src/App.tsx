@@ -25,6 +25,7 @@ import SubCategories from "./pages/SubCategories";
 import SizeCharts from "./pages/SizeCharts";
 import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
+import AddBanners from "./pages/AddBanners";
 
 export default function App() {
   return (
@@ -36,6 +37,8 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/banners" element={<Banners />} />
+            <Route path="/banner/add" element={<AddBanners />} />
+            <Route path="/banners/add" element={<AddBanners />} />
             <Route path="/coupons" element={<Coupons />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:id" element={<OrderDetail />} />
