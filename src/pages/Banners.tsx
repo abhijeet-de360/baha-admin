@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,18 @@ import {
 
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
-import { getAllBanners } from "@/store/bannerSlice";
+import { deleteBanner, getAllBanners, updateBanner } from "@/store/bannerSlice";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Banners() {
   const navigate = useNavigate();
@@ -40,16 +52,15 @@ export default function Banners() {
   const dispatch = useDispatch<AppDispatch>();
 
   const searchTimeoutRef = useRef(null);
-  
+
   const [formVar, setFormVar] = useState({
     keyword: "",
     status: "",
-  })
+  });
   const [hasMore, setHasMore] = useState(false);
-  
+
   // Modals state
   const [previewBanner, setPreviewBanner] = useState<any>(null);
-
 
   // Open Add modal -> Navigate to dedicated Add page
   const handleOpenAdd = () => {
@@ -57,8 +68,10 @@ export default function Banners() {
   };
 
   // Delete slider
-  const handleDeleteConfirm = () => { };
-  
+  const handleDelete = (id: string) => {
+    dispatch(deleteBanner(id));
+  };
+
   // handle input change
   const handleInputChange = (searchTerm: string) => {
     setFormVar((prev) => ({
@@ -71,14 +84,9 @@ export default function Banners() {
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      dispatch(
-        getAllBanners(
-          searchTerm,
-          formVar.status,
-        ),
-      );
+      dispatch(getAllBanners(searchTerm, formVar.status));
     }, 500);
-  }
+  };
 
   const handleStatusChange = (status: string) => {
     setFormVar((prev) => ({
@@ -86,12 +94,13 @@ export default function Banners() {
       status: status,
     }));
 
-    dispatch(
-      getAllBanners(
-        formVar.keyword,
-        status,
-      ),
-    );
+    dispatch(getAllBanners(formVar.keyword, status));
+  };
+
+  const handleToggleStatus = (bannerId: string, checked: boolean) => {
+    const formData = new FormData();
+    formData.append("status", checked ? "active" : "inactive");
+    dispatch(updateBanner(bannerId, formData));
   };
 
   const getStatusBadge = (status: any) => {
@@ -124,8 +133,8 @@ export default function Banners() {
   };
 
   useEffect(() => {
-    dispatch(getAllBanners("", ""))
-  }, [])
+    dispatch(getAllBanners("", ""));
+  }, []);
 
   return (
     <div className="space-y-4 max-w-full mx-auto">
@@ -249,20 +258,43 @@ export default function Banners() {
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                    // onClick={() => handleOpenEdit(banner)}
+                    onClick={() => navigate(`/banner/edit/${banner._id}`)}
                     title="Edit"
                   >
                     <SquarePen className="h-3.5 w-3.5" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                    // onClick={() => setDeletingBanner(banner)}
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        title="Delete"
+                        className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this Banner?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently
+                          delete this Banner.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-600 hover:bg-red-700"
+                          onClick={() => handleDelete(banner._id)}
+                        >
+                          Yes, delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </Card>
@@ -380,12 +412,23 @@ export default function Banners() {
 
                     {/* Status */}
                     <td className="py-3 px-4">
-                      <button
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                        title="Click to toggle status"
-                      >
-                        {getStatusBadge(banner.status)}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={banner.status === "active"}
+                          onCheckedChange={(checked) =>
+                            handleToggleStatus(banner._id || banner.id, checked)
+                          }
+                        />
+                        <span
+                          className={`text-xs font-semibold capitalize ${
+                            banner.status === "active"
+                              ? "text-emerald-500"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {banner.status || "inactive"}
+                        </span>
+                      </div>
                     </td>
 
                     {/* Actions */}
@@ -403,21 +446,47 @@ export default function Banners() {
                         <Button
                           variant="outline"
                           size="icon"
-                          // onClick={() => handleOpenEdit(banner)}
+                          onClick={() => navigate(`/banner/edit/${banner._id}`)}
                           title="Edit"
                           className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                         >
                           <SquarePen className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          // onClick={() => setDeletingBanner(banner)}
-                          title="Delete"
-                          className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {/* Delete action button */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              title="Delete"
+                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete this Banner?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will
+                                permanently delete this Banner.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => handleDelete(banner._id)}
+                              >
+                                Yes, delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </td>
                   </tr>

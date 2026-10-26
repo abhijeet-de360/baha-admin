@@ -5,25 +5,19 @@ import type { AppDispatch, RootState } from "@/store/store";
 import {
   ArrowLeft,
   Calendar,
-  Check,
   CheckCircle2,
-  ChevronDown,
-  Clock,
   Eye,
   Image as ImageIcon,
   Link2,
   Monitor,
   RefreshCw,
   Save,
-  Search,
-  Sliders,
   Smartphone,
   Sparkles,
   Upload,
   X,
   ExternalLink,
   Layers,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +34,6 @@ import { getAllProducts } from "@/store/productSlice";
 import { addBanner } from "@/store/bannerSlice";
 import {
   warningHandler,
-  successHandler,
 } from "@/shared/_helper/responseHelper";
 import {
   Combobox,
@@ -85,7 +78,7 @@ export default function AddBanners() {
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">(
     "desktop",
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const bannerVar = useSelector((state: RootState) => state.banner);
 
   const searchTimeoutRef = useRef<any>(null);
 
@@ -241,25 +234,29 @@ export default function AddBanners() {
     <div className="space-y-6 max-w-full pb-16">
       {/* Top Header & Breadcrumbs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
-        <div>
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-xl shrink-0 hover:bg-muted"
               onClick={() => navigate("/banners")}
-              className="hover:text-foreground transition-colors flex items-center gap-1 cursor-pointer"
+              title="Return to Banners"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Hero Sliders
-            </button>
-            <span>/</span>
-            <span className="text-foreground font-medium">Add Hero Slide</span>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-amber-500" />
-            Create Hero Slide
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Configure headline, promotional CTA, visuals, and schedule for your
-            storefront home slider.
-          </p>
+
+          <div className="flex items-center flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              Create Hero Slide
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Configure headline, promotional CTA, visuals, and schedule for
+              your storefront home slider.
+            </p>
+          </div>
         </div>
 
         {/* Quick action buttons */}
@@ -283,11 +280,11 @@ export default function AddBanners() {
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={bannerVar.status === "loading"}
             className="bg-amber-500 hover:bg-amber-600 text-white font-medium cursor-pointer shadow-sm gap-2"
           >
             <Save className="w-4 h-4" />
-            {isSubmitting ? "Creating Slide..." : "Save & Publish"}
+            {bannerVar.status === "loading" ? "Creating Slide..." : "Save & Publish"}
           </Button>
         </div>
       </div>
@@ -1079,11 +1076,11 @@ export default function AddBanners() {
                   <Button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={isSubmitting}
+                    disabled={bannerVar.status === "loading"}
                     className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold cursor-pointer shadow-sm gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    {isSubmitting
+                    {bannerVar.status === "loading"
                       ? "Saving Hero Slide..."
                       : "Save & Publish Slide"}
                   </Button>

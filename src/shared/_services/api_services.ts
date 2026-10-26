@@ -14,6 +14,7 @@ const subCategoryUrl = rootUrl + "/subCategory";
 const sizeChartUrl = rootUrl + "/sizeChart";
 const productUrl = rootUrl + "/product";
 const bannerUrl = rootUrl + "/heroBanner";
+const testimonialUrl = rootUrl + "/testimonial";
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -358,8 +359,27 @@ async function deleteBanner(id: string) {
   });
 }
 
-async function changeBannerStatus(id: string, data: { status: string }) {
-  return await axios.patch(`${bannerUrl}/status/${id}`, data, {
+/*************************** Testimonial service function *************************** */
+async function addTestimonial(data: FormData) {
+  return await axios.post(testimonialUrl + "/create", data, {
+    headers: await authHeader("FormData"),
+  });
+}
+
+async function updateTestimonial(id: string, data: FormData) {
+  return await axios.patch(`${testimonialUrl}/update/${id}`, data, {
+    headers: await authHeader("FormData"),
+  });
+}
+
+async function getAllTestimonials() {
+  return await axios.get(
+    `${testimonialUrl}/list`,
+  );
+}
+
+async function deleteTestimonial(id: string) {
+  return await axios.delete(`${testimonialUrl}/delete/${id}`, {
     headers: await authHeader(),
   });
 }
@@ -406,4 +426,11 @@ export const service = {
   deleteProduct,
   addBanner,
   getAllBanners,
+  updateBanner,
+  getBannerById,
+  deleteBanner,
+  addTestimonial,
+  getAllTestimonials,
+  updateTestimonial,
+  deleteTestimonial
 };

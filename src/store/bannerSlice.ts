@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { AppDispatch } from "./store";
 import { setLoading } from "./loader";
 import { service } from "@/shared/_services/api_services";
+import { errorHandler, successHandler } from "@/shared/_helper/responseHelper";
 
 export const STATUS = Object.freeze({
   IDLE: "idle",
@@ -88,31 +89,20 @@ const bannerSlice = createSlice({
 
     // Update banner
     updateBannerSuccess: (state, { payload }: { payload: BannerItem }) => {
-      const payloadId = payload._id || payload.id;
+      const payloadId = payload._id;
       state.banners = state.banners.map((banner) => {
-        const itemId = banner._id || banner.id;
+        const itemId = banner._id;
         return itemId === payloadId ? { ...banner, ...payload } : banner;
       });
 
-      const currentDetailsId =
-        state.bannerDetails?._id || state.bannerDetails?.id;
+      const currentDetailsId = state.bannerDetails?._id;
       if (state.bannerDetails && currentDetailsId === payloadId) {
         state.bannerDetails = { ...state.bannerDetails, ...payload };
       }
     },
 
-    // Delete / remove banner
-    removeBanner: (state, { payload }: { payload: string }) => {
-      state.banners = state.banners.filter(
-        (banner) => banner._id !== payload && banner.id !== payload,
-      );
-      state.total = Math.max(0, state.total - 1);
-    },
-
     deleteBannerSuccess: (state, { payload }: { payload: string }) => {
-      state.banners = state.banners.filter(
-        (banner) => banner._id !== payload && banner.id !== payload,
-      );
+      state.banners = state.banners.filter((banner) => banner._id !== payload);
       state.total = Math.max(0, state.total - 1);
     },
 
@@ -121,9 +111,7 @@ const bannerSlice = createSlice({
       state,
       { payload }: { payload: { id: string; status: any } },
     ) => {
-      const banner = state.banners.find(
-        (item) => item._id === payload.id || item.id === payload.id,
-      );
+      const banner = state.banners.find((item) => item._id === payload.id);
       if (banner) {
         banner.status = payload.status;
       }
@@ -154,7 +142,6 @@ export const {
   setBannerDetails,
   addBannerSuccess,
   updateBannerSuccess,
-  removeBanner,
   deleteBannerSuccess,
   changeBannerStatus,
   resetBannerDetails,
@@ -173,12 +160,14 @@ export function addBanner(data: FormData, navigate?: any) {
       .addBanner(data)
       .then((res) => {
         dispatch(addBannerSuccess(res.data?.result || res.data));
+        successHandler("Banner created successfully");
         navigate && navigate("/banners");
         dispatch(setStatus(STATUS.IDLE));
       })
       .catch((error: any) => {
         dispatch(setError(error));
         dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
       })
       .finally(() => {
         dispatch(setLoading(false));
@@ -199,6 +188,72 @@ export function getAllBanners(keyword: string, status: string) {
       .catch((error: any) => {
         dispatch(setError(error));
         dispatch(setStatus(STATUS.ERROR));
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
+  };
+}
+
+export function updateBanner(id: string, data: FormData, navigate?: any) {
+  return async function updateBannerThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .updateBanner(id, data)
+      .then((res) => {
+        dispatch(updateBannerSuccess(res.data?.result || res.data));
+        successHandler("Banner updated successfully");
+        navigate && navigate("/banners");
+        dispatch(setStatus(STATUS.IDLE));
+      })
+      .catch((error: any) => {
+        dispatch(setError(error));
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
+  };
+}
+
+export function getBannerById(id: string) {
+  return async function getBannerByIdThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .getBannerById(id)
+      .then((res) => {
+        dispatch(setBannerDetails(res.data));
+        dispatch(setStatus(STATUS.IDLE));
+      })
+      .catch((error: any) => {
+        dispatch(setError(error));
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
+  };
+}
+
+export function deleteBanner(id: string) {
+  return async function deleteBannerThunk(dispatch: AppDispatch) {
+    dispatch(setLoading(true));
+    dispatch(setStatus(STATUS.LOADING));
+    await service
+      .deleteBanner(id)
+      .then(() => {
+        dispatch(deleteBannerSuccess(id));
+        successHandler("Banner deleted successfully");
+        dispatch(setStatus(STATUS.IDLE));
+      })
+      .catch((error: any) => {
+        dispatch(setError(error));
+        dispatch(setStatus(STATUS.ERROR));
+        errorHandler(error);
       })
       .finally(() => {
         dispatch(setLoading(false));

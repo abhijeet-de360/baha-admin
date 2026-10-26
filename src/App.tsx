@@ -26,6 +26,7 @@ import SizeCharts from "./pages/SizeCharts";
 import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
 import AddBanners from "./pages/AddBanners";
+import EditBanner from "./pages/EditBanner";
 
 export default function App() {
   return (
@@ -38,7 +39,7 @@ export default function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/banners" element={<Banners />} />
             <Route path="/banner/add" element={<AddBanners />} />
-            <Route path="/banners/add" element={<AddBanners />} />
+            <Route path="/banner/edit/:id" element={<EditBanner />} />
             <Route path="/coupons" element={<Coupons />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:id" element={<OrderDetail />} />

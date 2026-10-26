@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   ArrowLeft,
@@ -48,7 +48,6 @@ import { getAllSubCategories } from "@/store/subCategorySlice";
 import { warningHandler } from "@/shared/_helper/responseHelper";
 import { generateSlug } from "@/lib/utils";
 import { addProduct, getAllProducts } from "@/store/productSlice";
-import { service } from "@/shared/_services/api_services";
 
 export type ProductOption = {
   sku: string;
@@ -1482,7 +1481,7 @@ export default function AddProduct() {
                                               "stock",
                                               Math.max(
                                                 0,
-                                                parseInt(e.target.value) || 0,
+                                                parseInt(e.target.value),
                                               ),
                                             )
                                           }
@@ -1507,7 +1506,7 @@ export default function AddProduct() {
                                               "price",
                                               Math.max(
                                                 0,
-                                                parseFloat(e.target.value) || 0,
+                                                parseFloat(e.target.value),
                                               ),
                                             )
                                           }
@@ -1539,7 +1538,7 @@ export default function AddProduct() {
                                               "discountPrice",
                                               Math.max(
                                                 0,
-                                                parseFloat(e.target.value) || 0,
+                                                parseFloat(e.target.value),
                                               ),
                                             )
                                           }
