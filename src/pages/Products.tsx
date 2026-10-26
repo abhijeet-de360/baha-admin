@@ -8,6 +8,7 @@ import {
   Eye,
   Filter,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -262,6 +263,25 @@ export default function Products() {
       dispatch(getAllSize("", 0, 0, "")),
     ]);
   }, []);
+
+   // Loading state when initial fetch is pending
+  if (productsVar.status === "loading" && productsVar.products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-500 animate-pulse">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+        <div className="text-center space-y-1">
+          <h2 className="text-lg font-semibold text-foreground">
+            Loading Hero Slide Details
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Fetching slide configuration and assets...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-full mx-auto">

@@ -56,9 +56,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { generateSlug } from "@/lib/utils";
-
-
+import { formatDataString, generateSlug } from "@/lib/utils";
 
 export default function Categories() {
   const categoryVar = useSelector((state: RootState) => state.category);
@@ -247,14 +245,14 @@ export default function Categories() {
   }, [formData.name]);
 
   useEffect(() => {
-      dispatch(
-        getAllCategories(
-          formVar.keyword,
-          formVar.limit,
-          formVar.offset,
-          formVar.status,
-        ),
-      );
+    dispatch(
+      getAllCategories(
+        formVar.keyword,
+        formVar.limit,
+        formVar.offset,
+        formVar.status,
+      ),
+    );
   }, []);
 
   return (
@@ -385,26 +383,15 @@ export default function Categories() {
                       </div>
 
                       {/* Status Switch */}
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={cat.status === "active"}
-                          onCheckedChange={(checked) =>
-                            updateStatus(
-                              cat._id,
-                              checked ? "active" : "inactive",
-                            )
-                          }
-                        />
-                        <span
-                          className={`text-[11px] font-semibold capitalize ${
-                            cat.status === "active"
-                              ? "text-emerald-500"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {cat.status}
-                        </span>
-                      </div>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize w-fit ${
+                          cat.status?.toLowerCase() === "active"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                            : "bg-muted text-muted-foreground border-border"
+                        }`}
+                      >
+                        {cat.status}
+                      </span>
 
                       {/* Footer: date + actions */}
                       <div className="pt-2 border-t border-border flex items-center justify-between mt-auto">
@@ -491,29 +478,18 @@ export default function Categories() {
                         <TableCell>{cat.name}</TableCell>
                         <TableCell>{cat.slug}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={cat.status === "active"}
-                              onCheckedChange={(checked) => {
-                                updateStatus(
-                                  cat._id,
-                                  checked ? "active" : "inactive",
-                                );
-                              }}
-                            />
-                            <span
-                              className={`text-[11px] font-semibold capitalize ${
-                                cat.status === "active"
-                                  ? "text-emerald-500"
-                                  : "text-muted-foreground"
-                              }`}
-                            >
-                              {cat.status}
-                            </span>
-                          </div>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize ${
+                              cat.status?.toLowerCase() === "active"
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                : "bg-muted text-muted-foreground border-border"
+                            }`}
+                          >
+                            {cat.status}
+                          </span>
                         </TableCell>
-                        <TableCell>
-                          {new Date(cat.createdAt).toDateString()}
+                        <TableCell className="text-muted-foreground font-mono">
+                          {formatDataString(cat.createdAt)}
                         </TableCell>
                         <TableCell>
                           <Button

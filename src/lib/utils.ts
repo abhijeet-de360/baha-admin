@@ -14,3 +14,8 @@ export function generateSlug(text: string): string {
     trim: true,
   });
 }
+
+// Format Data string
+export function formatDataString(date: string): string {
+  return new Date(date).toISOString().split("T")[0];
+}

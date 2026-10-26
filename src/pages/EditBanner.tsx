@@ -316,7 +316,7 @@ export default function EditBanner() {
   }
 
   // Not found or failed load
-  if (bannerVar.status !== "loading" && !bannerVar.bannerDetails) {
+  if (bannerVar.status === "error" && !bannerVar.bannerDetails) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px] p-6 text-center">
         <div className="p-4 rounded-2xl bg-rose-500/10 text-rose-500 mb-4">
