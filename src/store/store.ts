@@ -11,9 +11,11 @@ import sizeChartReducer from "./sizeChartSlice";
 import productReducer from "./productSlice";
 import bannerReducer from "./bannerSlice";
 import testimonialReducer from "./testimonialSlice";
+import loaderReducer from "./loader";
 
 export const store = configureStore({
   reducer: {
+    loader: loaderReducer,
     auth: authReducer,
     color: colorReducer,
     faq: faqReducer,

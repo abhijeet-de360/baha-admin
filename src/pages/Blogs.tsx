@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import slugify from 'slugify'
 import {
   BookOpen,
@@ -110,6 +111,7 @@ const INITIAL_BLOGS: BlogPost[] = [
 const CATEGORIES = ['Fashion Trends', 'Parenting & Care', 'Festive Wear', 'Store News', 'Guides']
 
 export default function BlogsPage() {
+  const navigate = useNavigate()
   const [blogs, setBlogs] = useState<BlogPost[]>(INITIAL_BLOGS)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Published' | 'Draft'>('All')
@@ -188,23 +190,9 @@ export default function BlogsPage() {
     }
   }
 
-  // Open Modal for Add (Clear all fields)
+  // Open Add Page
   const handleOpenAddModal = () => {
-    setEditingBlog(null)
-    setFormTitle('')
-    setFormSlug('')
-    setIsSlugManuallyModified(false)
-    setFormCategory('')
-    setFormAuthor('')
-    setFormStatus('')
-    setFormCoverImage('')
-    setFormExcerpt('')
-    setFormContent('')
-    setFormMetaTitle('')
-    setFormMetaDescription('')
-    setIsMetaTitleModified(false)
-    setIsMetaDescModified(false)
-    setIsModalOpen(true)
+    navigate('/blog/add')
   }
 
   // Open Modal for Edit

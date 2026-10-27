@@ -13,6 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import {
   Dialog,
@@ -48,6 +56,7 @@ import {
 
 import { warningHandler } from "@/shared/_helper/responseHelper";
 import { getAllSize } from "@/store/sizeSlice";
+import { formatDataString } from "@/lib/utils";
 
 export default function SizeCharts() {
   const sizeChartsVar = useSelector((state: RootState) => state.sizeChart);
@@ -87,7 +96,7 @@ export default function SizeCharts() {
     keyword: "",
     limit: 10,
     offset: 0,
-  })
+  });
 
   // Open Modal for Add
   const handleOpenAddModal = () => {
@@ -125,7 +134,7 @@ export default function SizeCharts() {
     setFormData({
       name: sizeChart.name,
       description: sizeChart.description || "",
-      rows: sizeChart.rows.map((row) => ({
+      rows: (sizeChart.rows || []).map((row) => ({
         size: typeof row.size === "object" ? row.size._id : row.size,
 
         height: {
@@ -308,11 +317,11 @@ export default function SizeCharts() {
 
     if (editingSizeChart) {
       // Update
-      await dispatch(updateSizeChart(editingSizeChart._id, payload)).finally(
-        () => {
-          setEditingSizeChart(null);
-        },
-      );
+      await dispatch(
+        updateSizeChart(editingSizeChart._id || "", payload),
+      ).finally(() => {
+        setEditingSizeChart(null);
+      });
     } else {
       // Add
       await dispatch(addSizeChart(payload));
@@ -324,7 +333,7 @@ export default function SizeCharts() {
     null,
   );
   const [displayUnit, setDisplayUnit] = useState<"cm" | "in">("cm");
-  const searchTimeoutRef = useRef(null);
+  const searchTimeoutRef = useRef<any>(null);
 
   const getSizeObj = (sizeField: any) => {
     if (typeof sizeField === "object" && sizeField !== null) {
@@ -415,9 +424,7 @@ export default function SizeCharts() {
     }
 
     const newOffset = formVar.offset + formVar.limit;
-    await dispatch(
-      getAllSizeCharts(formVar.keyword, formVar.limit, newOffset),
-    );
+    await dispatch(getAllSizeCharts(formVar.keyword, formVar.limit, newOffset));
 
     setFormVar((prev) => ({
       ...prev,
@@ -466,22 +473,24 @@ export default function SizeCharts() {
         </Button>
       </div>
 
-      {/* Search Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-card p-4 rounded-2xl border border-border shadow-xs">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search size charts by name or description..."
-            value={formVar.keyword}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
-          />
-        </div>
-      </div>
-
       {/* Main Size Charts Card / Table */}
-      <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
+      <Card className="rounded-3xl border border-border shadow-xs overflow-hidden bg-card">
+        {/* Search Toolbar */}
+        <div className="p-4 sm:p-6 border-b border-border space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search size charts by name or description..."
+                value={formVar.keyword}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40 rounded-2xl"
+              />
+            </div>
+          </div>
+        </div>
+
         <CardContent className="p-0">
           {sizeChartsVar.sizeCharts.length === 0 &&
           sizeChartsVar.status !== "loading" ? (
@@ -507,214 +516,86 @@ export default function SizeCharts() {
               )}
             </div>
           ) : (
-            <InfiniteScroll
-              dataLength={sizeChartsVar.sizeCharts.length}
-              next={fetchMoreSizeCharts}
-              hasMore={hasMore}
-              loader={
-                <div className="py-6 text-center text-xs text-muted-foreground font-semibold flex items-center justify-center gap-2">
-                  <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  Loading more size charts...
-                </div>
-              }
-              endMessage={
-                sizeChartsVar.sizeCharts.length > 0 && (
-                  <div className="py-6 text-center text-xs text-muted-foreground font-medium border-t border-border/50">
-                    Showing all {sizeChartsVar.sizeCharts.length} of{" "}
-                    {sizeChartsVar.total} size charts
-                  </div>
-                )
-              }
-            >
+            <>
               {/* Mobile Card View (< xl screens) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
-                {sizeChartsVar.sizeCharts.map((chart, cIdx) => {
-                  const chartId = chart._id || `chart-${cIdx}`;
-
-                  return (
-                    <div
-                      key={chartId}
-                      className="p-4 rounded-xl border border-border bg-card hover:border-border/80 transition-all shadow-xs flex flex-col justify-between space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
-                            <Ruler className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground">
-                              {chart.name}
-                            </p>
-                            {chart.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
-                                {chart.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Sizes Badges */}
-                      <div className="space-y-1.5">
-                        <span className="text-[11px] font-medium text-muted-foreground">
-                          Configured Sizes ({chart.rows?.length || 0}):
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {chart.rows && chart.rows.length > 0 ? (
-                            chart.rows.map((r, rIdx) => (
-                              <span
-                                key={rIdx}
-                                className="px-2 py-0.5 rounded-md bg-muted text-[11px] font-semibold text-foreground border border-border/60"
-                              >
-                                {getSizeName(r.size)}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground italic">
-                              No sizes
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
-                        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />{" "}
-                          {chart.createdAt
-                            ? new Date(chart.createdAt).toLocaleDateString()
-                            : "—"}
-                        </span>
-
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              setViewingSizeChart(chart);
-                              setDisplayUnit("in");
-                            }}
-                            className="h-8 w-8 text-indigo-600 border-border hover:bg-indigo-50 cursor-pointer"
-                            title="View Size Guide"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleOpenEditModal(chart)}
-                            className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
-                            title="Edit"
-                          >
-                            <SquarePen className="h-3.5 w-3.5" />
-                          </Button>
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors cursor-pointer"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete Size Chart?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete &quot;{chart.name}&quot;? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-red-600 hover:bg-red-700"
-                                  onClick={() => handleDelete(chart._id)}
-                                >
-                                  Yes, delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
+              <div
+                id="sizecharts-mobile-list"
+                className="xl:hidden max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={sizeChartsVar.sizeCharts.length}
+                  next={fetchMoreSizeCharts}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more size charts...
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Desktop Table View (xl+ screens) */}
-              <div className="hidden xl:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                      <th className="py-3.5 px-5">Chart Name</th>
-                      <th className="py-3.5 px-4">Configured Sizes</th>
-                      <th className="py-3.5 px-4">Created Date</th>
-                      <th className="py-3.5 px-5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border text-xs">
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {sizeChartsVar.sizeCharts.length} of{" "}
+                      {sizeChartsVar.total} size charts
+                    </div>
+                  }
+                  scrollableTarget="sizecharts-mobile-list"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     {sizeChartsVar.sizeCharts.map((chart, cIdx) => {
                       const chartId = chart._id || `chart-${cIdx}`;
 
                       return (
-                        <tr
+                        <div
                           key={chartId}
-                          className="hover:bg-muted/30 transition-colors group"
+                          className="p-4 rounded-2xl border border-border bg-card hover:border-border/80 transition-all shadow-xs flex flex-col justify-between space-y-3"
                         >
-                          {/* Chart Name & Description */}
-                          <td className="py-4 px-5">
-                            <div className="flex items-center gap-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
                               <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
                                 <Ruler className="h-4 w-4" />
                               </div>
-                              <div className="min-w-0">
-                                <p className="font-bold text-foreground">
+                              <div>
+                                <p className="text-sm font-bold text-foreground">
                                   {chart.name}
                                 </p>
                                 {chart.description && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-xs">
+                                  <p className="text-xs text-muted-foreground line-clamp-1">
                                     {chart.description}
                                   </p>
                                 )}
                               </div>
                             </div>
-                          </td>
+                          </div>
 
-                          {/* Configured Sizes */}
-                          <td className="py-4 px-4">
-                            <div className="flex flex-wrap gap-1.5 max-w-md">
+                          {/* Sizes Badges */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-medium text-muted-foreground">
+                              Configured Sizes ({chart.rows?.length || 0}):
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
                               {chart.rows && chart.rows.length > 0 ? (
-                                chart.rows.map((row, rIdx) => (
+                                chart.rows.map((r, rIdx) => (
                                   <span
                                     key={rIdx}
                                     className="px-2 py-0.5 rounded-md bg-muted text-[11px] font-semibold text-foreground border border-border/60"
                                   >
-                                    {getSizeName(row.size)}
+                                    {getSizeName(r.size)}
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-muted-foreground italic">
+                                <span className="text-xs text-muted-foreground italic">
                                   No sizes
                                 </span>
                               )}
                             </div>
-                          </td>
+                          </div>
 
-                          {/* Created Date */}
-                          <td className="py-4 px-4 text-muted-foreground font-mono text-[11px]">
-                            {chart.createdAt
-                              ? new Date(chart.createdAt).toLocaleDateString()
-                              : "—"}
-                          </td>
+                          <div className="pt-2 border-t border-border flex items-center justify-between text-xs mt-auto">
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />{" "}
+                              {formatDataString(chart.createdAt || "")}
+                            </span>
 
-                          {/* Actions */}
-                          <td className="py-4 px-5 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
+                            <div className="flex items-center gap-1.5">
                               <Button
                                 variant="outline"
                                 size="icon"
@@ -722,8 +603,8 @@ export default function SizeCharts() {
                                   setViewingSizeChart(chart);
                                   setDisplayUnit("in");
                                 }}
+                                className="h-8 w-8 text-indigo-500 border-border hover:bg-indigo-500/10 cursor-pointer"
                                 title="View Size Guide"
-                                className="h-8 w-8 text-indigo-600 border-border hover:bg-indigo-50 cursor-pointer"
                               >
                                 <Eye className="h-3.5 w-3.5" />
                               </Button>
@@ -732,8 +613,8 @@ export default function SizeCharts() {
                                 variant="outline"
                                 size="icon"
                                 onClick={() => handleOpenEditModal(chart)}
-                                title="Edit"
                                 className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
+                                title="Edit"
                               >
                                 <SquarePen className="h-3.5 w-3.5" />
                               </Button>
@@ -741,11 +622,12 @@ export default function SizeCharts() {
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors cursor-pointer"
+                                    variant="outline"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -754,11 +636,15 @@ export default function SizeCharts() {
                                       Delete Size Chart?
                                     </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete &quot;{chart.name}&quot;? This action cannot be undone.
+                                      Are you sure you want to delete &quot;
+                                      {chart.name}&quot;? This action cannot be
+                                      undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
                                     <AlertDialogAction
                                       className="bg-red-600 hover:bg-red-700"
                                       onClick={() => handleDelete(chart._id)}
@@ -769,14 +655,177 @@ export default function SizeCharts() {
                                 </AlertDialogContent>
                               </AlertDialog>
                             </div>
-                          </td>
-                        </tr>
+                          </div>
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                </InfiniteScroll>
               </div>
-            </InfiniteScroll>
+
+              {/* Desktop Table View (xl+ screens) */}
+              <div
+                id="sizecharts-desktop-list"
+                className="hidden xl:block max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={sizeChartsVar.sizeCharts.length}
+                  next={fetchMoreSizeCharts}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more size charts...
+                    </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {sizeChartsVar.sizeCharts.length} of{" "}
+                      {sizeChartsVar.total} size charts
+                    </div>
+                  }
+                  scrollableTarget="sizecharts-desktop-list"
+                >
+                  <Table className="w-full text-left border-collapse">
+                    <TableHeader>
+                      <TableRow className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider hover:bg-muted/50">
+                        <TableHead className="py-3.5 px-5">
+                          Chart Name
+                        </TableHead>
+                        <TableHead className="py-3.5 px-4">
+                          Configured Sizes
+                        </TableHead>
+                        <TableHead className="py-3.5 px-4">
+                          Created Date
+                        </TableHead>
+                        <TableHead className="py-3.5 px-5 text-right">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-border text-xs">
+                      {sizeChartsVar.sizeCharts.map((chart, cIdx) => {
+                        const chartId = chart._id || `chart-${cIdx}`;
+
+                        return (
+                          <TableRow
+                            key={chartId}
+                            className="hover:bg-muted/30 transition-colors group"
+                          >
+                            {/* Chart Name & Description */}
+                            <TableCell className="py-4 px-5">
+                              <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
+                                  <Ruler className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-foreground">
+                                    {chart.name}
+                                  </p>
+                                  {chart.description && (
+                                    <p className="text-xs text-muted-foreground truncate max-w-xs">
+                                      {chart.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            {/* Configured Sizes */}
+                            <TableCell className="py-4 px-4">
+                              <div className="flex flex-wrap gap-1.5 max-w-md">
+                                {chart.rows && chart.rows.length > 0 ? (
+                                  chart.rows.map((row, rIdx) => (
+                                    <span
+                                      key={rIdx}
+                                      className="px-2 py-0.5 rounded-md bg-muted text-[11px] font-semibold text-foreground border border-border/60"
+                                    >
+                                      {getSizeName(row.size)}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-muted-foreground italic">
+                                    No sizes
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* Created Date */}
+                            <TableCell className="py-4 px-4 text-muted-foreground font-mono text-[11px]">
+                              {formatDataString(chart.createdAt || "")}
+                            </TableCell>
+
+                            {/* Actions */}
+                            <TableCell className="py-4 px-5 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => {
+                                    setViewingSizeChart(chart);
+                                    setDisplayUnit("in");
+                                  }}
+                                  title="View Size Guide"
+                                  className="h-8 w-8 text-indigo-500 border-border hover:bg-indigo-500/10 cursor-pointer"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => handleOpenEditModal(chart)}
+                                  title="Edit"
+                                  className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
+                                >
+                                  <SquarePen className="h-3.5 w-3.5" />
+                                </Button>
+
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      title="Delete"
+                                      className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete Size Chart?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete &quot;
+                                        {chart.name}&quot;? This action cannot
+                                        be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        className="bg-red-600 hover:bg-red-700"
+                                        onClick={() => handleDelete(chart._id)}
+                                      >
+                                        Yes, delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </InfiniteScroll>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -996,7 +1045,11 @@ export default function SizeCharts() {
                           <select
                             value={formData.rows[index].size}
                             onChange={(e) =>
-                              handleRowInputChange(index, "size", e.target.value)
+                              handleRowInputChange(
+                                index,
+                                "size",
+                                e.target.value,
+                              )
                             }
                             className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           >
@@ -1147,7 +1200,7 @@ export default function SizeCharts() {
                 Cancel
               </Button>
 
-              <Button type="submit">
+              <Button type="submit" disabled={sizeChartsVar.status === "loading"}>
                 {editingSizeChart ? "Update Size Chart" : "Create Size Chart"}
               </Button>
             </DialogFooter>

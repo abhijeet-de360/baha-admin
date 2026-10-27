@@ -341,10 +341,13 @@ async function updateBanner(id: string, data: FormData) {
 async function getAllBanners(
   keyword?: string,
   status?: string,
+  limit?: number,
+  offset?: number,
 ) {
-  return await axios.get(
-    `${bannerUrl}/list?keyword=${keyword}&status=${status}`,
-  );
+  let url = `${bannerUrl}/list?keyword=${keyword || ""}&status=${status || ""}`;
+  if (limit !== undefined) url += `&limit=${limit}`;
+  if (offset !== undefined) url += `&offset=${offset}`;
+  return await axios.get(url);
 }
 
 async function getBannerById(id: string) {

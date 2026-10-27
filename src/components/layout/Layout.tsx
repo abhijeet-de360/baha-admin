@@ -5,14 +5,14 @@ import Header from "@/components/layout/Header";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "@/store/store";
 import { getProfile } from "@/store/authSlice";
+import { Spinner } from "../ui/spinner";
 
 export default function Layout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
+  
   // Protected Route
-  const { isAuthenticated } = useSelector(
-    (state: RootState) => state.auth,
-  );
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const loaderVar = useSelector((state: RootState) => state.loader);
   
   const dispatch = useDispatch<AppDispatch>();
 
@@ -21,10 +21,6 @@ export default function Layout() {
       dispatch(getProfile());
     }
   }, [isAuthenticated]);
-
-  // if (loading) {
-  //   return <div>Loading...</div>;
-  // }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -48,6 +44,7 @@ export default function Layout() {
 
         {/* Scrollable Content Viewport */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 lg:p-7 w-full space-y-5">
+          {loaderVar?.loading && <Spinner />}
           <Outlet />
         </main>
       </div>

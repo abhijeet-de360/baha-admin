@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -52,16 +52,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useDispatch, useSelector } from "react-redux";
-import slugify from "slugify";
-
-// Generate slug using slugify package
-const generateSlug = (text: string): string => {
-  return slugify(text, {
-    lower: true,
-    strict: true,
-    trim: true,
-  });
-};
+import { formatDataString, generateSlug } from "@/lib/utils";
 
 const SubCategories = () => {
   const subCategoryVar = useSelector((state: RootState) => state.subCategory);
@@ -77,44 +68,50 @@ const SubCategories = () => {
     name: "",
     slug: "",
     category: "",
+    status: "active",
   });
 
   const [formVar, setFormVar] = useState({
     keyword: "",
     limit: 10,
     offset: 0,
-    status: "",
-    categoryId: "",
+    status: "all",
+    categoryId: "all",
   });
 
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   // Ref
   const searchTimeoutRef = useRef<any>(null);
 
   // Handle input change
-  const handleInputChange = (name: keyof typeof formData, value: string) => {
+  const handleInputChange = (name: keyof typeof formData, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // open modal for add
+  // Open modal for add
   const handleOpenAddModal = () => {
     setEditingSubCategory(null);
     setFormData({
       name: "",
       slug: "",
       category: "",
+      status: "active",
     });
     dispatch(toogleModal(true));
   };
 
-  // open modal for edit
-  const handleOpenEditModal = (subCategory) => {
+  // Open modal for edit
+  const handleOpenEditModal = (subCategory: SubCategoryItem) => {
     setEditingSubCategory(subCategory);
     setFormData({
       name: subCategory.name,
       slug: subCategory.slug,
-      category: subCategory.category._id,
+      category:
+        typeof subCategory.category === "object"
+          ? subCategory.category?._id
+          : subCategory.category,
+      status: subCategory.status || "active",
     });
     dispatch(toogleModal(true));
   };
@@ -124,23 +121,24 @@ const SubCategories = () => {
     dispatch(deleteSubCategory(id));
   };
 
-  const fetchMoreSubCategories = async () => {
+  // Infinite Scroll fetch more
+  const fetchMoreSubCategories = () => {
     if (
       subCategoryVar.status === "loading" ||
-      subCategoryVar.subCategories.length === subCategoryVar.total
+      subCategoryVar.subCategories.length >= subCategoryVar.total
     ) {
       return;
     }
 
     const newOffset = formVar.offset + formVar.limit;
 
-    await dispatch(
+    dispatch(
       getAllSubCategories(
         formVar.keyword,
         formVar.limit,
         newOffset,
-        formVar.status,
-        formVar.categoryId,
+        formVar.status === "all" ? "" : formVar.status,
+        formVar.categoryId === "all" ? "" : formVar.categoryId,
       ),
     );
 
@@ -154,14 +152,16 @@ const SubCategories = () => {
     }
   };
 
-  // Update status
-  const updateStatus = (id: string, status: string) => {
-    dispatch(
-      updateSubCategory(id, {
-        status: status,
-      }),
-    );
-  };
+  useEffect(() => {
+    if (
+      subCategoryVar.subCategories.length >= subCategoryVar.total &&
+      subCategoryVar.total > 0
+    ) {
+      setHasMore(false);
+    } else {
+      setHasMore(true);
+    }
+  }, [subCategoryVar.subCategories.length, subCategoryVar.total]);
 
   // Handle search
   const handleSearch = (searchTerm: string) => {
@@ -182,7 +182,7 @@ const SubCategories = () => {
           formVar.limit,
           0,
           formVar.status === "all" ? "" : formVar.status,
-          formVar.categoryId,
+          formVar.categoryId === "all" ? "" : formVar.categoryId,
         ),
       );
     }, 500);
@@ -201,7 +201,7 @@ const SubCategories = () => {
         formVar.limit,
         0,
         status === "all" ? "" : status,
-        formVar.categoryId,
+        formVar.categoryId === "all" ? "" : formVar.categoryId,
       ),
     );
   };
@@ -218,14 +218,14 @@ const SubCategories = () => {
         formVar.keyword,
         formVar.limit,
         0,
-        formVar.status,
+        formVar.status === "all" ? "" : formVar.status,
         categoryId === "all" ? "" : categoryId,
       ),
     );
   };
 
   // Handle save sub category
-  const handleSaveSubCategory = (e) => {
+  const handleSaveSubCategory = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -233,7 +233,7 @@ const SubCategories = () => {
       return;
     }
     if (!formData.category) {
-      warningHandler("Please enter select category");
+      warningHandler("Please select category");
       return;
     }
     if (!formData.slug) {
@@ -243,10 +243,11 @@ const SubCategories = () => {
 
     if (editingSubCategory) {
       dispatch(
-        updateSubCategory(editingSubCategory._id, {
+        updateSubCategory(editingSubCategory._id!, {
           name: formData.name.trim(),
           slug: formData.slug,
           category: formData.category,
+          status: formData.status,
         }),
       );
     } else {
@@ -255,6 +256,7 @@ const SubCategories = () => {
           name: formData.name.trim(),
           slug: formData.slug,
           category: formData.category,
+          status: formData.status,
         }),
       );
     }
@@ -269,17 +271,15 @@ const SubCategories = () => {
 
   useEffect(() => {
     dispatch(getAllCategories("", 0, 0, ""));
-    if (subCategoryVar.subCategories.length === 0) {
-      dispatch(
-        getAllSubCategories(
-          formVar.keyword,
-          formVar.limit,
-          formVar.offset,
-          formVar.status,
-          formVar.categoryId,
-        ),
-      );
-    }
+    dispatch(
+      getAllSubCategories(
+        formVar.keyword,
+        formVar.limit,
+        formVar.offset,
+        formVar.status === "all" ? "" : formVar.status,
+        formVar.categoryId === "all" ? "" : formVar.categoryId,
+      ),
+    );
   }, []);
 
   return (
@@ -309,276 +309,335 @@ const SubCategories = () => {
         </Button>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-card p-4 rounded-2xl border border-border shadow-xs">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search category name or description..."
-            value={formVar.keyword}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
-          />
-        </div>
-        {/* Filter category */}
-        <div className="flex items-center gap-2 shrink-0">
-          <select
-            value={formVar.categoryId}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
-          >
-            <option value="all">All Categories</option>
-            {categoryVar.categories.map((category) => (
-              <option key={category._id} value={category._id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+      {/* Sub Categories Content Area */}
+      <Card className="rounded-3xl border border-border shadow-xs overflow-hidden bg-card">
+        {/* Search & Filter Toolbar */}
+        <div className="p-4 sm:p-6 border-b border-border space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search sub category name or slug..."
+                value={formVar.keyword}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40 font-semibold rounded-xl border-border shadow-2xs"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Category Filter */}
+              <select
+                value={formVar.categoryId}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer shadow-2xs"
+              >
+                <option value="all">All Categories</option>
+                {categoryVar.categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Status Filter */}
+              <select
+                value={formVar.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer shadow-2xs"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        {/* Filter status */}
-        <div className="flex items-center gap-2 shrink-0">
-          <select
-            value={formVar.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Sub categories content area */}
-      <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
         <CardContent className="p-0">
-          {subCategoryVar.subCategories.length === 0 ? (
+          {subCategoryVar.status !== "loading" && subCategoryVar.subCategories.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <div className="p-3.5 rounded-full bg-muted text-muted-foreground w-fit mx-auto">
                 <FolderTree className="h-8 w-8" />
               </div>
               <h3 className="text-sm font-bold text-foreground">
-                No categories found
+                No sub categories found
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                {formVar.keyword || formVar.status !== "all"
-                  ? "Try adjusting your search criteria or status filter."
-                  : "Get started by adding your first kids clothing category."}
+                {formVar.keyword ||
+                formVar.status !== "all" ||
+                formVar.categoryId !== "all"
+                  ? "Try adjusting your search criteria or filter."
+                  : "Get started by adding your first clothing sub category."}
               </p>
-              {!formVar.keyword && formVar.status === "all" && (
-                <Button
-                  onClick={handleOpenAddModal}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-4 py-2 mt-2 cursor-pointer"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Category
-                </Button>
-              )}
+              {!formVar.keyword &&
+                formVar.status === "all" &&
+                formVar.categoryId === "all" && (
+                  <Button
+                    onClick={handleOpenAddModal}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-4 py-2 mt-2 cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Sub Category
+                  </Button>
+                )}
             </div>
           ) : (
-            <InfiniteScroll
-              dataLength={subCategoryVar.subCategories.length}
-              next={fetchMoreSubCategories}
-              hasMore={hasMore}
-              loader={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                  Loading more categories...
-                </div>
-              }
-              endMessage={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                  Showing all {subCategoryVar.subCategories.length} categories
-                </div>
-              }
-            >
-              {/* Mobile & Tablet card layout  */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
-                {subCategoryVar.subCategories.map((subCat) => (
-                  <div
-                    key={subCat._id}
-                    className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/20 transition-all flex flex-col"
-                  >
-                    {/* Card Body */}
-                    <div className="p-4 flex flex-col gap-3 flex-1">
-                      {/* Name & Slug */}
-                      <div className="space-y-0.5">
-                        <h4 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
-                          {subCat.name}
-                        </h4>
-                        <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
-                          <LinkIcon className="h-3 w-3 shrink-0" />/
-                          {subCat.slug}
-                        </p>
-                      </div>
-
-                      {/* Status Switch */}
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={subCat.status === "active"}
-                          onCheckedChange={(checked) =>
-                            updateStatus(
-                              subCat._id,
-                              checked ? "active" : "inactive",
-                            )
-                          }
-                        />
-                        <span
-                          className={`text-[11px] font-semibold capitalize ${
-                            subCat.status === "active"
-                              ? "text-emerald-500"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {subCat.status}
-                        </span>
-                      </div>
-
-                      {/* Footer: date + actions */}
-                      <div className="pt-2 border-t border-border flex items-center justify-between mt-auto">
-                        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(subCat.createdAt).toDateString()}
-                        </span>
-
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleOpenEditModal(subCat)}
-                            className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                            title="Edit"
-                          >
-                            <SquarePen className="h-3.5 w-3.5" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete this Category?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will
-                                  permanently delete this Category.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-red-600 hover:bg-red-700"
-                                  onClick={() => handleDelete(subCat._id)}
-                                >
-                                  Yes, delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
+            <>
+              {/* ========================================= */}
+              {/* Mobile & Tablet */}
+              {/* ========================================= */}
+              <div
+                id="subcategories-mobile-list"
+                className="xl:hidden max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={subCategoryVar.subCategories.length}
+                  next={fetchMoreSubCategories}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more sub categories...
                     </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop table view  */}
-              <div className="hidden xl:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Slug</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {subCategoryVar.subCategories.length} of{" "}
+                      {subCategoryVar.total} sub categories
+                    </div>
+                  }
+                  scrollableTarget="subcategories-mobile-list"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     {subCategoryVar.subCategories.map((subCat) => (
-                      <TableRow key={subCat._id}>
-                        <TableCell>{subCat.name}</TableCell>
-                        <TableCell>{subCat.slug}</TableCell>
-                        <TableCell>{subCat.category.name}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={subCat.status === "active"}
-                              onCheckedChange={(checked) => {
-                                updateStatus(
-                                  subCat._id,
-                                  checked ? "active" : "inactive",
-                                );
-                              }}
-                            />
-                            <span
-                              className={`text-[11px] font-semibold capitalize ${
+                      <div
+                        key={subCat._id}
+                        className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/20 transition-all flex flex-col"
+                      >
+                        {/* Card Body */}
+                        <div className="p-4 flex flex-col gap-3 flex-1">
+                          {/* Name & Slug */}
+                          <div className="space-y-0.5">
+                            <h4 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
+                              {subCat.name}
+                            </h4>
+                            <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+                              <LinkIcon className="h-3 w-3 shrink-0" />/
+                              {subCat.slug}
+                            </p>
+                          </div>
+
+                          {/* Category Badge & Status */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-block px-2 py-0.5 rounded bg-muted text-[11px] font-semibold text-foreground">
+                              {typeof subCat.category === "object"
+                                ? subCat.category?.name
+                                : "—"}
+                            </span>
+                            <Badge
+                              variant={
                                 subCat.status === "active"
-                                  ? "text-emerald-500"
-                                  : "text-muted-foreground"
-                              }`}
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
                             >
                               {subCat.status}
-                            </span>
+                            </Badge>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(subCat.createdAt).toDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            onClick={() => handleOpenEditModal(subCat)}
-                            className="mr-2"
-                          >
-                            Edit
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive">Delete</Button>
-                            </AlertDialogTrigger>
 
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete this Category?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will
-                                  permanently delete this Category.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
+                          {/* Footer: date + actions */}
+                          <div className="pt-2 border-t border-border flex items-center justify-between mt-auto">
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDataString(
+                                subCat.createdAt
+                                  ? String(subCat.createdAt)
+                                  : "",
+                              )}
+                            </span>
 
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-red-600 hover:bg-red-700"
-                                  onClick={() => handleDelete(subCat._id)}
-                                >
-                                  Yes, delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
-                      </TableRow>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenEditModal(subCat)}
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                                title="Edit"
+                              >
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Sub Category?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Sub Category.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(subCat._id!)}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                </InfiniteScroll>
               </div>
-            </InfiniteScroll>
+
+              {/* ========================================= */}
+              {/* Desktop */}
+              {/* ========================================= */}
+              <div
+                id="subcategories-desktop-list"
+                className="hidden xl:block max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={subCategoryVar.subCategories.length}
+                  next={fetchMoreSubCategories}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more sub categories...
+                    </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {subCategoryVar.subCategories.length} of{" "}
+                      {subCategoryVar.total} sub categories
+                    </div>
+                  }
+                  scrollableTarget="subcategories-desktop-list"
+                >
+                  <Table className="w-full text-left border-collapse">
+                    <TableHeader>
+                      <TableRow className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider hover:bg-muted/50">
+                        <TableHead className="py-3.5 px-6">Name</TableHead>
+                        <TableHead className="py-3.5 px-6">Slug</TableHead>
+                        <TableHead className="py-3.5 px-6">Category</TableHead>
+                        <TableHead className="py-3.5 px-6">Status</TableHead>
+                        <TableHead className="py-3.5 px-6">Created At</TableHead>
+                        <TableHead className="py-3.5 px-6 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-border">
+                      {subCategoryVar.subCategories.map((subCat) => (
+                        <TableRow key={subCat._id} className="hover:bg-muted/30 transition-colors">
+                          <TableCell className="py-4 px-6 font-semibold text-foreground">
+                            {subCat.name}
+                          </TableCell>
+                          <TableCell className="py-4 px-6 font-mono text-muted-foreground">
+                            {subCat.slug}
+                          </TableCell>
+                          <TableCell className="py-4 px-6">
+                            <span className="inline-block px-2.5 py-1 rounded-md bg-muted text-xs font-semibold text-foreground">
+                              {typeof subCat.category === "object"
+                                ? subCat.category?.name
+                                : "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-4 px-6">
+                            <Badge
+                              variant={
+                                subCat.status === "active"
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
+                            >
+                              {subCat.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-4 px-6 text-muted-foreground font-mono">
+                            {formatDataString(
+                              subCat.createdAt ? String(subCat.createdAt) : "",
+                            )}
+                          </TableCell>
+                          <TableCell className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenEditModal(subCat)}
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                                title="Edit"
+                              >
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Sub Category?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Sub Category.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(subCat._id!)}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </InfiniteScroll>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Add / Edit Category Modal Dialog */}
+      {/* Add / Edit Sub Category Modal Dialog */}
       <Dialog
         open={subCategoryVar.isModalOpen}
         onOpenChange={(open) => dispatch(toogleModal(open))}
@@ -593,8 +652,7 @@ const SubCategories = () => {
                   : "Add New Sub Category"}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Enter sub category title, URL slug, upload cover image, and
-                status.
+                Enter sub category title, URL slug, select primary category, and status.
               </DialogDescription>
             </DialogHeader>
 
@@ -613,6 +671,22 @@ const SubCategories = () => {
                     className="h-10 text-xs font-semibold text-foreground bg-background"
                     required
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Status <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={formData.status || "active"}
+                    onChange={(e) =>
+                      handleInputChange("status", e.target.value)
+                    }
+                    className="h-10 w-full px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
 
@@ -633,12 +707,16 @@ const SubCategories = () => {
 
               {/* Select Category  */}
               <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Parent Category <span className="text-destructive">*</span>
+                </label>
                 <select
                   value={formData.category}
                   onChange={(e) =>
                     handleInputChange("category", e.target.value)
                   }
-                  className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
+                  className="h-10 w-full px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
+                  required
                 >
                   <option value="">Select Category</option>
                   {categoryVar.categories.map((category) => (

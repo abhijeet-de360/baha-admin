@@ -54,6 +54,7 @@ export interface AddBannerFormData {
   order: number;
   startDate: string;
   endDate: string;
+  status: 'active' | 'inactive';
 }
 
 const INITIAL_FORM: AddBannerFormData = {
@@ -66,6 +67,7 @@ const INITIAL_FORM: AddBannerFormData = {
   order: 1,
   startDate: "",
   endDate: "",
+  status: 'active'
 };
 
 export default function AddBanners() {
@@ -212,6 +214,7 @@ export default function AddBanners() {
       data.append("image", formData.image);
     }
     data.append("order", String(Number(formData.order) || 0));
+    data.append("status", formData.status || "active");
 
     // Optional start & end dates
     if (formData.startDate) {
@@ -688,68 +691,98 @@ export default function AddBanners() {
                   </div>
                   <div>
                     <CardTitle className="text-base font-semibold">
-                      Sequence & Scheduling
+                      Sequence, Status & Scheduling
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Carousel priority order and automatic campaign
-                      start/expiry dates.
+                      Carousel priority order, display status, and active
+                      campaign dates.
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
 
               <CardContent className="p-5 space-y-4">
-                {/* Order / Sequence */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Sequence Position
-                  </label>
-                  <div className="flex items-center gap-2 max-w-xs">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 cursor-pointer"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          order: Math.max(1, prev.order - 1),
-                        }))
-                      }
-                    >
-                      -
-                    </Button>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="99"
-                      value={formData.order}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          order: Math.max(1, parseInt(e.target.value) || 1),
-                        })
-                      }
-                      className="text-center font-bold font-mono"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 cursor-pointer"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          order: prev.order + 1,
-                        }))
-                      }
-                    >
-                      +
-                    </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Order / Sequence */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Sequence Position
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 cursor-pointer"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            order: Math.max(1, prev.order - 1),
+                          }))
+                        }
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={formData.order}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            order: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="text-center font-bold font-mono"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 cursor-pointer"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            order: prev.order + 1,
+                          }))
+                        }
+                      >
+                        +
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Lower numbers appear first (#1 is the first slide).
+                    </p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Lower numbers appear first (#1 is the first slide).
-                  </p>
+
+                  {/* Status Select */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Status <span className="text-destructive">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={formData.status}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            status: e.target.value as "active" | "inactive",
+                          }))
+                        }
+                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
+                        <span className="text-xs">▼</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Inactive slides are hidden from the storefront hero slider.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Schedule Dates (Optional) */}
@@ -934,9 +967,19 @@ export default function AddBanners() {
                         )}
                       </div>
 
-                      {/* Simulated Slide Order Indicator */}
-                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-white/90 z-10">
-                        Slide #{formData.order}
+                      {/* Simulated Slide Order & Status Indicator */}
+                      <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+                        <Badge
+                          variant={
+                            formData.status === "active" ? "success" : "secondary"
+                          }
+                          className="uppercase text-[9px] px-1.5 py-0"
+                        >
+                          {formData.status}
+                        </Badge>
+                        <span className="px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-white/90">
+                          Slide #{formData.order}
+                        </span>
                       </div>
 
                       {/* Simulated Dots indicator */}
@@ -996,8 +1039,18 @@ export default function AddBanners() {
                       </div>
 
                       {/* Badge in mobile */}
-                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-white font-mono">
-                        #{formData.order}
+                      <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                        <Badge
+                          variant={
+                            formData.status === "active" ? "success" : "secondary"
+                          }
+                          className="uppercase text-[8px] px-1 py-0"
+                        >
+                          {formData.status}
+                        </Badge>
+                        <span className="px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-white font-mono">
+                          #{formData.order}
+                        </span>
                       </div>
                     </div>
 
@@ -1061,13 +1114,25 @@ export default function AddBanners() {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-1">
+                  <div className="flex items-center justify-between py-1 border-b border-border/60">
                     <span className="text-muted-foreground">
                       Carousel Sequence
                     </span>
                     <span className="font-bold text-foreground bg-muted px-2 py-0.5 rounded">
                       Position #{formData.order}
                     </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge
+                      variant={
+                        formData.status === "active" ? "success" : "secondary"
+                      }
+                      className="uppercase text-[10px]"
+                    >
+                      {formData.status}
+                    </Badge>
                   </div>
                 </div>
 

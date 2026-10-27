@@ -196,20 +196,3 @@ export const deleteProduct = (id: string, navigate?: any) => {
       });
   };
 };
-
-export const toggleProductStatus = (id: string, newStatus: string) => {
-  return async function toggleProductStatusThunk(dispatch: AppDispatch) {
-    const formData = new FormData();
-    formData.append("data", JSON.stringify({ status: newStatus }));
-
-    await service
-      .updateProduct(id, formData)
-      .then(() => {
-        dispatch(changeProductStatus({ id, status: newStatus }));
-        successHandler(`Product status changed to ${newStatus}`);
-      })
-      .catch((error: any) => {
-        errorHandler(error);
-      });
-  };
-};

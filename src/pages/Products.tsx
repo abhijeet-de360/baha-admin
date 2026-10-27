@@ -9,6 +9,7 @@ import {
   Filter,
   Sparkles,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,16 +34,23 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Switch } from "@/components/ui/switch";
 import { useDispatch, useSelector } from "react-redux";
 import {
   deleteProduct,
   getAllProducts,
-  toggleProductStatus,
 } from "@/store/productSlice";
 import type { AppDispatch, RootState } from "@/store/store";
 import { getAllCategories } from "@/store/categorySlice";
 import { getAllSize } from "@/store/sizeSlice";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Products() {
   const dispatch = useDispatch<AppDispatch>();
@@ -62,21 +70,6 @@ export default function Products() {
 
   // Ref
   const searchTimeoutRef = useRef<any>(null);
-
-  // Badge helpers
-  const getStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "active":
-        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
-      case "draft":
-        return "bg-amber-500/10 text-amber-600 border-amber-500/20";
-      case "inactive":
-        return "bg-destructive/10 text-destructive border-destructive/20";
-      default:
-        return "bg-muted text-muted-foreground border-border";
-    }
-  };
-
   // Derive total stock for a product across all variants/options
   const getTotalStock = (product: any): number =>
     (product.variants ?? []).reduce(
@@ -184,12 +177,6 @@ export default function Products() {
   const handleDelete = (id: string) => {
     dispatch(deleteProduct(id));
   };
-
-  // handle status toggle
-  const handleStatusToggle = (id: string, newStatus: string) => {
-    dispatch(toggleProductStatus(id, newStatus));
-  };
-
   // Pagination calculations and handler
   const totalProducts = productsVar.total || 0;
   const totalPages = Math.ceil(totalProducts / formVar.limit) || 1;
@@ -263,25 +250,6 @@ export default function Products() {
       dispatch(getAllSize("", 0, 0, "")),
     ]);
   }, []);
-
-   // Loading state when initial fetch is pending
-  if (productsVar.status === "loading" && productsVar.products.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-500 animate-pulse">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
-        <div className="text-center space-y-1">
-          <h2 className="text-lg font-semibold text-foreground">
-            Loading Hero Slide Details
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Fetching slide configuration and assets...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4 max-w-full mx-auto">
@@ -403,7 +371,7 @@ export default function Products() {
 
         {/* Product List: Mobile/Tablet Cards (< md) & Desktop Table (>= md) */}
         <CardContent className="p-0">
-          {productsVar.products.length === 0 ? (
+          {productsVar.status !== "loading" && productsVar.products.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <div className="p-4 rounded-full bg-muted inline-block text-muted-foreground">
                 <Package className="h-8 w-8" />
@@ -526,25 +494,17 @@ export default function Products() {
                           <span className="text-[10px] text-muted-foreground block font-medium mb-1">
                             Status
                           </span>
-                          <div className="flex items-center gap-1.5 justify-end">
-                            <Switch
-                              checked={product.status === "active"}
-                              onCheckedChange={(checked) => {
-                                handleStatusToggle(
-                                  product._id,
-                                  checked ? "active" : "inactive",
-                                );
-                              }}
-                            />
-                            <span
-                              className={`text-[11px] font-semibold capitalize ${
+                          <div className="flex items-center justify-end">
+                            <Badge
+                              variant={
                                 product.status === "active"
-                                  ? "text-emerald-500"
-                                  : "text-muted-foreground"
-                              }`}
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
                             >
                               {product.status}
-                            </span>
+                            </Badge>
                           </div>
                         </div>
                       </div>
@@ -555,9 +515,9 @@ export default function Products() {
                           variant="outline"
                           size="sm"
                           onClick={() => navigate(`/products/${product._id}`)}
-                          className="h-8 px-3 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                          className="h-8 w-8 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                         >
-                          <Eye className="h-3.5 w-3.5 mr-1" /> View
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="outline"
@@ -565,18 +525,19 @@ export default function Products() {
                           onClick={() =>
                             navigate(`/products/edit/${product._id}`)
                           }
-                          className="h-8 px-3 text-xs text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                          className="h-8 w-8 text-xs text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                         >
-                          <SquarePen className="h-3.5 w-3.5 mr-1" /> Edit
+                          <SquarePen className="h-3.5 w-3.5" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="outline"
-                              size="sm"
-                              className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                              size="icon"
+                              title="Delete"
+                              className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                             >
-                              Delete
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </AlertDialogTrigger>
 
@@ -610,19 +571,19 @@ export default function Products() {
 
               {/* Desktop Table View (Visible on 'md' breakpoint and larger) */}
               <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider">
-                      <th className="py-3 px-6 min-w-[260px]">Product Info</th>
-                      <th className="py-3 px-6">Category</th>
-                      <th className="py-3 px-6">Colors</th>
-                      <th className="py-3 px-6">Price</th>
-                      <th className="py-3 px-6">Stock</th>
-                      <th className="py-3 px-6">Status</th>
-                      <th className="py-3 px-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
+                <Table className="w-full text-left text-xs border-collapse">
+                  <TableHeader>
+                    <TableRow className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider hover:bg-muted/50">
+                      <TableHead className="py-3 px-6 min-w-[260px]">Product Info</TableHead>
+                      <TableHead className="py-3 px-6">Category</TableHead>
+                      <TableHead className="py-3 px-6">Colors</TableHead>
+                      <TableHead className="py-3 px-6">Price</TableHead>
+                      <TableHead className="py-3 px-6">Stock</TableHead>
+                      <TableHead className="py-3 px-6">Status</TableHead>
+                      <TableHead className="py-3 px-6 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-border">
                     {productsVar.products.map((product: any) => {
                       const primaryImg =
                         product.variants?.[0]?.images?.[0]?.imageUrl ?? "";
@@ -634,12 +595,12 @@ export default function Products() {
                       const subCategoryName =
                         product.subCategory?.[0]?.name ?? "";
                       return (
-                        <tr
+                        <TableRow
                           key={product._id}
                           className="hover:bg-muted/30 transition-colors group"
                         >
                           {/* Info Column */}
-                          <td className="py-4 px-6">
+                          <TableCell className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <div className="h-12 w-12 rounded-xl overflow-hidden border border-border bg-muted shrink-0">
                                 {primaryImg ? (
@@ -670,10 +631,10 @@ export default function Products() {
                                 </p>
                               </div>
                             </div>
-                          </td>
+                          </TableCell>
 
                           {/* Category / Sub-category Column */}
-                          <td className="py-4 px-6">
+                          <TableCell className="py-4 px-6">
                             <div className="space-y-1">
                               <span className="inline-block px-2 py-0.5 rounded bg-muted text-[11px] font-semibold">
                                 {categoryName}
@@ -684,10 +645,10 @@ export default function Products() {
                                 </span>
                               )}
                             </div>
-                          </td>
+                          </TableCell>
 
                           {/* Colors Column */}
-                          <td className="py-4 px-6">
+                          <TableCell className="py-4 px-6">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {(product.variants ?? []).map((v: any) => (
                                 <span
@@ -698,10 +659,10 @@ export default function Products() {
                                 />
                               ))}
                             </div>
-                          </td>
+                          </TableCell>
 
                           {/* Price Column */}
-                          <td className="py-4 px-6">
+                          <TableCell className="py-4 px-6">
                             <div className="flex items-baseline gap-1.5">
                               <span className="font-bold text-foreground">
                                 ₹{(discountPrice ?? price).toLocaleString()}
@@ -712,10 +673,10 @@ export default function Products() {
                                 </span>
                               )}
                             </div>
-                          </td>
+                          </TableCell>
 
                           {/* Total Stock Column */}
-                          <td className="py-4 px-6">
+                          <TableCell className="py-4 px-6">
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                 totalStock === 0
@@ -727,34 +688,24 @@ export default function Products() {
                             >
                               {totalStock} units
                             </span>
-                          </td>
+                          </TableCell>
 
                           {/* Status Column */}
-                          <td className="py-4 px-6">
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={product.status === "active"}
-                                onCheckedChange={(checked) => {
-                                  handleStatusToggle(
-                                    product._id,
-                                    checked ? "active" : "inactive",
-                                  );
-                                }}
-                              />
-                              <span
-                                className={`text-[11px] font-semibold capitalize ${
-                                  product.status === "active"
-                                    ? "text-emerald-500"
-                                    : "text-muted-foreground"
-                                }`}
-                              >
-                                {product.status}
-                              </span>
-                            </div>
-                          </td>
+                          <TableCell className="py-4 px-6">
+                            <Badge
+                              variant={
+                                product.status === "active"
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
+                            >
+                              {product.status}
+                            </Badge>
+                          </TableCell>
 
                           {/* Actions */}
-                          <td className="py-4 px-6 text-right">
+                          <TableCell className="py-4 px-6 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <Button
                                 variant="outline"
@@ -762,9 +713,9 @@ export default function Products() {
                                 onClick={() =>
                                   navigate(`/products/${product._id}`)
                                 }
-                                className="h-8 px-3 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                                className="h-8 w-8 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                               >
-                                <Eye className="h-3.5 w-3.5 mr-1" /> View
+                                <Eye className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 variant="outline"
@@ -772,18 +723,19 @@ export default function Products() {
                                 onClick={() =>
                                   navigate(`/products/edit/${product._id}`)
                                 }
-                                className="h-8 px-3 text-xs text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                                className="h-8 w-8 text-xs text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                               >
-                                <SquarePen className="h-3.5 w-3.5 mr-1" /> Edit
+                                <SquarePen className="h-3.5 w-3.5" />
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button
                                     variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                                   >
-                                    Delete
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </AlertDialogTrigger>
 
@@ -812,12 +764,12 @@ export default function Products() {
                                 </AlertDialogContent>
                               </AlertDialog>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </>
           )}

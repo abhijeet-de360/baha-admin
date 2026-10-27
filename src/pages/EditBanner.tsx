@@ -21,7 +21,6 @@ import {
   Loader2,
   AlertCircle,
   Sliders,
-  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +55,7 @@ export interface EditBannerFormData {
   buttonText: string;
   buttonLinkTarget: "category" | "product" | "custom";
   buttonLink: string;
-  image: File | string;
+  image: File | string | null;
   order: number;
   status: "active" | "inactive";
   startDate: string;
@@ -196,7 +195,7 @@ export default function EditBanner() {
 
   // Clear existing image completely
   const handleClearExistingImage = () => {
-    setFormData((prev) => ({ ...prev, existingImageUrl: "", image: null }));
+    setFormData((prev) => ({ ...prev, image: null }));
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -898,45 +897,31 @@ export default function EditBanner() {
                     </p>
                   </div>
 
-                  {/* Status Toggle */}
+                  {/* Status Select */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Display Status
+                      Status <span className="text-destructive">*</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2 h-9">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({ ...prev, status: "active" }))
-                        }
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                          formData.status === "active"
-                            ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 font-bold"
-                            : "bg-background border-border text-muted-foreground hover:bg-muted/40"
-                        }`}
-                      >
-                        <Check className="w-3.5 h-3.5" /> Active
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
+                    <div className="relative">
+                      <select
+                        value={formData.status}
+                        onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            status: "inactive",
+                            status: e.target.value as "active" | "inactive",
                           }))
                         }
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                          formData.status === "inactive"
-                            ? "bg-slate-500/15 border-slate-500/50 text-slate-600 dark:text-slate-300 font-bold"
-                            : "bg-background border-border text-muted-foreground hover:bg-muted/40"
-                        }`}
+                        className="h-9 w-full appearance-none rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
                       >
-                        Inactive
-                      </button>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
+                        <span className="text-xs">▼</span>
+                      </div>
                     </div>
                     <p className="text-[10px] text-muted-foreground">
-                      Inactive slides are hidden from the storefront hero
-                      slider.
+                      Inactive slides are hidden from the storefront hero slider.
                     </p>
                   </div>
                 </div>

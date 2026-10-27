@@ -47,6 +47,16 @@ import {
   toogleModal,
 } from "@/store/colorSlice";
 import { warningHandler } from "@/shared/_helper/responseHelper";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatDataString } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 export default function Colors() {
   const dispatch = useDispatch<AppDispatch>();
@@ -80,7 +90,11 @@ export default function Colors() {
 
   // Infinite Scroll fetch more
   const fetchMoreColors = () => {
-    if (colorsVar.status === "loading" || colorsVar.colors.length >= colorsVar.total) return;
+    if (
+      colorsVar.status === "loading" ||
+      colorsVar.colors.length >= colorsVar.total
+    )
+      return;
 
     const newOffset = formVar.offset + formVar.limit;
 
@@ -317,21 +331,15 @@ export default function Colors() {
             {/* Filters and View Switcher */}
             <div className="flex items-center gap-2 shrink-0">
               {/* Status Filter */}
-              <div className="flex items-center gap-1 bg-muted p-1 rounded-xl">
-                {(["all", "active", "inactive"] as const).map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => handleStatusChange(st)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer capitalize ${
-                      formVar.status === st
-                        ? "bg-background text-foreground shadow-2xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
-              </div>
+              <select
+                value={formVar.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer shadow-2xs"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
           </div>
         </div>
@@ -360,179 +368,77 @@ export default function Colors() {
               </Button>
             </div>
           ) : (
-            <InfiniteScroll
-              dataLength={colorsVar.colors.length}
-              next={fetchMoreColors}
-              hasMore={hasMore}
-              loader={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                  Loading more colors...
-                </div>
-              }
-              endMessage={
-                colorsVar.colors.length > 0 && (
-                  <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                    Showing all {colorsVar.colors.length} of{" "}
-                    {colorsVar.total} colors
-                  </div>
-                )
-              }
-            >
-              {/* Mobile & Tablet Card View (screens smaller than lg) */}
-              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                {colorsVar.colors.map((color) => {
-                  const isCopied = copiedHex === color.hexCode;
-                  return (
-                    <Card
-                      key={color._id}
-                      className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3"
-                    >
-                      {/* Swatch & Status Header */}
-                      <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0"
-                            style={{ backgroundColor: color.hexCode }}
-                          />
-                          <div>
-                            <h4 className="font-bold text-foreground text-sm">
-                              {color.name}
-                            </h4>
-                            <p className="text-[11px] text-muted-foreground font-mono">
-                              {color.createdAt
-                                ? new Date(color.createdAt)
-                                    .toISOString()
-                                    .split("T")[0]
-                                : "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border capitalize shrink-0 ${
-                            color.status?.toLowerCase() === "active"
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                              : "bg-muted text-muted-foreground border-border"
-                          }`}
-                        >
-                          {color.status}
-                        </span>
-                      </div>
-
-                      {/* HEX Code Bar */}
-                      <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-xl border border-border/40 text-xs">
-                        <span className="text-muted-foreground font-medium">
-                          HEX Code:
-                        </span>
-                        <div className="inline-flex items-center gap-1.5 font-mono font-bold text-foreground">
-                          <span>{color.hexCode}</span>
-                          <button
-                            onClick={() => handleCopyHex(color.hexCode)}
-                            className="cursor-pointer text-muted-foreground hover:text-foreground"
-                            title="Copy HEX"
-                          >
-                            {isCopied ? (
-                              <Check className="h-3.5 w-3.5 text-primary" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenEditModal(color)}
-                          className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
-                          title="Edit"
-                        >
-                          <SquarePen className="h-3.5 w-3.5" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Delete this Color?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will
-                                permanently delete this Color.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => handleDelete(color?._id)}
-                              >
-                                Yes, delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {/* Desktop Table View (screens lg and larger) */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                      <th className="py-3.5 px-6">Color Swatch</th>
-                      <th className="py-3.5 px-6">Color Name</th>
-                      <th className="py-3.5 px-6">HEX Code</th>
-                      <th className="py-3.5 px-6">Status</th>
-                      <th className="py-3.5 px-6">Created Date</th>
-                      <th className="py-3.5 px-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border text-xs">
-                    {colorsVar.colors?.map((color) => {
+            <>
+              {/* ========================================= */}
+              {/* Mobile & Tablet */}
+              {/* ========================================= */}
+              <div
+                id="colors-mobile-list"
+                className="lg:hidden max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={colorsVar.colors.length}
+                  next={fetchMoreColors}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground">
+                      Loading more colors...
+                    </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground">
+                      Showing all {colorsVar.colors.length} of {colorsVar.total}{" "}
+                      colors
+                    </div>
+                  }
+                  scrollableTarget="colors-mobile-list"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                    {colorsVar.colors.map((color) => {
                       const isCopied = copiedHex === color.hexCode;
                       return (
-                        <tr
+                        <Card
                           key={color._id}
-                          className="hover:bg-muted/30 transition-colors group"
+                          className="rounded-2xl border border-border/70 bg-card/60 shadow-xs hover:border-primary/40 transition-all p-4 space-y-3"
                         >
-                          {/* Swatch */}
-                          <td className="py-4 px-6">
+                          {/* Swatch & Status Header */}
+                          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
                             <div className="flex items-center gap-3">
                               <div
-                                className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
+                                className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0"
                                 style={{ backgroundColor: color.hexCode }}
                               />
+                              <div>
+                                <h4 className="font-bold text-foreground text-sm">
+                                  {color.name}
+                                </h4>
+                                <p className="text-[11px] text-muted-foreground font-mono">
+                                  {formatDataString(color.createdAt || "")}
+                                </p>
+                              </div>
                             </div>
-                          </td>
+                            <Badge
+                              variant={
+                                color.status === "active"
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
+                            >
+                              {color.status}
+                            </Badge>
+                          </div>
 
-                          {/* Name */}
-                          <td className="py-4 px-6 font-bold text-foreground text-sm">
-                            {color.name}
-                          </td>
-
-                          {/* HEX Code */}
-                          <td className="py-4 px-6 font-mono font-semibold">
-                            <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
-                              <Hash className="h-3 w-3 text-muted-foreground" />
+                          {/* HEX Code Bar */}
+                          <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-xl border border-border/40 text-xs">
+                            <span className="text-muted-foreground font-medium">
+                              HEX Code:
+                            </span>
+                            <div className="inline-flex items-center gap-1.5 font-mono font-bold text-foreground">
                               <span>{color.hexCode}</span>
                               <button
                                 onClick={() => handleCopyHex(color.hexCode)}
-                                className="cursor-pointer text-muted-foreground hover:text-foreground ml-1"
+                                className="cursor-pointer text-muted-foreground hover:text-foreground"
                                 title="Copy HEX"
                               >
                                 {isCopied ? (
@@ -542,86 +448,223 @@ export default function Colors() {
                                 )}
                               </button>
                             </div>
-                          </td>
+                          </div>
 
-                          {/* Status */}
-                          <td className="py-4 px-6">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize ${
-                                color.status?.toLowerCase() === "active"
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                  : "bg-muted text-muted-foreground border-border"
-                              }`}
+                          {/* Action Buttons */}
+                          <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-border/40">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleOpenEditModal(color)}
+                              className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
+                              title="Edit"
                             >
-                              {color.status}
-                            </span>
-                          </td>
+                              <SquarePen className="h-3.5 w-3.5" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  title="Delete"
+                                  className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
 
-                          {/* Created Date */}
-                          <td className="py-4 px-6 text-muted-foreground font-mono">
-                            {color.createdAt
-                              ? new Date(color.createdAt)
-                                  .toISOString()
-                                  .split("T")[0]
-                              : "—"}
-                          </td>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Delete this Color?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will
+                                    permanently delete this Color.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
 
-                          {/* Actions */}
-                          <td className="py-4 px-6 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => handleOpenEditModal(color)}
-                                title="Edit"
-                                className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
-                              >
-                                <SquarePen className="h-3.5 w-3.5" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={() => handleDelete(color?._id)}
                                   >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Delete this Color?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This action cannot be undone. This will
-                                      permanently delete this Color.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>
-                                      Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      className="bg-red-600 hover:bg-red-700"
-                                      onClick={() => handleDelete(color?._id)}
-                                    >
-                                      Yes, delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </td>
-                        </tr>
+                                    Yes, delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </Card>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                </InfiniteScroll>
               </div>
-            </InfiniteScroll>
+
+              {/* ========================================= */}
+              {/* Desktop */}
+              {/* ========================================= */}
+              <div
+                id="colors-desktop-list"
+                className="hidden lg:block max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={colorsVar.colors.length}
+                  next={fetchMoreColors}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground">
+                      Loading more colors...
+                    </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground">
+                      Showing all {colorsVar.colors.length} of {colorsVar.total}{" "}
+                      colors
+                    </div>
+                  }
+                  scrollableTarget="colors-desktop-list"
+                >
+                  <Table className="w-full text-left border-collapse">
+                    <TableHeader>
+                      <TableRow className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider hover:bg-muted/50">
+                        <TableHead className="py-3.5 px-6">
+                          Color Swatch
+                        </TableHead>
+                        <TableHead className="py-3.5 px-6">
+                          Color Name
+                        </TableHead>
+                        <TableHead className="py-3.5 px-6">HEX Code</TableHead>
+                        <TableHead className="py-3.5 px-6">Status</TableHead>
+                        <TableHead className="py-3.5 px-6">
+                          Created Date
+                        </TableHead>
+                        <TableHead className="py-3.5 px-6 text-right">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody className="divide-y divide-border">
+                      {colorsVar.colors?.map((color) => {
+                        const isCopied = copiedHex === color.hexCode;
+                        return (
+                          <TableRow
+                            key={color._id}
+                            className="hover:bg-muted/30 transition-colors group"
+                          >
+                            {/* Swatch */}
+                            <TableCell className="py-4 px-6">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-border shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
+                                  style={{ backgroundColor: color.hexCode }}
+                                />
+                              </div>
+                            </TableCell>
+
+                            {/* Name */}
+                            <TableCell className="py-4 px-6 font-bold text-foreground text-sm">
+                              {color.name}
+                            </TableCell>
+
+                            {/* HEX Code */}
+                            <TableCell className="py-4 px-6 font-mono font-semibold">
+                              <div className="inline-flex items-center gap-1.5 bg-muted text-foreground px-2.5 py-1 rounded-lg border border-border">
+                                <span>{color.hexCode}</span>
+                                <button
+                                  onClick={() => handleCopyHex(color.hexCode)}
+                                  className="cursor-pointer text-muted-foreground hover:text-foreground ml-1"
+                                  title="Copy HEX"
+                                >
+                                  {isCopied ? (
+                                    <Check className="h-3.5 w-3.5 text-primary" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </TableCell>
+
+                            {/* Status */}
+                            <TableCell className="py-4 px-6">
+                              <Badge
+                                variant={
+                                  color.status === "active"
+                                    ? "success"
+                                    : "secondary"
+                                }
+                                className="uppercase"
+                              >
+                                {color.status}
+                              </Badge>
+                            </TableCell>
+
+                            {/* Created Date */}
+                            <TableCell className="py-4 px-6 text-muted-foreground font-mono">
+                              {formatDataString(color.createdAt || "")}
+                            </TableCell>
+
+                            {/* Actions */}
+                            <TableCell className="py-4 px-6 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => handleOpenEditModal(color)}
+                                  title="Edit"
+                                  className="h-8 w-8 text-amber-500 border-border hover:bg-amber-500/10 cursor-pointer"
+                                >
+                                  <SquarePen className="h-3.5 w-3.5" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      title="Delete"
+                                      className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete this Color?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. This will
+                                        permanently delete this Color.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        className="bg-red-600 hover:bg-red-700"
+                                        onClick={() => handleDelete(color?._id)}
+                                      >
+                                        Yes, delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </InfiniteScroll>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

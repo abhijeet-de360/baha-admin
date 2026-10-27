@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Image,
   Plus,
   Search,
   Sliders,
@@ -12,16 +11,12 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
-  Layers,
   Calendar,
-  Upload,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +27,7 @@ import {
 
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
-import { deleteBanner, getAllBanners, updateBanner } from "@/store/bannerSlice";
+import { deleteBanner, getAllBanners } from "@/store/bannerSlice";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { formatDataString } from "@/lib/utils";
 
 export default function Banners() {
   const navigate = useNavigate();
@@ -51,13 +47,12 @@ export default function Banners() {
 
   const dispatch = useDispatch<AppDispatch>();
 
-  const searchTimeoutRef = useRef(null);
+  const searchTimeoutRef = useRef<any>(null);
 
   const [formVar, setFormVar] = useState({
     keyword: "",
     status: "",
   });
-  const [hasMore, setHasMore] = useState(false);
 
   // Modals state
   const [previewBanner, setPreviewBanner] = useState<any>(null);
@@ -97,11 +92,7 @@ export default function Banners() {
     dispatch(getAllBanners(formVar.keyword, status));
   };
 
-  const handleToggleStatus = (bannerId: string, checked: boolean) => {
-    const formData = new FormData();
-    formData.append("status", checked ? "active" : "inactive");
-    dispatch(updateBanner(bannerId, formData));
-  };
+
 
   const getStatusBadge = (status: any) => {
     switch (status?.toLowerCase?.() || status) {
@@ -157,302 +148,137 @@ export default function Banners() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search hero slide title, subtitle or ID..."
-              value={formVar.keyword}
-              onChange={(e) => handleInputChange(e.target.value)}
-              className="pl-9 bg-background"
-            />
+      <Card className="rounded-3xl border border-border shadow-xs overflow-hidden bg-card">
+        {/* Filter and Search Bar */}
+        <div className="p-4 sm:p-6 border-b border-border space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search hero slide title, subtitle or ID..."
+                value={formVar.keyword}
+                onChange={(e) => handleInputChange(e.target.value)}
+                className="pl-9 bg-background"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <select
+                value={formVar.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
+        </div>
 
-          {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            <select
-              value={formVar.status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className="px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Mobile Card View */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:hidden gap-4">
-        {bannerVar.banners.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-muted-foreground bg-card border border-border rounded-lg p-6">
-            No hero slides found matching your search.
-          </div>
-        ) : (
-          bannerVar.banners.map((banner) => (
-            <Card
-              key={banner._id || banner.id}
-              className="overflow-hidden border-border bg-card flex flex-col justify-between"
-            >
-              <div>
-                {/* Image Header */}
-                <div
-                  className="relative h-44 w-full bg-slate-900 overflow-hidden group cursor-pointer"
-                  onClick={() => setPreviewBanner(banner)}
-                >
-                  <img
-                    src={banner.image || banner.imageUrl}
-                    alt={banner.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-2 right-2 flex items-center gap-1.5">
-                    {getStatusBadge(banner.status)}
-                  </div>
-                  <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur-sm text-[11px] text-white font-medium">
-                    Slide Position: #{banner.order ?? 1}
-                  </div>
-                </div>
-
-                {/* Body */}
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-mono text-amber-500 truncate max-w-[150px]">
-                      {banner._id || banner.id}
-                    </span>
-                    {banner.startDate && (
-                      <span className="flex items-center gap-1 text-[11px]">
-                        <Calendar className="w-3 h-3" />{" "}
-                        {new Date(banner.startDate).toLocaleDateString()} to{" "}
-                        {banner.endDate
-                          ? new Date(banner.endDate).toLocaleDateString()
-                          : "Ongoing"}
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="font-bold text-foreground text-base line-clamp-1">
-                    {banner.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {banner.subTitle || banner.subtitle}
-                  </p>
-                </div>
+        <CardContent className="p-0">
+          {bannerVar.status !== "loading" && bannerVar.banners.length === 0 ? (
+            <div className="p-12 text-center space-y-3">
+              <div className="p-3.5 rounded-full bg-muted text-muted-foreground w-fit mx-auto">
+                <Sliders className="h-8 w-8 text-amber-500" />
               </div>
-
-              {/* Actions Footer */}
-              <div className="p-3 bg-muted/40 border-t border-border flex items-center justify-end gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
-                    onClick={() => setPreviewBanner(banner)}
+              <h3 className="text-sm font-bold text-foreground">
+                No hero slides found
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                {formVar.keyword || (formVar.status && formVar.status !== "all")
+                  ? "Try adjusting your search criteria or status filter."
+                  : "Get started by creating your first homepage hero slide."}
+              </p>
+              <Button
+                onClick={handleOpenAdd}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-4 py-2 mt-2 inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Hero Slide
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Mobile Card View */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:hidden gap-4">
+                {bannerVar.banners.map((banner) => (
+                  <div
+                    key={banner._id}
+                    className="overflow-hidden border-border bg-card flex flex-col justify-between"
                   >
-                    <Eye className="h-3.5 w-3.5" /> Preview
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                    onClick={() => navigate(`/banner/edit/${banner._id}`)}
-                    title="Edit"
-                  >
-                    <SquarePen className="h-3.5 w-3.5" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        title="Delete"
-                        className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </AlertDialogTrigger>
-
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this Banner?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently
-                          delete this Banner.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-red-600 hover:bg-red-700"
-                          onClick={() => handleDelete(banner._id)}
-                        >
-                          Yes, delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Desktop Table View */}
-      <Card className="hidden xl:block bg-card border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
-                <th className="py-3.5 px-4 font-semibold w-16 text-center">
-                  Slide #
-                </th>
-                <th className="py-3.5 px-4 font-semibold w-32">Slide Image</th>
-                <th className="py-3.5 px-4 font-semibold">Title & Subtitle</th>
-                <th className="py-3.5 px-4 font-semibold">Button CTA</th>
-                <th className="py-3.5 px-4 font-semibold">Schedule</th>
-                <th className="py-3.5 px-4 font-semibold">Status</th>
-                <th className="py-3.5 px-4 font-semibold text-right">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {bannerVar.banners.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    No hero slides found.
-                  </td>
-                </tr>
-              ) : (
-                bannerVar.banners.map((banner) => (
-                  <tr
-                    key={banner._id || banner.id}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Sequence Controls */}
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span className="font-bold text-xs text-foreground bg-muted px-1.5 py-0.5 rounded">
-                          #{banner.order ?? 1}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Image Thumbnail */}
-                    <td className="py-3 px-4">
+                    <div>
+                      {/* Image Header */}
                       <div
-                        className="relative w-24 h-14 rounded-md overflow-hidden bg-slate-900 border border-border group cursor-pointer"
+                        className="relative h-44 w-full bg-slate-900 overflow-hidden group cursor-pointer"
                         onClick={() => setPreviewBanner(banner)}
                       >
                         <img
                           src={banner.image || banner.imageUrl}
                           alt={banner.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <Eye className="w-4 h-4 text-white" />
+                        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                          <Badge
+                            variant={
+                              banner.status === "active"
+                                ? "success"
+                                : "secondary"
+                            }
+                            className="uppercase"
+                          >
+                            {banner.status}
+                          </Badge>
+                        </div>
+                        <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur-sm text-[11px] text-white font-medium">
+                          Slide Position: #{banner.order ?? 1}
                         </div>
                       </div>
-                    </td>
 
-                    {/* Title & Details */}
-                    <td className="py-3 px-4 max-w-sm">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[11px] font-mono font-medium text-amber-500 truncate max-w-[150px]">
-                          {banner._id || banner.id}
-                        </span>
-                      </div>
-                      <h4 className="font-semibold text-foreground text-sm line-clamp-1">
-                        {banner.title}
-                      </h4>
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {banner.subTitle || banner.subtitle}
-                      </p>
-                    </td>
-
-                    {/* CTA */}
-                    <td className="py-3 px-4">
-                      <div className="text-xs font-medium text-foreground">
-                        {banner.buttonLabel || banner.buttonText}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground flex items-center gap-0.5 font-mono truncate max-w-[140px]">
-                        <ExternalLink className="w-2.5 h-2.5 shrink-0" />{" "}
-                        {banner.buttonLink}
-                      </div>
-                    </td>
-
-                    {/* Schedule */}
-                    <td className="py-3 px-4 text-xs text-muted-foreground">
-                      {banner.startDate ? (
-                        <div>
-                          <div>
-                            {new Date(banner.startDate).toLocaleDateString()}
-                          </div>
-                          <div className="text-[11px] text-muted-foreground/70">
-                            to{" "}
-                            {banner.endDate
-                              ? new Date(banner.endDate).toLocaleDateString()
-                              : "Forever"}
-                          </div>
+                      {/* Body */}
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          {banner.startDate && (
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <Calendar className="w-3 h-3" />{" "}
+                              {formatDataString(banner.startDate)} to{" "}
+                              {banner.endDate
+                                ? formatDataString(banner.endDate)
+                                : "Ongoing"}
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground/60 italic">
-                          Always Active
-                        </span>
-                      )}
-                    </td>
 
-                    {/* Status */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={banner.status === "active"}
-                          onCheckedChange={(checked) =>
-                            handleToggleStatus(banner._id || banner.id, checked)
-                          }
-                        />
-                        <span
-                          className={`text-xs font-semibold capitalize ${
-                            banner.status === "active"
-                              ? "text-emerald-500"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {banner.status || "inactive"}
-                        </span>
+                        <h3 className="font-bold text-foreground text-base line-clamp-1">
+                          {banner.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {banner.subTitle || banner.subtitle}
+                        </p>
                       </div>
-                    </td>
+                    </div>
 
-                    {/* Actions */}
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    {/* Actions Footer */}
+                    <div className="p-3 bg-muted/40 border-t border-border flex items-center justify-end gap-2">
+                      <div className="flex items-center gap-1.5">
                         <Button
                           variant="outline"
-                          size="icon"
+                          size="sm"
+                          className="h-8 w-8 text-xs text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                           onClick={() => setPreviewBanner(banner)}
-                          title="View"
-                          className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="outline"
                           size="icon"
+                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                           onClick={() => navigate(`/banner/edit/${banner._id}`)}
                           title="Edit"
-                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
                         >
                           <SquarePen className="h-3.5 w-3.5" />
                         </Button>
-                        {/* Delete action button */}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
@@ -480,7 +306,7 @@ export default function Banners() {
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-red-600 hover:bg-red-700"
-                                onClick={() => handleDelete(banner._id)}
+                                onClick={() => handleDelete(banner._id || "")}
                               >
                                 Yes, delete
                               </AlertDialogAction>
@@ -488,13 +314,193 @@ export default function Banners() {
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden xl:block bg-card border-border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
+                        <th className="py-3.5 px-4 font-semibold w-16 text-center">
+                          Slide #
+                        </th>
+                        <th className="py-3.5 px-4 font-semibold w-32">
+                          Slide Image
+                        </th>
+                        <th className="py-3.5 px-4 font-semibold">
+                          Title & Subtitle
+                        </th>
+                        <th className="py-3.5 px-4 font-semibold">
+                          Button CTA
+                        </th>
+                        <th className="py-3.5 px-4 font-semibold">Schedule</th>
+                        <th className="py-3.5 px-4 font-semibold">Status</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {bannerVar.banners.map((banner) => (
+                        <tr
+                          key={banner._id || banner.id}
+                          className="hover:bg-muted/30 transition-colors"
+                        >
+                          {/* Sequence Controls */}
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="font-bold text-xs text-foreground bg-muted px-1.5 py-0.5 rounded">
+                                #{banner.order ?? 1}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Image Thumbnail */}
+                          <td className="py-3 px-4">
+                            <div
+                              className="relative w-24 h-14 rounded-md overflow-hidden bg-slate-900 border border-border group cursor-pointer"
+                              onClick={() => setPreviewBanner(banner)}
+                            >
+                              <img
+                                src={banner.image || banner.imageUrl}
+                                alt={banner.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <Eye className="w-4 h-4 text-white" />
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Title & Details */}
+                          <td className="py-3 px-4 max-w-sm">
+                            <h4 className="font-semibold text-foreground text-sm line-clamp-1">
+                              {banner.title}
+                            </h4>
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {banner.subTitle || banner.subtitle}
+                            </p>
+                          </td>
+
+                          {/* CTA */}
+                          <td className="py-3 px-4">
+                            <div className="text-xs font-medium text-foreground">
+                              {banner.buttonLabel || banner.buttonText}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground flex items-center gap-0.5 font-mono truncate max-w-[140px]">
+                              <ExternalLink className="w-2.5 h-2.5 shrink-0" />{" "}
+                              {banner.buttonLink}
+                            </div>
+                          </td>
+
+                          {/* Schedule */}
+                          <td className="py-3 px-4 text-xs text-muted-foreground">
+                            {banner.startDate ? (
+                              <div>
+                                <div>{formatDataString(banner.startDate)}</div>
+                                <div className="text-[11px] text-muted-foreground/70">
+                                  to{" "}
+                                  {banner.endDate
+                                    ? formatDataString(banner.endDate)
+                                    : "Forever"}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground/60 italic">
+                                Always Active
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3 px-4">
+                            <Badge
+                              variant={
+                                banner.status === "active"
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
+                            >
+                              {banner.status}
+                            </Badge>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setPreviewBanner(banner)}
+                                title="View"
+                                className="h-8 w-8 text-indigo-400 border-border hover:bg-indigo-500/10 cursor-pointer"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() =>
+                                  navigate(`/banner/edit/${banner._id}`)
+                                }
+                                title="Edit"
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                              >
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              {/* Delete action button */}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Banner?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Banner.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(banner._id || "")}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
       </Card>
 
       {/* Preview Live Hero Slide Modal */}

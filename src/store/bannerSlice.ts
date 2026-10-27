@@ -70,7 +70,13 @@ const bannerSlice = createSlice({
     appendBanners: (state, { payload }: { payload: any }) => {
       const newItems =
         payload?.result || (Array.isArray(payload) ? payload : []);
-      state.banners = [...state.banners, ...newItems];
+      const existingIds = new Set(
+        state.banners.map((item) => item._id || item.id),
+      );
+      const filtered = newItems.filter(
+        (item: any) => !existingIds.has(item._id || item.id),
+      );
+      state.banners = [...state.banners, ...filtered];
       if (payload?.total !== undefined) {
         state.total = payload.total;
       }
@@ -175,14 +181,23 @@ export function addBanner(data: FormData, navigate?: any) {
   };
 }
 
-export function getAllBanners(keyword: string, status: string) {
+export function getAllBanners(
+  keyword: string = "",
+  status: string = "",
+  limit?: number,
+  offset: number = 0,
+) {
   return async function getAllBannersThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     await service
-      .getAllBanners(keyword, status)
+      .getAllBanners(keyword, status, limit, offset)
       .then((res) => {
-        dispatch(setBanners(res.data));
+        if (offset > 0) {
+          dispatch(appendBanners(res.data));
+        } else {
+          dispatch(setBanners(res.data));
+        }
         dispatch(setStatus(STATUS.IDLE));
       })
       .catch((error: any) => {

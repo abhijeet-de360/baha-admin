@@ -12,6 +12,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +51,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { warningHandler } from "@/shared/_helper/responseHelper";
+import { formatDataString } from "@/lib/utils";
 
 export default function ClothingSizes() {
   const sizesVar = useSelector((state: RootState) => state.size);
@@ -67,7 +77,7 @@ export default function ClothingSizes() {
     keyword: "",
     limit: 10,
     offset: 0,
-    status: "",
+    status: "all",
   });
 
   const [hasMore, setHasMore] = useState(true);
@@ -174,13 +184,22 @@ export default function ClothingSizes() {
   };
 
   // Infinite Scroll fetch more
-  const fetchMoreSizes = async () => {
-    if (sizesVar.status === "loading" || sizesVar.sizes.length >= sizesVar.total) return;
+  const fetchMoreSizes = () => {
+    if (
+      sizesVar.status === "loading" ||
+      sizesVar.sizes.length >= sizesVar.total
+    )
+      return;
 
     const newOffset = formVar.offset + formVar.limit;
 
-    await dispatch(
-      getAllSize(formVar.keyword, formVar.limit, newOffset, formVar.status),
+    dispatch(
+      getAllSize(
+        formVar.keyword,
+        formVar.limit,
+        newOffset,
+        formVar.status === "all" ? "" : formVar.status,
+      ),
     );
 
     setFormVar((prev) => ({
@@ -215,22 +234,42 @@ export default function ClothingSizes() {
 
     searchTimeoutRef.current = setTimeout(() => {
       dispatch(
-        getAllSize(searchTerm, formVar.limit, formVar.offset, formVar.status),
+        getAllSize(
+          searchTerm,
+          formVar.limit,
+          0,
+          formVar.status === "all" ? "" : formVar.status,
+        ),
       );
     }, 500);
   };
 
+  // Handle status change
+  const handleStatusChange = (status: string) => {
+    setFormVar((prev) => ({
+      ...prev,
+      status: status,
+      offset: 0,
+    }));
+    dispatch(
+      getAllSize(
+        formVar.keyword,
+        formVar.limit,
+        0,
+        status === "all" ? "" : status,
+      ),
+    );
+  };
+
   useEffect(() => {
-    if (sizesVar.sizes.length <= 0) {
-      dispatch(
-        getAllSize(
-          formVar.keyword,
-          formVar.limit,
-          formVar.offset,
-          formVar.status,
-        ),
-      );
-    }
+    dispatch(
+      getAllSize(
+        formVar.keyword,
+        formVar.limit,
+        formVar.offset,
+        formVar.status === "all" ? "" : formVar.status,
+      ),
+    );
   }, []);
 
   return (
@@ -260,24 +299,39 @@ export default function ClothingSizes() {
         </Button>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-card p-4 rounded-2xl border border-border shadow-xs">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search size name, age range, description..."
-            value={formVar.keyword}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
-          />
-        </div>
-      </div>
+      {/* Main Sizes Card */}
+      <Card className="rounded-3xl border border-border shadow-xs overflow-hidden bg-card">
+        {/* Search & Filter Toolbar */}
+        <div className="p-4 sm:p-6 border-b border-border space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search size name, age range, description..."
+                value={formVar.keyword}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40 font-semibold rounded-xl border-border shadow-2xs"
+              />
+            </div>
 
-      {/* Main Sizes Table Card */}
-      <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Status Filter */}
+              <select
+                value={formVar.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer shadow-2xs"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <CardContent className="p-0">
-          {sizesVar.sizes.length === 0 && sizesVar.status !== "loading" ? (
+          {sizesVar.sizes.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <div className="p-3.5 rounded-full bg-muted text-muted-foreground w-fit mx-auto">
                 <Ruler className="h-8 w-8" />
@@ -286,239 +340,109 @@ export default function ClothingSizes() {
                 No sizes found
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                {formVar.keyword
-                  ? "Try adjusting your search criteria."
+                {formVar.keyword || formVar.status !== "all"
+                  ? "Try adjusting your search criteria or status filter."
                   : "Get started by creating your first clothing size specification."}
               </p>
-              {!formVar.keyword && (
+              {!formVar.keyword && formVar.status === "all" && (
                 <Button
                   onClick={handleOpenAddModal}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-4 py-2 mt-2"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-4 py-2 mt-2 cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Size
                 </Button>
               )}
             </div>
           ) : (
-            <InfiniteScroll
-              dataLength={sizesVar.sizes.length}
-              next={fetchMoreSizes}
-              hasMore={hasMore}
-              loader={
-                <div className="py-6 text-center text-xs text-muted-foreground font-semibold flex items-center justify-center gap-2">
-                  <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  Loading more sizes...
-                </div>
-              }
-              endMessage={
-                sizesVar.sizes.length > 0 && (
-                  <div className="py-6 text-center text-xs text-muted-foreground font-medium border-t border-border/50">
-                    Showing all {sizesVar.sizes.length} of {sizesVar.total}{" "}
-                    sizes
-                  </div>
-                )
-              }
-            >
-              {/* Mobile & Tablet Card Layout (< lg screens) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
-                {sizesVar.sizes.map((size) => (
-                  <div
-                    key={size._id}
-                    className="p-4 rounded-xl border border-border bg-card hover:border-border/80 transition-all shadow-xs flex flex-col justify-between space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center font-extrabold text-foreground text-xs border border-border/60">
-                          {size.name}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">
-                            {formatAgeRange(
-                              size.minAge,
-                              size.maxAge,
-                              size.ageUnit,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          size.status === "Active"
-                            ? "bg-emerald-500/15 text-emerald-600"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            size.status === "Active"
-                              ? "bg-emerald-500"
-                              : "bg-muted-foreground"
-                          }`}
-                        />
-                        {size.status}
-                      </span>
+            <>
+              {/* ========================================= */}
+              {/* Mobile & Tablet */}
+              {/* ========================================= */}
+              <div
+                id="sizes-mobile-list"
+                className="xl:hidden max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={sizesVar.sizes.length}
+                  next={fetchMoreSizes}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more sizes...
                     </div>
-
-                    {size.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 bg-muted/30 p-2 rounded-lg">
-                        {size.description}
-                      </p>
-                    )}
-
-                    <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> {size.createdAt}
-                      </span>
-
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenEditModal(size)}
-                          className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                          title="Edit"
-                        >
-                          <SquarePen className="h-3.5 w-3.5" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Delete this Size?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will
-                                permanently delete this Size.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => handleDelete(size?._id)}
-                              >
-                                Yes, delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {sizesVar.sizes.length} of {sizesVar.total} sizes
                     </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table View (lg+ screens) */}
-              <div className="hidden xl:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40 text-[11px] font-bold uppercase tracking-wider">
-                      <th className="py-3.5 px-5">Size Name</th>
-                      <th className="py-3.5 px-4">Age Range</th>
-                      <th className="py-3.5 px-4">Min Age</th>
-                      <th className="py-3.5 px-4">Max Age</th>
-                      <th className="py-3.5 px-4">Description</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4">Created Date</th>
-                      <th className="py-3.5 px-5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border text-xs">
+                  }
+                  scrollableTarget="sizes-mobile-list"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     {sizesVar.sizes.map((size) => (
-                      <tr
+                      <div
                         key={size._id}
-                        className="hover:bg-muted/30 transition-colors group"
+                        className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/20 transition-all flex flex-col p-4 justify-between space-y-3"
                       >
-                        {/* Size Name */}
-                        <td className="py-4 px-5">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-2.5">
-                            <span className="font-bold text-muted-foreground">
+                            <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center font-extrabold text-xs border border-border/60">
                               {size.name}
-                            </span>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold">
+                                {formatAgeRange(
+                                  size.minAge,
+                                  size.maxAge,
+                                  size.ageUnit,
+                                )}
+                              </p>
+                            </div>
                           </div>
-                        </td>
 
-                        {/* Age Range */}
-                        <td className="py-4 px-4 font-semibold text-muted-foreground">
-                          {formatAgeRange(
-                            size.minAge,
-                            size.maxAge,
-                            size.ageUnit,
-                          )}
-                        </td>
-
-                        {/* Min Age */}
-                        <td className="py-4 px-4 font-medium text-muted-foreground">
-                          {size.minAge} {size.ageUnit}
-                        </td>
-
-                        {/* Max Age */}
-                        <td className="py-4 px-4 font-medium text-muted-foreground">
-                          {size.maxAge} {size.ageUnit}
-                        </td>
-
-                        {/* Description */}
-                        <td className="py-4 px-4 text-muted-foreground max-w-xs truncate">
-                          {size.description || "—"}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-4 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              size.status === "Active"
-                                ? "bg-emerald-500/15 text-emerald-600"
-                                : "bg-muted text-muted-foreground"
-                            }`}
+                          <Badge
+                            variant={
+                              size.status?.toLowerCase() === "active"
+                                ? "success"
+                                : "secondary"
+                            }
+                            className="uppercase"
                           >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                size.status === "Active"
-                                  ? "bg-emerald-500"
-                                  : "bg-muted-foreground"
-                              }`}
-                            />
                             {size.status}
+                          </Badge>
+                        </div>
+
+                        {size.description && (
+                          <p className="text-xs line-clamp-2 bg-muted/30 p-2 rounded-lg">
+                            {size.description}
+                          </p>
+                        )}
+
+                        <div className="pt-2 border-t border-border flex items-center justify-between text-xs mt-auto">
+                          <span className="text-[11px] flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />{" "}
+                            {formatDataString(size.createdAt || "")}
                           </span>
-                        </td>
 
-                        {/* Created Date */}
-                        <td className="py-4 px-4 text-muted-foreground font-mono text-[11px]">
-                          {size.createdAt}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-4 px-5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center gap-1.5">
                             <Button
                               variant="outline"
                               size="icon"
                               onClick={() => handleOpenEditModal(size)}
-                              title="Edit"
                               className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                              title="Edit"
                             >
                               <SquarePen className="h-3.5 w-3.5" />
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                                  variant="outline"
+                                  size="icon"
+                                  title="Delete"
+                                  className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </AlertDialogTrigger>
 
@@ -545,13 +469,143 @@ export default function ClothingSizes() {
                               </AlertDialogContent>
                             </AlertDialog>
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </InfiniteScroll>
               </div>
-            </InfiniteScroll>
+
+              {/* ========================================= */}
+              {/* Desktop */}
+              {/* ========================================= */}
+              <div
+                id="sizes-desktop-list"
+                className="hidden xl:block max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={sizesVar.sizes.length}
+                  next={fetchMoreSizes}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more sizes...
+                    </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {sizesVar.sizes.length} of {sizesVar.total} sizes
+                    </div>
+                  }
+                  scrollableTarget="sizes-desktop-list"
+                >
+                  <Table className="w-full text-left border-collapse">
+                    <TableHeader>
+                      <TableRow className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider hover:bg-muted/50">
+                        <TableHead className="py-3.5 px-5">Size Name</TableHead>
+                        <TableHead className="py-3.5 px-4">Age Range</TableHead>
+                        <TableHead className="py-3.5 px-4">Min Age</TableHead>
+                        <TableHead className="py-3.5 px-4">Max Age</TableHead>
+                        <TableHead className="py-3.5 px-4">Description</TableHead>
+                        <TableHead className="py-3.5 px-4">Status</TableHead>
+                        <TableHead className="py-3.5 px-4">Created Date</TableHead>
+                        <TableHead className="py-3.5 px-5 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-border text-xs">
+                      {sizesVar.sizes.map((size) => (
+                        <TableRow
+                          key={size._id}
+                          className="hover:bg-muted/30 transition-colors group"
+                        >
+                          <TableCell className="py-4 px-5 font-bold">
+                            {size.name}
+                          </TableCell>
+                          <TableCell className="py-4 px-4 font-semibold">
+                            {formatAgeRange(
+                              size.minAge,
+                              size.maxAge,
+                              size.ageUnit,
+                            )}
+                          </TableCell>
+                          <TableCell className="py-4 px-4 font-medium">
+                            {size.minAge} {size.ageUnit}
+                          </TableCell>
+                          <TableCell className="py-4 px-4 font-medium">
+                            {size.maxAge} {size.ageUnit}
+                          </TableCell>
+                          <TableCell className="py-4 px-4 max-w-xs truncate">
+                            {size.description || "—"}
+                          </TableCell>
+                          <TableCell className="py-4 px-4">
+                            <Badge
+                              variant={
+                                size.status?.toLowerCase() === "active"
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
+                            >
+                              {size.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-4 px-4 font-mono text-[11px]">
+                            {formatDataString(size.createdAt || "")}
+                          </TableCell>
+                          <TableCell className="py-4 px-5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenEditModal(size)}
+                                title="Edit"
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                              >
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Size?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Size.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(size?._id)}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </InfiniteScroll>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -655,12 +709,9 @@ export default function ClothingSizes() {
                 <select
                   value={formData.status}
                   onChange={(e) => handleInputChange("status", e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                  className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
                   required
                 >
-                  <option value="" disabled>
-                    Select Status
-                  </option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
@@ -684,14 +735,6 @@ export default function ClothingSizes() {
                   className="w-full p-3 rounded-xl border border-input bg-background text-xs font-medium focus:outline-none focus:ring-1 focus:ring-ring resize-y"
                 />
               </div>
-
-              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2 text-[11px] text-muted-foreground">
-                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                <p>
-                  Sizes will be automatically displayed to customers on product
-                  detail pages when filtering by age group.
-                </p>
-              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
@@ -705,10 +748,10 @@ export default function ClothingSizes() {
               </Button>
               <Button
                 type="submit"
-                disabled={status === "loading"}
+                disabled={sizesVar.status === "loading"}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-5 cursor-pointer disabled:opacity-50"
               >
-                {status === "loading"
+                {sizesVar.status === "loading"
                   ? "Saving..."
                   : editingSize
                     ? "Update Size"

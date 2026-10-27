@@ -50,7 +50,12 @@ const subCategorySlice = createSlice({
       state.total = payload?.total || 0;
     },
     appendSubCategories: (state, { payload }) => {
-      state.subCategories = [...state.subCategories, ...(payload || [])];
+      const newItems =
+        payload?.result || (Array.isArray(payload) ? payload : []);
+      state.subCategories = [...state.subCategories, ...newItems];
+      if (payload?.total !== undefined) {
+        state.total = payload.total;
+      }
     },
     addSubCategorySuccess: (state, { payload }) => {
       state.subCategories = [payload, ...state.subCategories];
@@ -104,7 +109,11 @@ export function getAllSubCategories(
         categoryId,
       );
       if (response?.status) {
-        dispatch(setSubCategories(response.data));
+        if (offset && offset > 0) {
+          dispatch(appendSubCategories(response.data));
+        } else {
+          dispatch(setSubCategories(response.data));
+        }
         dispatch(setStatus(STATUS.IDLE));
         dispatch(setLoading(false));
       } else {

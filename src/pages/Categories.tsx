@@ -11,8 +11,8 @@ import {
   X,
   Calendar,
   Link as LinkIcon,
-  Globe,
   Folder,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,8 +55,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
 import { formatDataString, generateSlug } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 export default function Categories() {
   const categoryVar = useSelector((state: RootState) => state.category);
@@ -79,10 +79,10 @@ export default function Categories() {
     keyword: "",
     limit: 10,
     offset: 0,
-    status: "",
+    status: "all",
   });
 
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   // Ref
   const searchTimeoutRef = useRef<any>(null);
@@ -143,14 +143,14 @@ export default function Categories() {
     const data = new FormData();
     data.append("name", formData.name.trim());
     data.append("slug", finalSlug);
-    data.append("priority", formData.priority.toString());
+    data.append("priority", (formData.priority ?? 0).toString());
 
     if (formData.image instanceof File) {
       data.append("image", formData.image);
     }
 
     if (editingCategory) {
-      dispatch(updateCategory(editingCategory._id, data));
+      dispatch(updateCategory(editingCategory._id!, data));
     } else {
       dispatch(addCategory(data));
     }
@@ -161,7 +161,8 @@ export default function Categories() {
     dispatch(deleteCategory(id));
   };
 
-  const fetchMoreCategories = async () => {
+  // Infinite Scroll fetch more
+  const fetchMoreCategories = () => {
     if (
       categoryVar.status === "loading" ||
       categoryVar.categories.length >= categoryVar.total
@@ -170,12 +171,12 @@ export default function Categories() {
 
     const newOffset = formVar.offset + formVar.limit;
 
-    await dispatch(
+    dispatch(
       getAllCategories(
         formVar.keyword,
         formVar.limit,
         newOffset,
-        formVar.status,
+        formVar.status === "all" ? "" : formVar.status,
       ),
     );
 
@@ -188,6 +189,17 @@ export default function Categories() {
       setHasMore(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      categoryVar.categories.length >= categoryVar.total &&
+      categoryVar.total > 0
+    ) {
+      setHasMore(false);
+    } else {
+      setHasMore(true);
+    }
+  }, [categoryVar.categories.length, categoryVar.total]);
 
   // Handle status change
   const handleStatusChange = (status: string) => {
@@ -230,13 +242,6 @@ export default function Categories() {
     }, 500);
   };
 
-  // Update status
-  const updateStatus = (id: string, status: string) => {
-    const data = new FormData();
-    data.append("status", status);
-    dispatch(updateCategory(id, data));
-  };
-
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -250,7 +255,7 @@ export default function Categories() {
         formVar.keyword,
         formVar.limit,
         formVar.offset,
-        formVar.status,
+        formVar.status === "all" ? "" : formVar.status,
       ),
     );
   }, []);
@@ -282,34 +287,36 @@ export default function Categories() {
         </Button>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-card p-4 rounded-2xl border border-border shadow-xs">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search category name or description..."
-            value={formVar.keyword}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <select
-            value={formVar.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
       {/* Categories Content Area */}
-      <Card className="rounded-2xl border-border overflow-hidden shadow-xs">
+      <Card className="rounded-3xl border border-border shadow-xs overflow-hidden bg-card">
+        {/* Search & Filter Toolbar */}
+        <div className="p-4 sm:p-6 border-b border-border space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search category name or description..."
+                value={formVar.keyword}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10 h-10 bg-background text-xs placeholder:text-muted-foreground/40"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <select
+                value={formVar.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ring text-foreground cursor-pointer"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <CardContent className="p-0">
           {categoryVar.categories.length === 0 ? (
             <div className="p-12 text-center space-y-3">
@@ -334,205 +341,259 @@ export default function Categories() {
               )}
             </div>
           ) : (
-            <InfiniteScroll
-              dataLength={categoryVar.categories.length}
-              next={fetchMoreCategories}
-              hasMore={hasMore}
-              loader={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                  Loading more categories...
-                </div>
-              }
-              endMessage={
-                <div className="py-4 text-center text-xs text-muted-foreground font-medium">
-                  Showing all {categoryVar.categories.length} categories
-                </div>
-              }
-            >
-              {/* Mobile & Tablet card layout  */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 xl:hidden">
-                {categoryVar.categories.map((cat) => (
-                  <div
-                    key={cat._id}
-                    className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/20 transition-all flex flex-col"
-                  >
-                    {/* Cover Image */}
-                    <div className="relative h-36 w-full bg-muted overflow-hidden shrink-0">
-                      <img
-                        src={
-                          typeof cat.image === "string"
-                            ? cat.image
-                            : URL.createObjectURL(cat.image)
-                        }
-                        alt={cat.name}
-                        className="h-full w-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+            <>
+              {/* ========================================= */}
+              {/* Mobile & Tablet */}
+              {/* ========================================= */}
+              <div
+                id="categories-mobile-list"
+                className="xl:hidden max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={categoryVar.categories.length}
+                  next={fetchMoreCategories}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more categories...
                     </div>
-
-                    {/* Card Body */}
-                    <div className="p-4 flex flex-col gap-3 flex-1">
-                      {/* Name & Slug */}
-                      <div className="space-y-0.5">
-                        <h4 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
-                          {cat.name}
-                        </h4>
-                        <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
-                          <LinkIcon className="h-3 w-3 shrink-0" />/{cat.slug}
-                        </p>
-                      </div>
-
-                      {/* Status Switch */}
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize w-fit ${
-                          cat.status?.toLowerCase() === "active"
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                            : "bg-muted text-muted-foreground border-border"
-                        }`}
-                      >
-                        {cat.status}
-                      </span>
-
-                      {/* Footer: date + actions */}
-                      <div className="pt-2 border-t border-border flex items-center justify-between mt-auto">
-                        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(cat.createdAt).toDateString()}
-                        </span>
-
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleOpenEditModal(cat)}
-                            className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
-                            title="Edit"
-                          >
-                            <SquarePen className="h-3.5 w-3.5" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete this Category?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will
-                                  permanently delete this Category.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-red-600 hover:bg-red-700"
-                                  onClick={() => handleDelete(cat._id)}
-                                >
-                                  Yes, delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {categoryVar.categories.length} of{" "}
+                      {categoryVar.total} categories
                     </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop table view  */}
-              <div className="hidden xl:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Slug</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                  }
+                  scrollableTarget="categories-mobile-list"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     {categoryVar.categories.map((cat) => (
-                      <TableRow key={cat._id}>
-                        <TableCell>
+                      <div
+                        key={cat._id}
+                        className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/20 transition-all flex flex-col"
+                      >
+                        {/* Cover Image */}
+                        <div className="relative h-36 w-full bg-muted overflow-hidden shrink-0">
                           <img
                             src={
                               typeof cat.image === "string"
                                 ? cat.image
-                                : URL.createObjectURL(cat.image)
+                                : URL.createObjectURL(cat.image!)
                             }
                             alt={cat.name}
-                            className="h-10 w-10 object-cover rounded"
+                            className="h-full w-full object-cover"
                           />
-                        </TableCell>
-                        <TableCell>{cat.name}</TableCell>
-                        <TableCell>{cat.slug}</TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize ${
-                              cat.status?.toLowerCase() === "active"
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                : "bg-muted text-muted-foreground border-border"
-                            }`}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-4 flex flex-col gap-3 flex-1">
+                          {/* Name & Slug */}
+                          <div className="space-y-0.5">
+                            <h4 className="text-sm font-bold text-foreground leading-tight line-clamp-1">
+                              {cat.name}
+                            </h4>
+                            <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+                              <LinkIcon className="h-3 w-3 shrink-0" />/
+                              {cat.slug}
+                            </p>
+                          </div>
+
+                          {/* Status */}
+                          <Badge
+                            variant={
+                              cat.status === "active" ? "success" : "secondary"
+                            }
+                            className="uppercase w-fit"
                           >
                             {cat.status}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground font-mono">
-                          {formatDataString(cat.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            onClick={() => handleOpenEditModal(cat)}
-                            className="mr-2"
-                          >
-                            Edit
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive">Delete</Button>
-                            </AlertDialogTrigger>
+                          </Badge>
 
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete this Category?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will
-                                  permanently delete this Category.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
+                          {/* Footer: date + actions */}
+                          <div className="pt-2 border-t border-border flex items-center justify-between mt-auto">
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDataString(cat.createdAt || "")}
+                            </span>
 
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-red-600 hover:bg-red-700"
-                                  onClick={() => handleDelete(cat._id)}
-                                >
-                                  Yes, delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
-                      </TableRow>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenEditModal(cat)}
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                                title="Edit"
+                              >
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Category?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Category.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(cat._id!)}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                </InfiniteScroll>
               </div>
-            </InfiniteScroll>
-          )}
+
+              {/* ========================================= */}
+              {/* Desktop */}
+              {/* ========================================= */}
+              <div
+                id="categories-desktop-list"
+                className="hidden xl:block max-h-[600px] overflow-y-auto"
+              >
+                <InfiniteScroll
+                  dataLength={categoryVar.categories.length}
+                  next={fetchMoreCategories}
+                  hasMore={hasMore}
+                  loader={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Loading more categories...
+                    </div>
+                  }
+                  endMessage={
+                    <div className="py-4 text-center text-xs text-muted-foreground font-medium">
+                      Showing all {categoryVar.categories.length} of{" "}
+                      {categoryVar.total} categories
+                    </div>
+                  }
+                  scrollableTarget="categories-desktop-list"
+                >
+                  <Table className="w-full text-left border-collapse">
+                    <TableHeader>
+                      <TableRow className="border-b border-border bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider hover:bg-muted/50">
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Image</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created At</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categoryVar.categories.map((cat) => (
+                        <TableRow key={cat._id}>
+                          <TableCell>#{cat.priority}</TableCell>
+                          <TableCell>
+                            <img
+                              src={
+                                typeof cat.image === "string"
+                                  ? cat.image
+                                  : URL.createObjectURL(cat.image!)
+                              }
+                              alt={cat.name}
+                              className="h-10 w-10 object-cover rounded"
+                            />
+                          </TableCell>
+                          <TableCell>{cat.name}</TableCell>
+                          <TableCell>{cat.slug}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                cat.status === "active"
+                                  ? "success"
+                                  : "secondary"
+                              }
+                              className="uppercase"
+                            >
+                              {cat.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground font-mono">
+                            {formatDataString(cat.createdAt || "")}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenEditModal(cat)}
+                                className="h-8 w-8 text-amber-400 border-border hover:bg-amber-500/10 cursor-pointer"
+                                title="Edit"
+                              >
+                                <SquarePen className="h-3.5 w-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    title="Delete"
+                                    className="h-8 w-8 text-rose-500 border-border hover:bg-rose-500/10 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this Category?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will
+                                      permanently delete this Category.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700"
+                                      onClick={() => handleDelete(cat._id!)}
+                                    >
+                                      Yes, delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </InfiniteScroll>
+              </div>
+            </>
+          )}{" "}
         </CardContent>
       </Card>
 
@@ -677,6 +738,7 @@ export default function Categories() {
               </Button>
               <Button
                 type="submit"
+                disabled={categoryVar.status === "loading"}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl px-5 cursor-pointer"
               >
                 {editingCategory ? "Update Category" : "Save Category"}
