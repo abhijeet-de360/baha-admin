@@ -295,25 +295,6 @@ export default function EditBanner() {
     dispatch(updateBanner(id, data, navigate));
   };
 
-  // Loading state when initial fetch is pending
-  if (bannerVar.status === "loading" && !bannerVar.bannerDetails) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] gap-4">
-        <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-500 animate-pulse">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
-        <div className="text-center space-y-1">
-          <h2 className="text-lg font-semibold text-foreground">
-            Loading Hero Slide Details
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Fetching slide configuration and assets...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Not found or failed load
   if (bannerVar.status === "error" && !bannerVar.bannerDetails) {
     return (

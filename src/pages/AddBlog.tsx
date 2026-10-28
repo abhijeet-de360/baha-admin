@@ -27,16 +27,16 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RichEditor } from "@/components/ui/rich-editor";
-import {
-  successHandler,
-  warningHandler,
-} from "@/shared/_helper/responseHelper";
+import { warningHandler } from "@/shared/_helper/responseHelper";
+import { generateSlug } from "@/lib/utils";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/store/store";
+import { addBlog } from "@/store/blogSlice";
 
 export interface AddBlogFormData {
   title: string;
   slug: string;
   content: string;
-  status: "active" | "inactive";
   image: File | null;
   imagePreview: string;
   metaTitle: string;
@@ -47,19 +47,10 @@ const INITIAL_FORM: AddBlogFormData = {
   title: "",
   slug: "",
   content: "",
-  status: "active",
   image: null,
   imagePreview: "",
   metaTitle: "",
   metaDescription: "",
-};
-
-const generateSlug = (text: string): string => {
-  return slugify(text, {
-    lower: true,
-    strict: true,
-    trim: true,
-  });
 };
 
 const stripHtml = (html: string): string => {
@@ -76,7 +67,9 @@ export default function AddBlog() {
   const [isSlugCustomized, setIsSlugCustomized] = useState(false);
   const [isMetaTitleCustomized, setIsMetaTitleCustomized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const dispatch = useDispatch<AppDispatch>();
+  const blogVar = useSelector((state: RootState) => state.blog);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -196,23 +189,16 @@ export default function AddBlog() {
       return;
     }
 
-    const plainText = stripHtml(formData.content).trim();
-    if (!plainText) {
-      warningHandler("Please compose content for the blog post.");
-      return;
-    }
+    const data = new FormData();
+    data.append("title", formData.title);
+    data.append("slug", finalSlug);
+    data.append("content", formData.content);
+    data.append("metaTitle", formData.metaTitle);
+    data.append("metaDescription", formData.metaDescription);
+    data.append("image", formData.image);
 
-    setIsSubmitting(true);
-
-    // Static simulation
-    setTimeout(() => {
-      setIsSubmitting(false);
-      successHandler("Blog post created successfully!");
-      navigate("/blogs");
-    }, 600);
+    dispatch(addBlog(data, navigate));
   };
-
-  const plainContentLength = stripHtml(formData.content).trim().length;
 
   return (
     <div className="space-y-6 max-w-full pb-16">
@@ -262,11 +248,11 @@ export default function AddBlog() {
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={blogVar.status === "loading"}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold cursor-pointer shadow-sm gap-2"
           >
             <Save className="w-4 h-4" />
-            {isSubmitting ? "Saving..." : "Save & Publish"}
+            {blogVar.status === "loading" ? "Saving..." : "Save & Publish"}
           </Button>
         </div>
       </div>
@@ -344,11 +330,9 @@ export default function AddBlog() {
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Article Content <span className="text-destructive">*</span>
+                      Article Content{" "}
+                      <span className="text-destructive">*</span>
                     </label>
-                    <span className="text-[11px] text-muted-foreground font-mono">
-                      {plainContentLength} characters
-                    </span>
                   </div>
                   <div className="rounded-xl border border-border overflow-hidden bg-background">
                     <RichEditor
@@ -360,10 +344,6 @@ export default function AddBlog() {
                       minHeight="380px"
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Use formatting tools in the rich editor to build engaging,
-                    readable stories.
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -464,10 +444,16 @@ export default function AddBlog() {
                       <span className="w-3.5 h-3.5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[9px] font-bold">
                         B
                       </span>
-                      <span>yourstore.com &gt; blog &gt; {formData.slug || "url-slug"}</span>
+                      <span>
+                        yourstore.com &gt; blog &gt;{" "}
+                        {formData.slug || "url-slug"}
+                      </span>
                     </div>
                     <h3 className="text-base font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer line-clamp-1">
-                      {formData.metaTitle || formData.title || "Untitled Blog Post"} | Baha Store
+                      {formData.metaTitle ||
+                        formData.title ||
+                        "Untitled Blog Post"}{" "}
+                      | Baha Store
                     </h3>
                     <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                       {formData.metaDescription ||
@@ -482,70 +468,6 @@ export default function AddBlog() {
 
           {/* Right Column: Publishing, Image & Checklist (4 cols) */}
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-4">
-            {/* Status & Publication Card */}
-            <Card className="rounded-3xl border border-border bg-card shadow-xs overflow-hidden">
-              <CardHeader className="p-5 pb-4 border-b border-border bg-muted/20">
-                <CardTitle className="text-sm font-bold flex items-center justify-between">
-                  <span>Publishing & Status</span>
-                  <Badge
-                    variant={
-                      formData.status === "active" ? "success" : "secondary"
-                    }
-                    className="uppercase text-[10px]"
-                  >
-                    {formData.status}
-                  </Badge>
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Control article visibility across your online store.
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="p-5 space-y-4">
-                {/* Status Select */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Status <span className="text-destructive">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={formData.status}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          status: e.target.value as "active" | "inactive",
-                        }))
-                      }
-                      className="h-10 w-full appearance-none rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                    >
-                      <option value="active">Active (Published)</option>
-                      <option value="inactive">Inactive (Draft)</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
-                      <span className="text-xs">▼</span>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    {formData.status === "active"
-                      ? "This article will be publicly visible to storefront visitors."
-                      : "Draft articles are kept hidden from storefront customers."}
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold cursor-pointer shadow-sm gap-2 rounded-xl h-10"
-                  >
-                    <Save className="w-4 h-4" />
-                    {isSubmitting ? "Publishing Post..." : "Save & Publish Post"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Featured Image Card */}
             <Card className="rounded-3xl border border-border bg-card shadow-xs overflow-hidden">
               <CardHeader className="p-5 pb-4 border-b border-border bg-muted/20">
@@ -656,7 +578,9 @@ export default function AddBlog() {
                         <CheckCircle2 className="w-3.5 h-3.5" /> Ready
                       </span>
                     ) : (
-                      <span className="text-amber-500 font-medium">Required</span>
+                      <span className="text-amber-500 font-medium">
+                        Required
+                      </span>
                     )}
                   </div>
 
@@ -667,22 +591,13 @@ export default function AddBlog() {
                         <CheckCircle2 className="w-3.5 h-3.5" /> Ready
                       </span>
                     ) : (
-                      <span className="text-amber-500 font-medium">Required</span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between py-1 border-b border-border/60">
-                    <span className="text-muted-foreground">Body Content</span>
-                    {plainContentLength > 0 ? (
-                      <span className="text-emerald-500 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Ready
+                      <span className="text-amber-500 font-medium">
+                        Required
                       </span>
-                    ) : (
-                      <span className="text-amber-500 font-medium">Required</span>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between py-1 border-b border-border/60">
+                  <div className="flex items-center justify-between py-1">
                     <span className="text-muted-foreground">Cover Image</span>
                     {formData.image ? (
                       <span className="text-emerald-500 font-semibold flex items-center gap-1">
@@ -692,19 +607,33 @@ export default function AddBlog() {
                       <span className="text-muted-foreground">Optional</span>
                     )}
                   </div>
-
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-muted-foreground">Status</span>
-                    <Badge
-                      variant={
-                        formData.status === "active" ? "success" : "secondary"
-                      }
-                      className="uppercase text-[10px]"
-                    >
-                      {formData.status}
-                    </Badge>
-                  </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Publish Action Card */}
+            <Card className="rounded-3xl border border-border bg-card shadow-xs overflow-hidden">
+              <CardHeader className="p-5 pb-4 border-b border-border bg-muted/20">
+                <CardTitle className="text-sm font-bold">
+                  Publish Post
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Save and publish this article to your storefront.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-5">
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={blogVar.status === "loading"}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold cursor-pointer shadow-sm gap-2 rounded-xl h-10"
+                >
+                  <Save className="w-4 h-4" />
+                  {blogVar.status === "loading"
+                    ? "Publishing Post..."
+                    : "Save & Publish Post"}
+                </Button>
               </CardContent>
             </Card>
           </div>

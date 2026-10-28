@@ -38,6 +38,7 @@ import {
   updateFaq,
   type FAQ,
 } from "@/store/faqSlice";
+import { Badge } from "@/components/ui/badge";
 
 const STATUS = [
   { label: "Active", value: "active" },
@@ -45,7 +46,6 @@ const STATUS = [
 ];
 
 export default function FaqPage() {
-  // const { faqs, isModalOpen } = useSelector((state: RootState) => state.faq);
   const faqVar = useSelector((state: RootState) => state.faq);
   const dispatch = useDispatch<AppDispatch>();
 
@@ -177,9 +177,14 @@ export default function FaqPage() {
               <CardContent className="p-5 md:p-6 space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1.5 flex-1 min-w-0">
-                    <span className="inline-block px-2.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                    <Badge
+                      variant={
+                        faq.status === "active" ? "success" : "secondary"
+                      }
+                      className="uppercase"
+                    >
                       {faq.status}
-                    </span>
+                    </Badge>
                     <h3 className="text-sm font-bold text-foreground leading-snug">
                       {faq.question}
                     </h3>

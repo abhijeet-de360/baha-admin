@@ -28,6 +28,8 @@ import EditProduct from "./pages/EditProduct";
 import AddBanners from "./pages/AddBanners";
 import EditBanner from "./pages/EditBanner";
 import AddBlog from "./pages/AddBlog";
+import EditBlog from "./pages/EditBlog";
+import BlogDetails from "./pages/BlogDetails";
 
 export default function App() {
   return (
@@ -54,8 +56,10 @@ export default function App() {
               <Route path="/categories" element={<Categories />} />
               <Route path="/sub-categories" element={<SubCategories />} />
               <Route path="/blogs" element={<Blogs />} />
-              <Route path="/blogs/add" element={<AddBlog />} />
+              <Route path="/blogs/:id" element={<BlogDetails />} />
+              <Route path="/blog/:id" element={<BlogDetails />} />
               <Route path="/blog/add" element={<AddBlog />} />
+              <Route path="/blog/edit/:id" element={<EditBlog />} />
               <Route path="/sizes" element={<ClothingSizes />} />
               <Route path="/size-charts" element={<SizeCharts />} />
               <Route path="/colors" element={<Colors />} />

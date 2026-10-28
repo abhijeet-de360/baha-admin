@@ -112,23 +112,6 @@ const bannerSlice = createSlice({
       state.total = Math.max(0, state.total - 1);
     },
 
-    // Toggle / change banner active status
-    changeBannerStatus: (
-      state,
-      { payload }: { payload: { id: string; status: any } },
-    ) => {
-      const banner = state.banners.find((item) => item._id === payload.id);
-      if (banner) {
-        banner.status = payload.status;
-      }
-
-      const currentDetailsId =
-        state.bannerDetails?._id || state.bannerDetails?.id;
-      if (state.bannerDetails && currentDetailsId === payload.id) {
-        state.bannerDetails.status = payload.status;
-      }
-    },
-
     // Reset banner details
     resetBannerDetails: (state) => {
       state.bannerDetails = null;
@@ -149,7 +132,6 @@ export const {
   addBannerSuccess,
   updateBannerSuccess,
   deleteBannerSuccess,
-  changeBannerStatus,
   resetBannerDetails,
   setError,
 } = bannerSlice.actions;
@@ -184,20 +166,14 @@ export function addBanner(data: FormData, navigate?: any) {
 export function getAllBanners(
   keyword: string = "",
   status: string = "",
-  limit?: number,
-  offset: number = 0,
 ) {
   return async function getAllBannersThunk(dispatch: AppDispatch) {
     dispatch(setLoading(true));
     dispatch(setStatus(STATUS.LOADING));
     await service
-      .getAllBanners(keyword, status, limit, offset)
+      .getAllBanners(keyword, status)
       .then((res) => {
-        if (offset > 0) {
-          dispatch(appendBanners(res.data));
-        } else {
-          dispatch(setBanners(res.data));
-        }
+        dispatch(setBanners(res.data));
         dispatch(setStatus(STATUS.IDLE));
       })
       .catch((error: any) => {

@@ -25,15 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { CustomPagination } from "@/components/ui/custom-pagination";
 import { useDispatch, useSelector } from "react-redux";
 import {
   deleteProduct,
@@ -201,37 +193,7 @@ export default function Products() {
     );
   };
 
-  const getPageNumbers = () => {
-    const pages: (number | "ellipsis")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 4) {
-        for (let i = 1; i <= 5; i++) {
-          pages.push(i);
-        }
-        pages.push("ellipsis");
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 3) {
-        pages.push(1);
-        pages.push("ellipsis");
-        for (let i = totalPages - 4; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        pages.push(1);
-        pages.push("ellipsis");
-        pages.push(currentPage - 1);
-        pages.push(currentPage);
-        pages.push(currentPage + 1);
-        pages.push("ellipsis");
-        pages.push(totalPages);
-      }
-    }
-    return pages;
-  };
+
 
   // Load products on mount
   useEffect(() => {
@@ -779,82 +741,13 @@ export default function Products() {
       {/* Pagination  */}
       {totalProducts > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-2">
-          <div className="text-xs text-muted-foreground font-medium">
-            Showing{" "}
-            <span className="font-semibold text-foreground">
-              {Math.min(formVar.offset + 1, totalProducts)}
-            </span>{" "}
-            to{" "}
-            <span className="font-semibold text-foreground">
-              {Math.min(formVar.offset + formVar.limit, totalProducts)}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-foreground">
-              {totalProducts}
-            </span>{" "}
-            products
-          </div>
 
           {totalPages > 1 && (
-            <Pagination className="mx-0 w-auto justify-end">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPage > 1) {
-                        handlePageChange(currentPage - 1);
-                      }
-                    }}
-                    className={
-                      currentPage <= 1
-                        ? "pointer-events-none opacity-50 cursor-not-allowed"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-
-                {getPageNumbers().map((page, idx) => (
-                  <PaginationItem key={idx}>
-                    {page === "ellipsis" ? (
-                      <PaginationEllipsis />
-                    ) : (
-                      <PaginationLink
-                        href="#"
-                        isActive={page === currentPage}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (page !== currentPage) {
-                            handlePageChange(page);
-                          }
-                        }}
-                        className="cursor-pointer"
-                      >
-                        {page}
-                      </PaginationLink>
-                    )}
-                  </PaginationItem>
-                ))}
-
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPage < totalPages) {
-                        handlePageChange(currentPage + 1);
-                      }
-                    }}
-                    className={
-                      currentPage >= totalPages
-                        ? "pointer-events-none opacity-50 cursor-not-allowed"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <CustomPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           )}
         </div>
       )}

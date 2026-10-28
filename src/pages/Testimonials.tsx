@@ -43,6 +43,7 @@ import {
   updateTestimonial,
 } from "@/store/testimonialSlice";
 import { warningHandler } from "@/shared/_helper/responseHelper";
+import { Badge } from "@/components/ui/badge";
 
 const INITIAL_FORM_DATA = {
   customerName: "",
@@ -50,6 +51,7 @@ const INITIAL_FORM_DATA = {
   image: null,
   review: "",
   rating: 5,
+  status: "active",
 };
 
 export default function Testimonials() {
@@ -61,9 +63,6 @@ export default function Testimonials() {
 
   // Form Fields
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
-
-  // Delete Dialog State
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Handle input change
   const handleInputChange = (name: keyof typeof formData, value: string) => {
@@ -97,6 +96,7 @@ export default function Testimonials() {
       image: item.image,
       review: item.review,
       rating: item.rating,
+      status: item.status || "active",
     });
     dispatch(toggleModal(true));
   };
@@ -120,6 +120,7 @@ export default function Testimonials() {
     data.append("customerRole", formData.customerRole.trim());
     data.append("review", formData.review.trim());
     data.append("rating", String(formData.rating));
+    data.append("status", formData.status || "active");
     if (formData.image instanceof File) {
       data.append("image", formData.image);
     }
@@ -136,15 +137,10 @@ export default function Testimonials() {
     dispatch(deleteTestimonial(id));
   };
 
-  // Toggle Status
-  const handleToggleStatus = (id: string, checked: boolean) => {
-    const formData = new FormData();
-    formData.append("status", checked ? "active" : "inactive");
-    dispatch(updateTestimonial(id, formData));
-  };
-
   useEffect(() => {
-    dispatch(getAllTestimonials());
+    if (testimonialVar.testimonials.length === 0) {
+      dispatch(getAllTestimonials());
+    }
   }, []);
 
   return (
@@ -216,21 +212,12 @@ export default function Testimonials() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Switch
-                      checked={t.status?.toLowerCase() === "active"}
-                      onCheckedChange={(checked) =>
-                        handleToggleStatus(t._id, checked)
-                      }
-                    />
-                    <span
-                      className={`text-[11px] font-semibold capitalize ${
-                        t.status?.toLowerCase() === "active"
-                          ? "text-emerald-500"
-                          : "text-muted-foreground"
-                      }`}
+                    <Badge
+                      variant={t.status === "active" ? "success" : "secondary"}
+                      className="uppercase"
                     >
                       {t.status}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
 
@@ -393,6 +380,27 @@ export default function Testimonials() {
                         />
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.status}
+                      onChange={(e) =>
+                        handleInputChange("status", e.target.value)
+                      }
+                      className="h-10 w-full appearance-none rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground">
+                      <span className="text-xs">▼</span>
+                    </div>
                   </div>
                 </div>
               </div>

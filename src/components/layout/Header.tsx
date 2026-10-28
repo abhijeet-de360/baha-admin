@@ -84,7 +84,7 @@ export default function Header({
   };
 
   // User
-  const { user } = useSelector((state: RootState) => state.auth);
+  const authVar = useSelector((state: RootState) => state.auth);
 
   const confirmLogout = () => {
     dispatch(logoutUser(navigate));
@@ -102,17 +102,15 @@ export default function Header({
     setPasswordMismatch(false);
 
     setIsSubmitting(true);
-    const success = await dispatch(
+    await dispatch(
       resetPassword({
         oldPassword: passwords.current,
         newPassword: passwords.new,
       }),
-    );
-    setIsSubmitting(false);
-
-    if (success) {
+    ).then(() => {
       resetPasswordDialog();
-    }
+    });
+    setIsSubmitting(false);
   };
 
   return (
@@ -173,7 +171,7 @@ export default function Header({
           </DropdownMenu>
 
           {/* Notification Bell */}
-          <Button
+          {/* <Button
             variant="outline"
             size="icon"
             className="relative h-9 w-9 rounded-xl"
@@ -181,18 +179,14 @@ export default function Header({
             <Bell className="h-4 w-4" />
             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500 animate-ping" />
             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
-          </Button>
+          </Button> */}
 
           {/* Profile Image Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="focus:outline-none cursor-pointer rounded-full ring-2 ring-primary/20 hover:ring-primary/60 transition-all">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-                    alt="Admin Profile"
-                  />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarFallback>{authVar.user?.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
@@ -204,15 +198,14 @@ export default function Header({
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/40 border border-border/50">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" />
-                    <AvatarFallback>AD</AvatarFallback>
+                    <AvatarFallback>{authVar.user?.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="overflow-hidden">
                     <p className="text-xs font-semibold truncate">
-                      {user?.name}
+                      {authVar.user?.name}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">
-                      {user?.email}
+                      {authVar.user?.email}
                     </p>
                   </div>
                 </div>

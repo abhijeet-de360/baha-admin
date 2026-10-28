@@ -130,7 +130,8 @@ export function RichEditor({
           border-left: none !important;
           border-right: none !important;
           border-bottom: 1px solid var(--border, #e2e8f0) !important;
-          background-color: var(--muted, #f8fafc) !important;
+          background-color: #ffffff !important;
+          background: #ffffff !important;
           border-radius: 1rem 1rem 0 0 !important;
         }
         .rich-editor-wrapper .ck.ck-editor__main > .ck-editor__editable {

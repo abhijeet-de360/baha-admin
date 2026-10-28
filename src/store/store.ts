@@ -12,6 +12,7 @@ import productReducer from "./productSlice";
 import bannerReducer from "./bannerSlice";
 import testimonialReducer from "./testimonialSlice";
 import loaderReducer from "./loader";
+import blogReducer from "./blogSlice";
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ export const store = configureStore({
     product: productReducer,
     banner: bannerReducer,
     testimonial: testimonialReducer,
+    blog: blogReducer,
   },
 });
 

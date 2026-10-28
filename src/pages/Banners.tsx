@@ -92,8 +92,6 @@ export default function Banners() {
     dispatch(getAllBanners(formVar.keyword, status));
   };
 
-
-
   const getStatusBadge = (status: any) => {
     switch (status?.toLowerCase?.() || status) {
       case "active":
@@ -483,7 +481,9 @@ export default function Banners() {
                                     </AlertDialogCancel>
                                     <AlertDialogAction
                                       className="bg-red-600 hover:bg-red-700"
-                                      onClick={() => handleDelete(banner._id || "")}
+                                      onClick={() =>
+                                        handleDelete(banner._id || "")
+                                      }
                                     >
                                       Yes, delete
                                     </AlertDialogAction>
@@ -528,7 +528,16 @@ export default function Banners() {
                   <Badge className="w-fit bg-amber-500 text-white font-bold text-xs hover:bg-amber-600">
                     Hero Slide #{previewBanner.order ?? 1}
                   </Badge>
-                  {getStatusBadge(previewBanner.status)}
+                  <Badge
+                    variant={
+                      previewBanner.status === "active"
+                        ? "success"
+                        : "secondary"
+                    }
+                    className="uppercase"
+                  >
+                    {previewBanner.status}
+                  </Badge>
                 </div>
                 <h2 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight mb-2 drop-shadow-sm line-clamp-2">
                   {previewBanner.title}
@@ -556,12 +565,6 @@ export default function Banners() {
 
             <div className="p-4 bg-slate-900 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-400">
               <div className="flex flex-wrap items-center gap-4">
-                <span>
-                  Slide ID:{" "}
-                  <strong className="text-white font-mono">
-                    {previewBanner._id || previewBanner.id}
-                  </strong>
-                </span>
                 {previewBanner.buttonLink && (
                   <span className="flex items-center gap-1">
                     Link:{" "}

@@ -18,10 +18,11 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/store/store";
 import { getProfile, updateAdminProfile } from "@/store/authSlice";
+import { formatDataString } from "@/lib/utils";
 
 export default function ProfilePage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,28 +59,14 @@ export default function ProfilePage() {
     );
   };
 
-  // Generate initials for avatar fallback
-  const getInitials = (userName?: string) => {
-    if (!userName) return "AD";
-    const parts = userName.trim().split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return userName.slice(0, 2).toUpperCase();
-  };
-
   return (
     <div className="space-y-8 w-full max-w-4xl mx-auto pb-12">
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-card border border-border p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-sm">
         <div className="relative">
           <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-            <AvatarImage
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-              alt={authVar.user?.name || "Admin"}
-            />
             <AvatarFallback className="text-xl font-extrabold bg-primary text-primary-foreground">
-              {getInitials(authVar.user?.name)}
+              {authVar.user?.name.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </div>
@@ -184,13 +171,7 @@ export default function ProfilePage() {
                   <Calendar className="h-3 w-3 text-amber-500" /> Member Since
                 </span>
                 <p className="text-xs font-mono font-semibold text-foreground">
-                  {authVar.user?.createdAt
-                    ? new Date(authVar.user.createdAt).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : "Active Member"}
+                  {formatDataString(authVar.user?.createdAt)}
                 </p>
               </div>
             </div>

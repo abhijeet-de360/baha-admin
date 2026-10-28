@@ -15,6 +15,7 @@ const sizeChartUrl = rootUrl + "/sizeChart";
 const productUrl = rootUrl + "/product";
 const bannerUrl = rootUrl + "/heroBanner";
 const testimonialUrl = rootUrl + "/testimonial";
+const blogUrl = rootUrl + "/blog";
 
 //***************** Authentication api service functions ******************* */
 // Admin login api service function
@@ -341,13 +342,10 @@ async function updateBanner(id: string, data: FormData) {
 async function getAllBanners(
   keyword?: string,
   status?: string,
-  limit?: number,
-  offset?: number,
 ) {
-  let url = `${bannerUrl}/list?keyword=${keyword || ""}&status=${status || ""}`;
-  if (limit !== undefined) url += `&limit=${limit}`;
-  if (offset !== undefined) url += `&offset=${offset}`;
-  return await axios.get(url);
+  return await axios.get(
+    `${bannerUrl}/list?keyword=${keyword}&status=${status}`,
+  );
 }
 
 async function getBannerById(id: string) {
@@ -376,13 +374,42 @@ async function updateTestimonial(id: string, data: FormData) {
 }
 
 async function getAllTestimonials() {
-  return await axios.get(
-    `${testimonialUrl}/list`,
-  );
+  return await axios.get(`${testimonialUrl}/list`);
 }
 
 async function deleteTestimonial(id: string) {
   return await axios.delete(`${testimonialUrl}/delete/${id}`, {
+    headers: await authHeader(),
+  });
+}
+
+/*************************** Blog service function *************************** */
+async function addBlog(data: FormData) {
+  return await axios.post(blogUrl + "/create", data, {
+    headers: await authHeader("FormData"),
+  });
+}
+
+async function updateBlog(id: string, data: FormData) {
+  return await axios.patch(`${blogUrl}/update/${id}`, data, {
+    headers: await authHeader("FormData"),
+  });
+}
+
+async function getAllBlogs(keyword, limit, offset, status) {
+  return await axios.get(
+    `${blogUrl}/list?keyword=${keyword}&limit=${limit}&offset=${offset}&status=${status}`,
+  );
+}
+
+async function deleteBlog(id: string) {
+  return await axios.delete(`${blogUrl}/delete/${id}`, {
+    headers: await authHeader(),
+  });
+}
+
+async function getBlogById(id: string) {
+  return await axios.get(`${blogUrl}/${id}`, {
     headers: await authHeader(),
   });
 }
@@ -435,5 +462,10 @@ export const service = {
   addTestimonial,
   getAllTestimonials,
   updateTestimonial,
-  deleteTestimonial
+  deleteTestimonial,
+  addBlog,
+  updateBlog,
+  getAllBlogs,
+  deleteBlog,
+  getBlogById
 };
