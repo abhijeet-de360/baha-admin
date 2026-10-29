@@ -44,6 +44,7 @@ import {
 } from "@/store/testimonialSlice";
 import { warningHandler } from "@/shared/_helper/responseHelper";
 import { Badge } from "@/components/ui/badge";
+import { formatDataString } from "@/lib/utils";
 
 const INITIAL_FORM_DATA = {
   customerName: "",
@@ -247,7 +248,7 @@ export default function Testimonials() {
               {/* Card Footer: Date & Actions */}
               <div className="pt-4 mt-4 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
                 <span className="font-mono text-[11px]">
-                  {new Date(t.createdAt).toDateString()}
+                  {formatDataString(t.createdAt)}
                 </span>
 
                 <div className="flex items-center gap-1.5">
